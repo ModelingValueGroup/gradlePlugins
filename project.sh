@@ -25,7 +25,7 @@
 #===================================================================
 version=1.0.0
 artifacts=(
-  "org.modelingvalue   helloworld              $version    jar jds"
+  "org.modelingvalue   gradlePlugins              $version    jar jds"
 )
 dependencies=(
   "org.junit.jupiter   junit-jupiter-api       5.6.2       jar jdst"
