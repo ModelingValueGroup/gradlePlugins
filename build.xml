@@ -169,7 +169,7 @@
   <target name="artifact.helloworld-sources:jar" depends="init.artifacts" description="Build 'helloworld-sources:jar' artifact">
     <property name="artifact.temp.output.helloworld-sources:jar" value="${artifacts.temp.dir}/helloworld_sources_jar"/>
     <mkdir dir="${artifact.temp.output.helloworld-sources:jar}"/>
-    <jar destfile="${temp.jar.path.helloworld-sources.jar}" duplicate="preserve" filesetmanifest="mergewithoutmain">
+    <jar destfile="${temp.jar.path.helloworld-sources.jar}" duplicate="preserve" filesetmanifest="merge">
       <zipfileset dir="${basedir}/helloworld/src"/>
       <zipfileset dir="${basedir}/helloworld/tst"/>
     </jar>
@@ -178,7 +178,7 @@
   <target name="artifact.helloworld:jar" depends="init.artifacts, compile.module.helloworld" description="Build 'helloworld:jar' artifact">
     <property name="artifact.temp.output.helloworld:jar" value="${artifacts.temp.dir}/helloworld_jar"/>
     <mkdir dir="${artifact.temp.output.helloworld:jar}"/>
-    <jar destfile="${temp.jar.path.helloworld.jar}" duplicate="preserve" filesetmanifest="mergewithoutmain">
+    <jar destfile="${temp.jar.path.helloworld.jar}" duplicate="preserve" filesetmanifest="merge">
       <zipfileset file="${basedir}/helloworld/src/META-INF/MANIFEST.MF" prefix="META-INF"/>
       <zipfileset dir="${helloworld.output.dir}"/>
     </jar>
