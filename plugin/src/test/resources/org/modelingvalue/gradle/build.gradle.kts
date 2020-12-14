@@ -1,7 +1,7 @@
 plugins {
-    `java-gradle-plugin`
-    id("org.modelingvalue.gradle.greeting")
+    java
+    id("<my-package>")
 }
-greeting {
-    q = "aaa"
+<myExtension> {
+    addTextFileExtention("pruuperties")
 }
