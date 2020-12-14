@@ -2,7 +2,7 @@
 This repo contains the gradle plugins for some build steps in our other projects.
 They might be usable for others but that is not the essence here.
 
-## mvgCorrections
+## mvgCorrector
 This plugin can be used to correct certain aspects during (or better before) a build.
 
 Usage in your ```build.gradle.kts``` file:
