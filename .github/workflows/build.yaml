@@ -19,7 +19,4 @@ jobs:
           java-version: 11
 
       - name: "build"
-        run: |
-          jar tfv gradle/wrapper/gradle-wrapper.jar
-          set -x
-          . ./gradlew
+        run: ./gradlew build
