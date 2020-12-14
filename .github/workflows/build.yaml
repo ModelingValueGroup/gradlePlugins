@@ -1,0 +1,22 @@
+name: build
+
+on: [ push, repository_dispatch ]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: "checkout"
+        uses: actions/checkout@v2.3.4
+
+#      - name: "attach git head"
+#        run: git checkout "${GITHUB_REF#refs/heads/}"
+#
+      - name: "setup JDK"
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: "if master: fail if there is already a tag for this version"
+        run: ./gradlew build
