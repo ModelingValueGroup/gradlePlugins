@@ -19,4 +19,4 @@ jobs:
           java-version: 11
 
       - name: "build"
-        run: set -x; ./gradlew build
+        run: set -x; . ./gradlew'
