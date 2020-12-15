@@ -29,7 +29,7 @@ import org.gradle.api.logging.Logging;
 
 @SuppressWarnings({"WeakerAccess"})
 public abstract class CorrectorBase {
-    private static final Logger      LOGGER = Logging.getLogger(Info.EXTENSION_NAME);
+    private static final Logger      LOGGER = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
     //
     private final        String      name;
     private final        Path        root;
@@ -41,18 +41,29 @@ public abstract class CorrectorBase {
         this.root = root;
         this.excludes = excludes;
         this.dry = dry;
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("========================================");
+            excludes.forEach(x -> LOGGER.trace("# " + name + " excludes        : " + x));
+        }
     }
 
     Stream<Path> allFiles() throws IOException {
-        return Files.walk(root)
-                .filter(Files::isRegularFile)
-                .filter(p -> excludes.stream().noneMatch(pattern -> Paths.get(".").resolve(root.relativize(p)).toString().matches(pattern)));
+        return Files.walk(root).filter(this::filter);
+    }
+
+    private boolean filter(Path p) {
+        return Files.isRegularFile(p) && excludes.stream().noneMatch(pattern -> {
+                    String p1 = root.relativize(p).toString();
+                    String p2 = Paths.get(".").resolve(p1).toString();
+                    return p1.matches(pattern) || p2.matches(pattern);
+                }
+        );
     }
 
     void overwrite(Path file, List<String> lines) {
         try {
             if (!Files.isRegularFile(file)) {
-                LOGGER.info("+ {} generated   : {}", String.format("%-8s", name), file);
+                LOGGER.info("+ {} generated   : {}", name, file);
                 if (!dry) {
                     Files.write(file, lines);
                 }
@@ -63,13 +74,13 @@ public abstract class CorrectorBase {
                     req += "\n";
                 }
                 if (!req.equals(was)) {
-                    LOGGER.info("+ {} regenerated : {}", String.format("%-8s", name), file);
+                    LOGGER.info("+ {} regenerated : {}", name, file);
                     LOGGER.trace("====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
                     if (!dry) {
                         Files.write(file, lines);
                     }
                 } else {
-                    LOGGER.info("+ {} untouched   : {}", String.format("%-8s", name), file);
+                    LOGGER.info("+ {} untouched   : {}", name, file);
                 }
             }
         } catch (IOException e) {

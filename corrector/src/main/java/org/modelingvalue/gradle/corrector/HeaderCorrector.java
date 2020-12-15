@@ -35,7 +35,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
 public class HeaderCorrector extends CorrectorBase {
-    private static final Logger                    LOGGER     = Logging.getLogger(Info.EXTENSION_NAME);
+    private static final Logger                    LOGGER     = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
     //
     private final        Map<String, String>       extensions;
     private final        List<String>              headerLines;
@@ -46,7 +46,10 @@ public class HeaderCorrector extends CorrectorBase {
         extensions = ext.getHeaderFileExtensions();
         URL headerUrl = ext.getHeaderUrl();
         headerLines = downloadHeaderLines(headerUrl);
-        LOGGER.info("header used from {}", headerUrl);
+        if (LOGGER.isTraceEnabled()) {
+            extensions.forEach((e, p) -> LOGGER.trace("# header extensions      : " + e + " (" + p + ")"));
+            LOGGER.trace("# header                 : {}", headerUrl);
+        }
     }
 
     public void generate() throws IOException {

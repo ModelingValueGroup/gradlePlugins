@@ -25,7 +25,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
 public class EolCorrector extends CorrectorBase {
-    private static final Logger      LOGGER = Logging.getLogger(Info.EXTENSION_NAME);
+    private static final Logger      LOGGER = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
     //
     private final        Set<String> textExtensions;
     private final        Set<String> noTextExtensions;
@@ -33,11 +33,17 @@ public class EolCorrector extends CorrectorBase {
     private final        Set<String> noTextFiles;
 
     public EolCorrector(MvgCorrectorPluginExtension ext) {
-        super("eols", ext.getRoot(), ext.getHeaderFileExcludes(), ext.getDry());
+        super("eols  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
         textExtensions = ext.getTextFileExtentions();
         noTextExtensions = ext.getNoTextFileExtentions();
         textFiles = ext.getTextFiles();
         noTextFiles = ext.getNoTextFiles();
+        if (LOGGER.isTraceEnabled()) {
+            textExtensions/*  */.forEach(x -> LOGGER.trace("# eols   textExtensions  : " + x));
+            noTextExtensions/**/.forEach(x -> LOGGER.trace("# eols   noTextExtensions: " + x));
+            textFiles/*       */.forEach(x -> LOGGER.trace("# eols   textFiles       : " + x));
+            noTextFiles/*     */.forEach(x -> LOGGER.trace("# eols   noTextFiles     : " + x));
+        }
     }
 
     public void generate() throws IOException {

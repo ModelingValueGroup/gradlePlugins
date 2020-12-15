@@ -13,21 +13,22 @@ import org.gradle.api.Project;
 
 @SuppressWarnings({"FieldCanBeLocal"})
 public class MvgCorrectorPluginExtension {
-
-    private       URL                 headerUrl          = getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
-    private       Path                root;
-    private       boolean             dry;
+    public static final String              NAME               = "mvgCorrector";
     //
-    private final Set<String>         textFiles          = new HashSet<>(List.of(
+    private             URL                 headerUrl          = getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
+    private             Path                root;
+    private             boolean             dry;
+    //
+    private final       Set<String>         textFiles          = new HashSet<>(List.of(
             ".gitignore",
             ".gitattributes",
             "LICENSE",
             "header"
     ));
-    private final Set<String>         noTextFiles        = new HashSet<>(List.of(
+    private final       Set<String>         noTextFiles        = new HashSet<>(List.of(
             ".DS_Store"
     ));
-    private final Set<String>         textExt            = new HashSet<>(List.of(
+    private final       Set<String>         textExt            = new HashSet<>(List.of(
             "MF",
             "java",
             "js",
@@ -51,7 +52,7 @@ public class MvgCorrectorPluginExtension {
             "kts",
             "gradle"
     ));
-    private final Set<String>         noTextExt          = new HashSet<>(List.of(
+    private final       Set<String>         noTextExt          = new HashSet<>(List.of(
             "class",
             "iml",
             "jar",
@@ -60,7 +61,7 @@ public class MvgCorrectorPluginExtension {
             "jpg",
             "png"
     ));
-    private final Map<String, String> headerFileExt      = new HashMap<>(Map.of(
+    private final       Map<String, String> headerFileExt      = new HashMap<>(Map.of(
             "java", "//",
             "js", "//",
             "kt", "//",
@@ -70,17 +71,25 @@ public class MvgCorrectorPluginExtension {
             "yaml", "##",
             "yml", "##"
     ));
-    private final Set<String>         headerFileExcludes = new HashSet<>(List.of(
-            "MPS/.*",
+    private final       Set<String>         headerFileExcludes = new HashSet<>(List.of(
             ".git.*",
+            ".github/workflows/.*", // github refuses bot pushes of workflows
             ".idea/.*",
-            ".*/.gradle/.*",
-            ".*/gradle/.*",
-            ".*/out/.*",
-            ".*/build/.*",
-            ".*/lib/.*",
-            ".*/gradlew.*",
-            ".github/workflows/.*" // github refuses bot pushes of workflows
+            ".gradle/.*",
+            "gradle/.*",
+            "gradlew.*",
+            "MPS/.*",
+            ".*/build/.*"
+    ));
+    private final       Set<String>         eolFileExcludes    = new HashSet<>(List.of(
+            ".git.*",
+            ".github/workflows/.*", // github refuses bot pushes of workflows
+            ".idea/.*",
+            ".gradle/.*",
+            "gradle/.*",
+            "gradlew.*",
+            "MPS/.*",
+            ".*/build/.*"
     ));
 
     public MvgCorrectorPluginExtension(Project project) {
@@ -161,6 +170,14 @@ public class MvgCorrectorPluginExtension {
 
     public Set<String> getHeaderFileExcludes() {
         return headerFileExcludes;
+    }
+
+    public void addEolFileExclude(String pattern) {
+        eolFileExcludes.add(pattern);
+    }
+
+    public Set<String> getEolFileExcludes() {
+        return eolFileExcludes;
     }
 
     private static URL getUrl(String url) {

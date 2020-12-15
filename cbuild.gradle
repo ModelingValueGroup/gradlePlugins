@@ -1,0 +1,13 @@
+buildscript{
+    dependencies{
+        classpath files("corrector/build/libs/corrector-"+VERSION+".jar")
+    }
+}
+
+apply plugin: org.modelingvalue.gradle.corrector.MvgCorrectorPlugin
+
+mvgCorrector {
+    dry = true
+    addTextFileExtention("pruuperties")
+    addHeaderFileExclude("corrector/src/test/resources/.*")
+}

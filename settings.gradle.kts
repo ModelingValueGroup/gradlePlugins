@@ -1,3 +1,3 @@
 rootProject.name = "gradlePlugins"
 
-include("plugin")
+include("corrector")

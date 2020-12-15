@@ -1,4 +1,13 @@
-group = "org.modelingvalue"
+val VERSION: String by project
+val GROUP: String by project
+val corrector_name: String by project
+val corrector_id: String by project
+val corrector_version: String? by project
+val corrector_class: String by project
+val corrector_displayname: String by project
+
+group = GROUP
+version = VERSION
 
 plugins {
     `java-gradle-plugin`
@@ -11,10 +20,6 @@ tasks.test {
     useJUnitPlatform()
 }
 
-val correctorClass = "org.modelingvalue.gradle.corrector.MvgCorrectorPlugin" //secured in test idCheck
-val correctorName = "mvgCorrector" //secured in test idCheck
-val correctorId = "org.modelingvalue.gradle.corrector" //secured in test idCheck
-
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
@@ -22,11 +27,11 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create(correctorName) {
-            id = correctorId
-            implementationClass = correctorClass
-            displayName = "MVG corrector plugin"
-            version = "0.1"
+        create(corrector_name) {
+            id = corrector_id
+            implementationClass = corrector_class
+            displayName = corrector_displayname
+            version = corrector_version ?: VERSION
         }
     }
 }
@@ -36,7 +41,7 @@ pluginBundle {
     vcsUrl = "https://github.com/ModelingValueGroup/gradlePlugins"
     description = "MVG gradle plugins"
     (plugins) {
-        correctorName {
+        corrector_name {
             tags = listOf("mvg")
         }
     }
