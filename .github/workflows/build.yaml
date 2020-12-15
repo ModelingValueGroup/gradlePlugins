@@ -20,3 +20,7 @@ jobs:
 
       - name: "build"
         run: ./gradlew --info build
+
+      - name: "correct"
+        run: ./gradlew --info -b cbuild.gradle mvgCorrector
+
