@@ -5,6 +5,8 @@ on: [ push, repository_dispatch ]
 jobs:
   build:
     runs-on: ubuntu-20.04
+    env:
+      CI: true
 
     steps:
       - name: "checkout"
