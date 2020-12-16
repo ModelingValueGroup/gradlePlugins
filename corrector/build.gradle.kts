@@ -36,6 +36,7 @@ tasks.test {
 }
 
 dependencies {
+    implementation("org.eclipse.jgit:org.eclipse.jgit:5.9.0.202009080501-r")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }

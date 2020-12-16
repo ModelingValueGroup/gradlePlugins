@@ -32,8 +32,11 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
             try {
                 new HeaderCorrector(extension).generate();
                 new EolCorrector(extension).generate();
+                if (extension.getGitPush()) {
+                    GitUtil.pushChanges(project.getRootDir().toPath());
+                }
             } catch (IOException e) {
-                throw new Error("could not correct file", e);
+                throw new Error("could not correct files", e);
             }
         }));
     }

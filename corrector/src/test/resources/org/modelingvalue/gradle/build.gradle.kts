@@ -4,4 +4,5 @@ plugins {
 }
 <myExtension> {
     addTextFileExtention("pruuperties")
+    gitPush = true // TODO: do not commit or push this, only for manual testing!
 }

@@ -33,6 +33,7 @@ public class MvgCorrectorPluginExtension {
     private             URL                 headerUrl          = getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
     private             Path                root;
     private             boolean             dry;
+    private             boolean             gitpush;
     //
     private final       Set<String>         textFiles          = new HashSet<>(List.of(
             ".gitignore",
@@ -133,6 +134,14 @@ public class MvgCorrectorPluginExtension {
 
     public boolean getDry() {
         return dry;
+    }
+
+    public void setGitPush(boolean gitpush) {
+        this.gitpush = gitpush;
+    }
+
+    public boolean getGitPush() {
+        return gitpush;
     }
 
     public void addTextFile(String pattern) {
