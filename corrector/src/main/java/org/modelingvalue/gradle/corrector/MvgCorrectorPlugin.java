@@ -24,10 +24,16 @@ import java.util.Set;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 import org.gradle.internal.extensibility.DefaultConvention;
 
 @SuppressWarnings("unused")
 public class MvgCorrectorPlugin implements Plugin<Project> {
+    private static final Logger  LOGGER       = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
+    private static final boolean CI           = Boolean.parseBoolean(System.getenv("CI"));
+    private static final String  ALLREP_TOKEN = System.getenv("ALLREP_TOKEN");
+
     public void apply(Project project) {
         MvgCorrectorPluginExtension extension = ((DefaultConvention) project.getExtensions()).create(NAME, MvgCorrectorPluginExtension.class, project);
 
@@ -47,7 +53,8 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
         changes.addAll(new HdrCorrector(extension).generate().getChangedFiles(root));
         changes.addAll(new EolCorrector(extension).generate().getChangedFiles(root));
 
-        if (!changes.isEmpty() && Boolean.parseBoolean(System.getenv("CI"))) {
+        LOGGER.info("changed {} files, CI={}, TOKEN={}", changes.size(), CI, ALLREP_TOKEN != null);
+        if (!changes.isEmpty() && CI && ALLREP_TOKEN != null) {
             new GitUtil(root).pushChanges(changes);
         }
     }
