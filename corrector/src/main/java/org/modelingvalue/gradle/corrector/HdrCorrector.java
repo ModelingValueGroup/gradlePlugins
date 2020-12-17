@@ -34,14 +34,14 @@ import java.util.stream.Collectors;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
-public class HeaderCorrector extends CorrectorBase {
+public class HdrCorrector extends CorrectorBase {
     private static final Logger                    LOGGER     = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
     //
     private final        Map<String, String>       extensions;
     private final        List<String>              headerLines;
     private final        Map<String, List<String>> ext2header = new HashMap<>();
 
-    public HeaderCorrector(MvgCorrectorPluginExtension ext) {
+    public HdrCorrector(MvgCorrectorPluginExtension ext) {
         super("header", ext.getRoot(), ext.getHeaderFileExcludes(), ext.getDry());
         extensions = ext.getHeaderFileExtensions();
         URL headerUrl = ext.getHeaderUrl();
@@ -52,7 +52,7 @@ public class HeaderCorrector extends CorrectorBase {
         }
     }
 
-    public HeaderCorrector generate() throws IOException {
+    public HdrCorrector generate() throws IOException {
         allFiles().forEach(this::replaceHeader);
         return this;
     }
@@ -66,7 +66,7 @@ public class HeaderCorrector extends CorrectorBase {
     }
 
     private static List<String> replaceVars(List<String> lines) {
-        return lines.stream().map(HeaderCorrector::replaceVars).collect(Collectors.toList());
+        return lines.stream().map(HdrCorrector::replaceVars).collect(Collectors.toList());
     }
 
     private static String replaceVars(String line) {

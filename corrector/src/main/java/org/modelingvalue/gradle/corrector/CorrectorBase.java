@@ -19,9 +19,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.gradle.api.logging.Logger;
@@ -29,12 +31,13 @@ import org.gradle.api.logging.Logging;
 
 @SuppressWarnings({"WeakerAccess"})
 public abstract class CorrectorBase {
-    private static final Logger      LOGGER = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
+    private static final Logger      LOGGER       = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
     //
     private final        String      name;
     private final        Path        root;
     private final        Set<String> excludes;
     private final        boolean     dry;
+    private final        Set<Path>   changedFiles = new HashSet<>();
 
     public CorrectorBase(String name, Path root, Set<String> excludes, boolean dry) {
         this.name = name;
@@ -47,25 +50,33 @@ public abstract class CorrectorBase {
         }
     }
 
-    Stream<Path> allFiles() throws IOException {
+    protected Stream<Path> allFiles() throws IOException {
         return Files.walk(root).filter(this::filter);
     }
 
-    private boolean filter(Path p) {
-        return Files.isRegularFile(p) && excludes.stream().noneMatch(pattern -> {
-                    String p1 = root.relativize(p).toString();
-                    String p2 = Paths.get(".").resolve(p1).toString();
-                    return p1.matches(pattern) || p2.matches(pattern);
-                }
-        );
+    public Set<Path> getChangedFiles() {
+        return changedFiles;
     }
 
-    void overwrite(Path file, List<String> lines) {
+    public Set<Path> getChangedFiles(Path root) {
+        return changedFiles.stream().map(root::relativize).collect(Collectors.toSet());
+    }
+
+    protected boolean filter(Path p) {
+        return Files.isRegularFile(p) && excludes.stream().noneMatch(pattern -> {
+            String p1 = root.relativize(p).toString();
+            String p2 = Paths.get(".").resolve(p1).toString();
+            return p1.matches(pattern) || p2.matches(pattern);
+        });
+    }
+
+    protected void overwrite(Path file, List<String> lines) {
         try {
             if (!Files.isRegularFile(file)) {
                 LOGGER.info("+ {} generated   : {}", name, file);
                 if (!dry) {
                     Files.write(file, lines);
+                    changedFiles.add(file);
                 }
             } else {
                 String was = Files.readString(file);
@@ -78,6 +89,7 @@ public abstract class CorrectorBase {
                     LOGGER.trace("====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
                     if (!dry) {
                         Files.write(file, lines);
+                        changedFiles.add(file);
                     }
                 } else {
                     LOGGER.info("+ {} untouched   : {}", name, file);
@@ -88,11 +100,11 @@ public abstract class CorrectorBase {
         }
     }
 
-    static Optional<String> getExtension(Path p) {
+    protected static Optional<String> getExtension(Path p) {
         return getExtension(p.getFileName().toString());
     }
 
-    static Optional<String> getExtension(String filename) {
+    protected static Optional<String> getExtension(String filename) {
         return Optional.ofNullable(filename)
                 .filter(f -> f.contains("."))
                 .map(f -> f.substring(f.lastIndexOf(".") + 1));

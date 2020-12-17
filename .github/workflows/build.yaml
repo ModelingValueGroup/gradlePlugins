@@ -5,24 +5,16 @@ on: [ push, repository_dispatch ]
 jobs:
   build:
     runs-on: ubuntu-20.04
-    env:
-      CI: true
 
     steps:
-      - name: "checkout"
-        uses: actions/checkout@v2.3.4
-
-#      - name: "attach git head"
-#        run: git checkout "${GITHUB_REF#refs/heads/}"
-#
-      - name: "setup JDK"
-        uses: actions/setup-java@v1
+      - uses: actions/checkout@v2.3.4
+      - uses: actions/setup-java@v1
         with:
           java-version: 11
+          #      - run: git checkout "${GITHUB_REF#refs/heads/}"
 
-      - name: "build"
-        run: ./gradlew --info build
-
-      - name: "correct"
-        run: ./gradlew --info -b cbuild.gradle mvgCorrector
+      ################################################################################
+      - run: CI=true ALLREP_TOKEN= ./gradlew --info -b correct.gradle.kts mvgCorrector
+      - run: ./gradlew --info build
+      - run: ./gradlew --info -b cbuild.gradle mvgCorrector
 

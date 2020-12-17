@@ -46,10 +46,11 @@ public class EolCorrector extends CorrectorBase {
         }
     }
 
-    public void generate() throws IOException {
+    public EolCorrector generate() throws IOException {
         allFiles()
                 .filter(this::isTextType)
                 .forEach(this::correctCRLF);
+        return this;
     }
 
     private void correctCRLF(Path f) {

@@ -18,6 +18,9 @@ package org.modelingvalue.gradle.corrector;
 import static org.modelingvalue.gradle.corrector.MvgCorrectorPluginExtension.NAME;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -30,14 +33,22 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
 
         project.getTasks().register(NAME, task -> task.doLast(s -> {
             try {
-                new HeaderCorrector(extension).generate();
-                new EolCorrector(extension).generate();
-                if (extension.getGitPush()) {
-                    GitUtil.pushChanges(project.getRootDir().toPath());
-                }
+                task(project, extension);
             } catch (IOException e) {
                 throw new Error("could not correct files", e);
             }
         }));
+    }
+
+    private void task(Project project, MvgCorrectorPluginExtension extension) throws IOException {
+        Path      root    = project.getRootDir().toPath();
+        Set<Path> changes = new HashSet<>();
+
+        changes.addAll(new HdrCorrector(extension).generate().getChangedFiles(root));
+        changes.addAll(new EolCorrector(extension).generate().getChangedFiles(root));
+
+        if (!changes.isEmpty() && Boolean.parseBoolean(System.getenv("CI"))) {
+            new GitUtil(root).pushChanges(changes);
+        }
     }
 }

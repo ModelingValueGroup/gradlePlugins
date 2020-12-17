@@ -14,9 +14,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 plugins {
-    id("org.modelingvalue.gradle.corrector") version "0.3.0"
-}
-
-mvgCorrector {
-    gitPush = true
+    id("org.modelingvalue.gradle.corrector")/* version "0.3.0"*/
 }

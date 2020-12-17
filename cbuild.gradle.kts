@@ -22,7 +22,6 @@ buildscript {
 apply(plugin = "org.modelingvalue.gradle.corrector.MvgCorrectorPlugin")
 
 mvgCorrector {
-    gitPush = Boolean.parseBoolean(System.getenv("CI"))
     addTextFileExtensions("pruuperties")
     addHeaderFileExclude("corrector/src/test/resources/.*")
 }
