@@ -14,5 +14,6 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 plugins {
-    id("org.modelingvalue.gradle.corrector") version "0.3.2"
+    id("org.modelingvalue.gradle.corrector") version "latest.release"
+    //id("org.modelingvalue.gradle.corrector") version "0.3.2"
 }
