@@ -52,8 +52,9 @@ public class HeaderCorrector extends CorrectorBase {
         }
     }
 
-    public void generate() throws IOException {
+    public HeaderCorrector generate() throws IOException {
         allFiles().forEach(this::replaceHeader);
+        return this;
     }
 
     private static List<String> downloadHeaderLines(URL headerUrl) {
