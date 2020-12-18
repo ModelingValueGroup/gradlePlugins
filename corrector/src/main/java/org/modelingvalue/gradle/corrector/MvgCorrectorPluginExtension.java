@@ -160,23 +160,23 @@ public class MvgCorrectorPluginExtension {
         return noTextFiles;
     }
 
-    public void addTextFileExtention(String pattern) {
+    public void addTextFileExtension(String pattern) {
         textExt.add(pattern);
     }
 
-    public Set<String> getTextFileExtentions() {
+    public Set<String> getTextFileExtensions() {
         return textExt;
     }
 
-    public void addNoTextFileExtention(String pattern) {
+    public void addNoTextFileExtension(String pattern) {
         noTextExt.add(pattern);
     }
 
-    public Set<String> getNoTextFileExtentions() {
+    public Set<String> getNoTextFileExtensions() {
         return noTextExt;
     }
 
-    public void addHeaderFileExtention(String ext, String comment) {
+    public void addHeaderFileExtension(String ext, String comment) {
         if (comment == null) {
             headerFileExt.remove(ext);
         } else {

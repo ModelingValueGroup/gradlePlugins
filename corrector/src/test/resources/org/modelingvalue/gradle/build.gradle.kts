@@ -3,6 +3,6 @@ plugins {
     id("<my-package>")
 }
 <myExtension> {
-    addTextFileExtention("pruuperties")
+    addTextFileExtension("pruuperties")
     gitPush = true
 }

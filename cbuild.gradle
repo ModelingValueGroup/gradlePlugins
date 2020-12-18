@@ -26,6 +26,6 @@ buildscript{
 apply plugin: org.modelingvalue.gradle.corrector.MvgCorrectorPlugin
 
 mvgCorrector {
-    addTextFileExtention("pruuperties")
+    addTextFileExtension("pruuperties")
     addHeaderFileExclude("corrector/src/test/resources/.*")
 }

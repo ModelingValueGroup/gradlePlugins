@@ -26,10 +26,10 @@ mvgCorrector {
     addTextFile("xyzzy")
     addNoTextFile("xyzzy")
     
-    addTextFileExtention("xyzzy")
-    addNoTextFileExtention("xyzzy")
+    addTextFileExtension("xyzzy")
+    addNoTextFileExtension("xyzzy")
     
-    addHeaderFileExtention("xyzzy","###") // ext and comment prelude
+    addHeaderFileExtension("xyzzy","###") // ext and comment prelude
     addHeaderFileExclude("xyzzy")
 }
 ```

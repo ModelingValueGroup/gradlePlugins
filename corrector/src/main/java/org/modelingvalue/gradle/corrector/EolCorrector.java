@@ -34,8 +34,8 @@ public class EolCorrector extends CorrectorBase {
 
     public EolCorrector(MvgCorrectorPluginExtension ext) {
         super("eols  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
-        textExtensions = ext.getTextFileExtentions();
-        noTextExtensions = ext.getNoTextFileExtentions();
+        textExtensions = ext.getTextFileExtensions();
+        noTextExtensions = ext.getNoTextFileExtensions();
         textFiles = ext.getTextFiles();
         noTextFiles = ext.getNoTextFiles();
         if (LOGGER.isTraceEnabled()) {
