@@ -17,6 +17,6 @@ plugins {
     id("org.modelingvalue.gradle.corrector") version "0.3.3"
 }
 mvgCorrector {
-    addTextFileExtension("pruuperties")
+    addTextFileExtention("pruuperties")
     addHeaderFileExclude("corrector/src/test/resources/.*")
 }
