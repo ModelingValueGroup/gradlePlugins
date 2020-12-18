@@ -22,6 +22,8 @@ jobs:
               --info \
               -b correct.gradle.kts \
               mvgCorrector
+          echo "${{secrets.GRADLE_KEY}}" | wc -l
+          echo "${{secrets.GRADLE_SECRET}}" | wc -l
           ./gradlew \
               --info \
               -Pgradle.publish.key=${{secrets.GRADLE_KEY}} \
