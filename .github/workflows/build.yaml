@@ -14,7 +14,8 @@ jobs:
           #      - run: git checkout "${GITHUB_REF#refs/heads/}"
 
       ################################################################################
-      - run: |
+      - name: "publish gradle plugin"
+        run: |
           export CI=true
           export TOKEN=${{secrets.TOKEN}}
           ./gradlew \
@@ -23,7 +24,7 @@ jobs:
               mvgCorrector
           ./gradlew \
               --info \
-              -Pgradle.publish.key=${{secrets.GRADLE_KEY}}
+              -Pgradle.publish.key=${{secrets.GRADLE_KEY}} \
               -Pgradle.publish.secret=${{secrets.GRADLE_SECRET}} \
               publishPlugins
 
