@@ -14,7 +14,6 @@ jobs:
           #      - run: git checkout "${GITHUB_REF#refs/heads/}"
 
       ################################################################################
-      - run: CI=true ALLREP_TOKEN=${{secrets.ALLREP_TOKEN}} ./gradlew --info -b correct.gradle.kts mvgCorrector
-      - run: ./gradlew --info build
-      - run: ./gradlew --info -b cbuild.gradle mvgCorrector
+      - run: CI=true TOKEN=${{secrets.TOKEN}} ./gradlew --info -b correct.gradle.kts mvgCorrector
+      - run: ./gradlew --info publishPlugins
 

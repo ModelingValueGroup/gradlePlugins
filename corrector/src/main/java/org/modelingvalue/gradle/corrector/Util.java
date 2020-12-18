@@ -1,2 +1,79 @@
-package org.modelingvalue.gradle.corrector;public class Util {
+package org.modelingvalue.gradle.corrector;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+public class Util {
+    public static URL getUrl(String url) {
+        try {
+            return new URL(url);
+        } catch (MalformedURLException e) {
+            throw new Error("not a valid url in header: " + url, e);
+        }
+    }
+
+    public static List<String> readAllLines(Path f) {
+        try {
+            return Files.readAllLines(f);
+        } catch (IOException e) {
+            throw new Error("could not read lines: " + f, e);
+        }
+    }
+
+    public static long getFileSize(Path f) {
+        try {
+            return Files.size(f);
+        } catch (IOException e) {
+            throw new Error("file size failed", e);
+        }
+    }
+
+    public static List<String> downloadAndSubstitute(Map<String, String> vars, URL url) {
+        try (InputStream in = url.openStream()) {
+            List<String> lines = Arrays.asList(new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n"));
+            return replaceVars(vars, lines);
+        } catch (IOException e) {
+            throw new Error("can not get lines from " + url, e);
+        }
+    }
+
+    public static List<String> replaceVars(Map<String, String> vars, List<String> lines) {
+        return lines.stream().map(line -> replaceVars(vars, line)).collect(Collectors.toList());
+    }
+
+    public static String replaceVars(Map<String, String> vars, String line) {
+        for (Entry<String, String> entry : vars.entrySet()) {
+            line = line.replaceAll(entry.getKey(), entry.getValue());
+        }
+        return line;
+    }
+
+    public static String envOrProp(String name) {
+        return elvis(System.getenv(name), () -> System.getProperty(name));
+    }
+
+    public static <T> T elvis(T o, Supplier<T> f) {
+        return o != null ? o : f == null ? null : f.get();
+    }
+
+    public static int numOccurences(String find, String all) {
+        int count     = 0;
+        int fromIndex = 0;
+        while ((fromIndex = all.indexOf(find, fromIndex)) != -1) {
+            count++;
+            fromIndex++;
+        }
+        return count;
+    }
 }

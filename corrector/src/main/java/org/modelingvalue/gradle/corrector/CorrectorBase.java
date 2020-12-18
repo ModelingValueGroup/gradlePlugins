@@ -15,6 +15,8 @@
 
 package org.modelingvalue.gradle.corrector;
 
+import static org.modelingvalue.gradle.corrector.Info.LOGGER;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,13 +28,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-
 @SuppressWarnings({"WeakerAccess"})
 public abstract class CorrectorBase {
-    private static final Logger      LOGGER       = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
-    //
     private final        String      name;
     private final        Path        root;
     private final        Set<String> excludes;
@@ -54,11 +51,11 @@ public abstract class CorrectorBase {
         return Files.walk(root).filter(this::filter);
     }
 
-    public Set<Path> getChangedFiles() {
-        return changedFiles;
+    public Path getRoot() {
+        return root;
     }
 
-    public Set<Path> getChangedFiles(Path root) {
+    public Set<Path> getChangedFiles() {
         return changedFiles.stream().map(root::relativize).collect(Collectors.toSet());
     }
 

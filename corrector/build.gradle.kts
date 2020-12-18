@@ -63,3 +63,12 @@ pluginBundle {
 tasks.withType<Javadoc> {
     options.encoding = "UTF-8"
 }
+
+//var t = tasks.register("correctSources") {
+//    doLast {
+//        println("TOMTOMTOM")
+//    }
+//}
+//tasks.filter { it != t.get() && it!=tasks.findByName("clean") }.forEach {
+//    it.dependsOn(t)
+//}

@@ -15,9 +15,9 @@
 
 package org.modelingvalue.gradle.corrector;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,23 +28,24 @@ import org.gradle.api.Project;
 
 @SuppressWarnings({"FieldCanBeLocal"})
 public class MvgCorrectorPluginExtension {
-    public static final String              NAME               = "mvgCorrector";
     //
-    private             URL                 headerUrl          = getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
-    private             Path                root;
-    private             boolean             dry;
-    private             boolean             gitpush;
+    private       URL                 headerUrl          = Util.getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
+    private       Path                root;
+    private       boolean             dry;
+    private       boolean             gitpush;
+    private       Path                fileWithVersion    = Paths.get("gradle.properties");
+    private       String              versionName        = "VERSION";
     //
-    private final       Set<String>         textFiles          = new HashSet<>(List.of(
+    private final Set<String>         textFiles          = new HashSet<>(List.of(
             ".gitignore",
             ".gitattributes",
             "LICENSE",
             "header"
     ));
-    private final       Set<String>         noTextFiles        = new HashSet<>(List.of(
+    private final Set<String>         noTextFiles        = new HashSet<>(List.of(
             ".DS_Store"
     ));
-    private final       Set<String>         textExt            = new HashSet<>(List.of(
+    private final Set<String>         textExt            = new HashSet<>(List.of(
             "MF",
             "java",
             "js",
@@ -68,7 +69,7 @@ public class MvgCorrectorPluginExtension {
             "kts",
             "gradle"
     ));
-    private final       Set<String>         noTextExt          = new HashSet<>(List.of(
+    private final Set<String>         noTextExt          = new HashSet<>(List.of(
             "class",
             "iml",
             "jar",
@@ -77,7 +78,7 @@ public class MvgCorrectorPluginExtension {
             "jpg",
             "png"
     ));
-    private final       Map<String, String> headerFileExt      = new HashMap<>(Map.of(
+    private final Map<String, String> headerFileExt      = new HashMap<>(Map.of(
             "java", "//",
             "js", "//",
             "kt", "//",
@@ -87,7 +88,7 @@ public class MvgCorrectorPluginExtension {
             "yaml", "##",
             "yml", "##"
     ));
-    private final       Set<String>         headerFileExcludes = new HashSet<>(List.of(
+    private final Set<String>         headerFileExcludes = new HashSet<>(List.of(
             ".git.*",
             ".github/workflows/.*", // github refuses bot pushes of workflows
             ".idea/.*",
@@ -97,7 +98,7 @@ public class MvgCorrectorPluginExtension {
             "MPS/.*",
             ".*/build/.*"
     ));
-    private final       Set<String>         eolFileExcludes    = new HashSet<>(List.of(
+    private final Set<String>         eolFileExcludes    = new HashSet<>(List.of(
             ".git.*",
             ".github/workflows/.*", // github refuses bot pushes of workflows
             ".idea/.*",
@@ -113,7 +114,7 @@ public class MvgCorrectorPluginExtension {
     }
 
     public void setHeaderUrl(String url) {
-        headerUrl = getUrl(url);
+        headerUrl = Util.getUrl(url);
     }
 
     public URL getHeaderUrl() {
@@ -204,11 +205,19 @@ public class MvgCorrectorPluginExtension {
         return eolFileExcludes;
     }
 
-    private static URL getUrl(String url) {
-        try {
-            return new URL(url);
-        } catch (MalformedURLException e) {
-            throw new Error("not a valid url in header: " + url, e);
-        }
+    public void setFileWithVersion(Path fileWithVersion) {
+        this.fileWithVersion = fileWithVersion;
+    }
+
+    public Path getFileWithVersion() {
+        return fileWithVersion;
+    }
+
+    public void setVersionName(String versionName) {
+        this.versionName = versionName;
+    }
+
+    public String getVersionName() {
+        return versionName;
     }
 }

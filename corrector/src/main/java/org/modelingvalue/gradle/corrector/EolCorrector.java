@@ -15,18 +15,15 @@
 
 package org.modelingvalue.gradle.corrector;
 
+import static org.modelingvalue.gradle.corrector.Info.LOGGER;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
 
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-
 public class EolCorrector extends CorrectorBase {
-    private static final Logger      LOGGER = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
-    //
     private final        Set<String> textExtensions;
     private final        Set<String> noTextExtensions;
     private final        Set<String> textFiles;

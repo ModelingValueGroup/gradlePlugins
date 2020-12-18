@@ -16,40 +16,36 @@
 package org.modelingvalue.gradle.corrector;
 
 import static java.lang.Integer.min;
+import static org.modelingvalue.gradle.corrector.Info.LOGGER;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
-
 public class HdrCorrector extends CorrectorBase {
-    private static final Logger                    LOGGER     = Logging.getLogger(MvgCorrectorPluginExtension.NAME);
-    //
-    private final        Map<String, String>       extensions;
-    private final        List<String>              headerLines;
-    private final        Map<String, List<String>> ext2header = new HashMap<>();
+    private final Map<String, String>       extensions;
+    private final List<String>              headerLines;
+    private final Map<String, List<String>> ext2header = new HashMap<>();
 
     public HdrCorrector(MvgCorrectorPluginExtension ext) {
         super("header", ext.getRoot(), ext.getHeaderFileExcludes(), ext.getDry());
         extensions = ext.getHeaderFileExtensions();
         URL headerUrl = ext.getHeaderUrl();
-        headerLines = downloadHeaderLines(headerUrl);
+        headerLines = Util.downloadAndSubstitute(getVarMapping(), headerUrl);
         if (LOGGER.isTraceEnabled()) {
             extensions.forEach((e, p) -> LOGGER.trace("# header extensions      : " + e + " (" + p + ")"));
             LOGGER.trace("# header                 : {}", headerUrl);
         }
+    }
+
+    private static Map<String, String> getVarMapping() {
+        return Map.of("yyyy", "" + LocalDateTime.now().getYear());
     }
 
     public HdrCorrector generate() throws IOException {
@@ -57,27 +53,11 @@ public class HdrCorrector extends CorrectorBase {
         return this;
     }
 
-    private static List<String> downloadHeaderLines(URL headerUrl) {
-        try (InputStream in = headerUrl.openStream()) {
-            return replaceVars(Arrays.asList(new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n")));
-        } catch (IOException e) {
-            throw new Error("can not get header from " + headerUrl, e);
-        }
-    }
-
-    private static List<String> replaceVars(List<String> lines) {
-        return lines.stream().map(HdrCorrector::replaceVars).collect(Collectors.toList());
-    }
-
-    private static String replaceVars(String line) {
-        return line.replaceAll("yyyy", "" + LocalDateTime.now().getYear());
-    }
-
     private void replaceHeader(Path f) {
         if (needsHeader(f)) {
             String       ext        = getExtension(f).orElseThrow();
             List<String> header     = ext2header.computeIfAbsent(ext, e -> border(extensions.get(e)));
-            List<String> lines      = readAllLines(f);
+            List<String> lines      = Util.readAllLines(f);
             boolean      isHashBang = !lines.isEmpty() && lines.get(0).startsWith("#!");
             int          baseIndex  = isHashBang ? 1 : 0;
             while (baseIndex < lines.size() && isHeaderLine(lines.get(baseIndex), ext)) {
@@ -92,7 +72,7 @@ public class HdrCorrector extends CorrectorBase {
 
     private boolean needsHeader(Path f) {
         Optional<String> ext = getExtension(f);
-        return ext.isPresent() && getFileSize(f) != 0 && extensions.containsKey(ext.get());
+        return ext.isPresent() && Util.getFileSize(f) != 0 && extensions.containsKey(ext.get());
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
@@ -145,22 +125,5 @@ public class HdrCorrector extends CorrectorBase {
             }
         }
         return indent;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private static List<String> readAllLines(Path f) {
-        try {
-            return Files.readAllLines(f);
-        } catch (IOException e) {
-            throw new Error("could not read lines: " + f, e);
-        }
-    }
-
-    private static long getFileSize(Path f) {
-        try {
-            return Files.size(f);
-        } catch (IOException e) {
-            throw new Error("file size failed", e);
-        }
     }
 }
