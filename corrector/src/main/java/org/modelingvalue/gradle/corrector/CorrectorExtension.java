@@ -25,10 +25,14 @@ import java.util.Map;
 import java.util.Set;
 
 import org.gradle.api.Project;
+import org.gradle.internal.extensibility.DefaultConvention;
 
 @SuppressWarnings({"FieldCanBeLocal"})
 public class MvgCorrectorPluginExtension {
-    //
+    public static MvgCorrectorPluginExtension makeExtension(Project project, String name) {
+        return ((DefaultConvention) project.getExtensions()).create(name, MvgCorrectorPluginExtension.class, project);
+    }
+
     private       URL                 headerUrl          = Util.getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
     private       Path                root;
     private       boolean             dry;
