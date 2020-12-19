@@ -16,3 +16,10 @@
 rootProject.name = "gradlePlugins"
 
 include("corrector")
+
+pluginManagement {
+    val PUBLISHED_VERSION: String by settings
+    plugins {
+        id("org.modelingvalue.gradle.corrector") version PUBLISHED_VERSION
+    }
+}

@@ -65,7 +65,7 @@ public class MvgCorrectorTest {
         assertEquals(PLUGIN_CLASS_NAME, props.get("corrector_class"));
 
         assertTrue(props.containsKey("corrector_name"));
-        assertEquals(Info.NAME, props.get("corrector_name"));
+        assertEquals(Info.CORRECTOR_TASK_NAME, props.get("corrector_name"));
     }
 
     @Test
@@ -73,7 +73,7 @@ public class MvgCorrectorTest {
         Project project = ProjectBuilder.builder().build();
         project.getPlugins().apply(PLUGIN_PACKAGE_NAME);
 
-        assertNotNull(project.getTasks().findByName(Info.NAME));
+        assertNotNull(project.getTasks().findByName(Info.CORRECTOR_TASK_NAME));
     }
 
     @Test
@@ -83,22 +83,20 @@ public class MvgCorrectorTest {
 
         // Setup the test build
         cp(null, settingsFile, javaFile, gradlePropsFile);
-        cp(s -> s.replaceAll("<my-package>", PLUGIN_PACKAGE_NAME).replaceAll("<myExtension>", Info.NAME), buildFile);
+        cp(s -> s.replaceAll("<my-package>", PLUGIN_PACKAGE_NAME).replaceAll("<myExtension>", Info.CORRECTOR_TASK_NAME), buildFile);
         cp(s -> s.replaceAll("\n", "\r"), prop1File);
         cp(s -> s.replaceAll("\n", "\n\r"), pruup2File);
 
         // Run the build
         StringWriter outWriter = new StringWriter();
         StringWriter errWriter = new StringWriter();
-        assertThrows(UnexpectedBuildFailure.class, () -> {
-            GradleRunner.create()
-                    .forwardStdOutput(outWriter)
-                    .forwardStdError(errWriter)
-                    .withPluginClasspath()
-                    .withProjectDir(testWorkspaceDir.toFile())
-                    .withArguments("--info", Info.NAME, "compileJava")
-                    .build();
-        });
+        assertThrows(UnexpectedBuildFailure.class, () -> GradleRunner.create()
+                .forwardStdOutput(outWriter)
+                .forwardStdError(errWriter)
+                .withPluginClasspath()
+                .withProjectDir(testWorkspaceDir.toFile())
+                .withArguments("--info", Info.CORRECTOR_TASK_NAME, "compileJava", Info.TAG_TASK_NAME)
+                .build());
         String out = outWriter.toString();
         String err = errWriter.toString();
 

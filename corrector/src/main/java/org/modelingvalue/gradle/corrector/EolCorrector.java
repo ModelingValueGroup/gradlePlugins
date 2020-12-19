@@ -29,7 +29,7 @@ public class EolCorrector extends CorrectorBase {
     private final        Set<String> textFiles;
     private final        Set<String> noTextFiles;
 
-    public EolCorrector(MvgCorrectorPluginExtension ext) {
+    public EolCorrector(CorrectorExtension ext) {
         super("eols  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
         textExtensions = ext.getTextFileExtensions();
         noTextExtensions = ext.getNoTextFileExtensions();

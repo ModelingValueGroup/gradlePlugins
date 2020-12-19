@@ -28,13 +28,13 @@ import org.gradle.api.Project;
 import org.gradle.internal.extensibility.DefaultConvention;
 
 @SuppressWarnings({"FieldCanBeLocal"})
-public class MvgCorrectorPluginExtension {
-    public static MvgCorrectorPluginExtension makeExtension(Project project, String name) {
-        return ((DefaultConvention) project.getExtensions()).create(name, MvgCorrectorPluginExtension.class, project);
+public class CorrectorExtension {
+    public static CorrectorExtension make(Project project, String name) {
+        return ((DefaultConvention) project.getExtensions()).create(name, CorrectorExtension.class, project);
     }
 
+    private final Project             project;
     private       URL                 headerUrl          = Util.getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
-    private       Path                root;
     private       boolean             dry;
     private       boolean             gitpush;
     private       Path                fileWithVersion    = Paths.get("gradle.properties");
@@ -113,8 +113,16 @@ public class MvgCorrectorPluginExtension {
             ".*/build/.*"
     ));
 
-    public MvgCorrectorPluginExtension(Project project) {
-        this.root = project.getRootDir().toPath();
+    public CorrectorExtension(Project project) {
+        this.project = project;
+    }
+
+    public Path getRoot() {
+        return project.getRootDir().toPath();
+    }
+
+    public String getProjectVersion() {
+        return project.getVersion().toString();
     }
 
     public void setHeaderUrl(String url) {
@@ -123,14 +131,6 @@ public class MvgCorrectorPluginExtension {
 
     public URL getHeaderUrl() {
         return headerUrl;
-    }
-
-    public Path getRoot() {
-        return root;
-    }
-
-    public void setRoot(Path root) {
-        this.root = root;
     }
 
     public void setDry(boolean dry) {

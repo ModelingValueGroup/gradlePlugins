@@ -15,6 +15,8 @@
 
 package org.modelingvalue.gradle.corrector;
 
+import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +30,7 @@ import org.gradle.api.GradleException;
 public class VerCorrector extends CorrectorBase {
     private final Path   propFile;
     private final String propName;
+    private final String projectVersion;
     private final Path   absPropFile;
 
     private Path getAbsPropFile(Path propFile) {
@@ -38,10 +41,11 @@ public class VerCorrector extends CorrectorBase {
         return f;
     }
 
-    public VerCorrector(MvgCorrectorPluginExtension ext) {
+    public VerCorrector(CorrectorExtension ext) {
         super("vers  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
         propFile = ext.getFileWithVersion();
         propName = ext.getVersionName();
+        projectVersion = ext.getProjectVersion();
         absPropFile = getAbsPropFile(propFile);
     }
 
@@ -55,6 +59,9 @@ public class VerCorrector extends CorrectorBase {
                 lines.set(index, propName + "=" + newVersion);
                 overwrite(absPropFile, lines);
                 Info.LOGGER.info("+ version updated from " + oldVersion + " to " + newVersion);
+            }
+            if (!projectVersion.equals(oldVersion)) {
+                LOGGER.error("the project's version '{}' is different from the version from the properties file '{}'", projectVersion, oldVersion);
             }
         }
         return this;

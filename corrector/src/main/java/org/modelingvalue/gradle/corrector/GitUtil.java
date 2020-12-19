@@ -27,6 +27,7 @@ import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.TextProgressMonitor;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -110,6 +111,39 @@ public class GitUtil {
                         .stream()
                         .map(ref -> ref.getName().replaceAll("^refs/tags/", ""))
                         .collect(Collectors.toList());
+                ///////////////////////////////////////////////////////////////////////////////////////////////////
+            }
+        } catch (Throwable e) {
+            throw new GradleException("push to git failed: " + e.getMessage(), e);
+        }
+    }
+
+    public static void tag(Path root,String tag) {
+        try {
+            try (Repository repository = new FileRepositoryBuilder()
+                    .findGitDir(root.toFile())
+                    .readEnvironment()
+                    .build();
+                 Git git = new Git(repository)) {
+
+                ///////////////////////////////////////////////////////////////////////////////////////////////////
+                Ref ref = git.tag()
+                        .setName(tag)
+                        .setForceUpdate(true)
+                        .call();
+                LOGGER.info("added tag '{}', id={}", tag, ref.getObjectId());
+
+                // Pushing the commit and tag
+                Iterable<PushResult> result = git.push()
+                        .setPushTags()
+                        .call();
+                if (LOGGER.isInfoEnabled()) {
+                    result.forEach(pr -> {
+                        LOGGER.info("push result  : {}", pr.getMessages());
+                        pr.getRemoteUpdates().forEach(x -> LOGGER.info("remote update     - {}", x));
+                        pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("tracking update   - {}", x));
+                    });
+                }
                 ///////////////////////////////////////////////////////////////////////////////////////////////////
             }
         } catch (Throwable e) {

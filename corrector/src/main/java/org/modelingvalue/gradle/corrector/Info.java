@@ -15,12 +15,15 @@
 
 package org.modelingvalue.gradle.corrector;
 
+import static org.modelingvalue.gradle.corrector.Util.envOrProp;
+
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
 public interface Info {
-    String  NAME         = "mvgCorrector";
-    Logger  LOGGER       = Logging.getLogger(NAME);
-    boolean CI           = Boolean.parseBoolean(Util.envOrProp("CI"));
-    String  TOKEN = Util.envOrProp("TOKEN");
+    String  CORRECTOR_TASK_NAME = "mvgCorrector";
+    String  TAG_TASK_NAME       = "mvgTagger";
+    Logger  LOGGER              = Logging.getLogger(CORRECTOR_TASK_NAME);
+    boolean CI                  = Boolean.parseBoolean(envOrProp("CI"));
+    String  TOKEN               = envOrProp("TOKEN");
 }

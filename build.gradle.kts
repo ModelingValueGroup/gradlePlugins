@@ -14,7 +14,7 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 plugins {
-    id("org.modelingvalue.gradle.corrector") version "0.3.4"
+    id("org.modelingvalue.gradle.corrector")
 }
 mvgCorrector {
     addTextFileExtension("pruuperties")

@@ -23,11 +23,9 @@ jobs:
           export TOKEN=${{secrets.ALLREP_TOKEN}}
           ./gradlew \
               --info \
-              -b correct.gradle.kts \
-              mvgCorrector
-          ./gradlew \
-              --info \
               -Pgradle.publish.key=${{secrets.GRADLE_KEY}} \
               -Pgradle.publish.secret=${{secrets.GRADLE_SECRET}} \
-              publishPlugins
+              mvgCorrector \
+              publishPlugins \
+              #tagVersion
 

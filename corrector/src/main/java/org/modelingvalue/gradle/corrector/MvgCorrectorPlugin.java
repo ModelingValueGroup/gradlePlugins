@@ -15,8 +15,9 @@
 
 package org.modelingvalue.gradle.corrector;
 
+import static org.modelingvalue.gradle.corrector.Info.CORRECTOR_TASK_NAME;
 import static org.modelingvalue.gradle.corrector.Info.LOGGER;
-import static org.modelingvalue.gradle.corrector.Info.NAME;
+import static org.modelingvalue.gradle.corrector.Info.TAG_TASK_NAME;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -27,25 +28,23 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.internal.extensibility.DefaultConvention;
 
 @SuppressWarnings("unused")
 public class MvgCorrectorPlugin implements Plugin<Project> {
     public void apply(Project project) {
-        MvgCorrectorPluginExtension extension = makeExtension(project);
-        project.getTasks().register(NAME, task -> taskSetup(project, extension, task));
+        CorrectorExtension ext1 = CorrectorExtension.make(project, CORRECTOR_TASK_NAME);
+        project.getTasks().register(CORRECTOR_TASK_NAME, task -> correctorTaskSetup(project, task, ext1));
+
+        TagExtension ext2 = TagExtension.make(project, TAG_TASK_NAME);
+        project.getTasks().register(TAG_TASK_NAME, task -> tagTaskSetup(project, task, ext2));
     }
 
-    private MvgCorrectorPluginExtension makeExtension(Project project) {
-        return ((DefaultConvention) project.getExtensions()).create(NAME, MvgCorrectorPluginExtension.class, project);
-    }
-
-    private void taskSetup(Project project, MvgCorrectorPluginExtension extension, Task task) {
+    private void correctorTaskSetup(Project project, Task task, CorrectorExtension extension) {
         task.setGroup("preparation");
-        task.setDescription("correct all sources (headers, eols,...)");
+        task.setDescription("correct various sources (version, headers, eols) and push to git");
         task.doLast(s -> {
             try {
-                taskLogic(project, extension);
+                correctorTaskLogic(project, extension);
             } catch (IOException e) {
                 throw new Error("could not correct files", e);
             }
@@ -57,7 +56,7 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
                 .forEach(t -> t.dependsOn(task));
     }
 
-    private void taskLogic(Project project, MvgCorrectorPluginExtension extension) throws IOException {
+    private void correctorTaskLogic(Project project, CorrectorExtension extension) throws IOException {
         Set<Path> changes = new HashSet<>();
 
         changes.addAll(new HdrCorrector(extension).generate().getChangedFiles());
@@ -70,8 +69,26 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
             GitUtil.push(extension.getRoot(), changes);
             // since we pushed changes it is not needed to finish ths build
             // so we stop here in expectation that a new build will have been started
-            LOGGER.quiet("some source changes have been pushed to the repo; they will trigger a new build; we will now force this build to fail now.");
-            throw new GradleException("abandoned build run");
+            LOGGER.quiet("!!! Some source-changes have been pushed to the repo.                              !!!");
+            LOGGER.quiet("!!! They will trigger a new build.                                                 !!!");
+            LOGGER.quiet("!!! We will force this build to fail now. This is ok, the next build will pick up. !!!");
+            throw new GradleException("abandoned build run (this is a planned failure)");
         }
+    }
+
+    private void tagTaskSetup(Project project, Task task, TagExtension extension) {
+        task.setGroup("wrap-up");
+        task.setDescription("tag the git repo with the current version");
+        task.doLast(s -> {
+            try {
+                tagTaskLogic(project, extension);
+            } catch (IOException e) {
+                throw new Error("could not correct files", e);
+            }
+        });
+    }
+
+    private void tagTaskLogic(Project project, TagExtension extension) throws IOException {
+        GitUtil.tag(project.getRootDir().toPath(), "v" + project.getVersion());
     }
 }

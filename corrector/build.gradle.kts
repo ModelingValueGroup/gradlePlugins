@@ -15,6 +15,7 @@
 
 val VERSION: String by project
 val GROUP: String by project
+
 val corrector_name: String by project
 val corrector_id: String by project
 val corrector_version: String? by project
@@ -27,17 +28,25 @@ version = VERSION
 plugins {
     `java-gradle-plugin`
     id("com.gradle.plugin-publish") version "0.12.0"
+    //id("com.dorongold.task-tree") version "1.5"
 }
+
 repositories {
     jcenter()
 }
+
 tasks.test {
     useJUnitPlatform()
 }
+
 dependencies {
     implementation("org.eclipse.jgit:org.eclipse.jgit:5.9.0.202009080501-r")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+}
+
+tasks.withType<Javadoc> {
+    options.encoding = "UTF-8"
 }
 
 gradlePlugin {
@@ -59,16 +68,3 @@ pluginBundle {
         }
     }
 }
-
-tasks.withType<Javadoc> {
-    options.encoding = "UTF-8"
-}
-
-//var t = tasks.register("correctSources") {
-//    doLast {
-//        println("TOMTOMTOM")
-//    }
-//}
-//tasks.filter { it != t.get() && it!=tasks.findByName("clean") }.forEach {
-//    it.dependsOn(t)
-//}
