@@ -13,6 +13,12 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+val VERSION: String by project
+val GROUP: String by project
+
+group = GROUP
+version = VERSION
+
 plugins {
     id("org.modelingvalue.gradle.corrector")
 }

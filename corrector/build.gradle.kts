@@ -16,14 +16,14 @@
 val VERSION: String by project
 val GROUP: String by project
 
+group = GROUP
+version = VERSION
+
 val corrector_name: String by project
 val corrector_id: String by project
 val corrector_version: String? by project
 val corrector_class: String by project
 val corrector_displayname: String by project
-
-group = GROUP
-version = VERSION
 
 plugins {
     `java-gradle-plugin`
