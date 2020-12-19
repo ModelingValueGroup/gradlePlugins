@@ -1,6 +1,8 @@
 name: build
 
-on: [ push, repository_dispatch ]
+on:
+  push:
+    branches: ["*"]
 
 jobs:
   build:
@@ -27,5 +29,5 @@ jobs:
               -Pgradle.publish.secret=${{secrets.GRADLE_SECRET}} \
               mvgCorrector \
               publishPlugins \
-              #tagVersion
+              tagVersion
 
