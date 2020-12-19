@@ -29,5 +29,5 @@ jobs:
               -Pgradle.publish.secret=${{secrets.GRADLE_SECRET}} \
               mvgCorrector \
               publishPlugins \
-              mvgTagger
+              #mvgTagger
 

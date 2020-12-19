@@ -136,6 +136,9 @@ public class GitUtil {
                 // Pushing the commit and tag
                 Iterable<PushResult> result = git.push()
                         .setPushTags()
+                        .setDryRun(DRY_RUN)
+                        .setCredentialsProvider(CREDENTIALS_PROV)
+                        .setProgressMonitor(PROGRESS_MONITOR)
                         .call();
                 if (LOGGER.isInfoEnabled()) {
                     result.forEach(pr -> {
