@@ -24,7 +24,6 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -66,13 +65,7 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
         LOGGER.info("changed {} files (CI={}, have-token={})", changes.size(), Info.CI, Info.ALLREP_TOKEN != null);
 
         if (!changes.isEmpty() && Info.CI && Info.ALLREP_TOKEN != null) {
-            GitUtil.push(extension.getRoot(), changes);
-            // since we pushed changes it is not needed to finish ths build
-            // so we stop here in expectation that a new build will have been started
-            LOGGER.quiet("!!! Some source-changes have been pushed to the repo.                              !!!");
-            LOGGER.quiet("!!! They will trigger a new build.                                                 !!!");
-            LOGGER.quiet("!!! We will force this build to fail now. This is ok, the next build will pick up. !!!");
-            throw new GradleException("abandoned build run (this is a planned failure)");
+            GitUtil.push(extension.getRoot(), changes, GitUtil.NO_CI_MESSAGE + " updated by corrector");
         }
     }
 
@@ -89,6 +82,13 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
     }
 
     private void tagTaskLogic(Project project, TagExtension extension) throws IOException {
-        GitUtil.tag(project.getRootDir().toPath(), "v" + project.getVersion());
+        Path   root   = project.getRootDir().toPath();
+        String branch = GitUtil.getBranch(root);
+        String tag    = "v" + project.getVersion();
+        if (branch.equals("master")) {
+            GitUtil.tag(root, tag);
+        } else {
+            LOGGER.info("not tagging this version with '{}' because this is branch '{}' which is not master", tag, branch);
+        }
     }
 }

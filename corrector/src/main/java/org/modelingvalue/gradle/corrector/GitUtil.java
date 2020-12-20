@@ -15,9 +15,10 @@
 
 package org.modelingvalue.gradle.corrector;
 
-import static org.modelingvalue.gradle.corrector.Info.LOGGER;
 import static org.modelingvalue.gradle.corrector.Info.ALLREP_TOKEN;
+import static org.modelingvalue.gradle.corrector.Info.LOGGER;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
@@ -38,119 +40,122 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.gradle.api.GradleException;
 
 public class GitUtil {
+    public final static  String              NO_CI_MESSAGE    = "[no-ci]";
     private final static TextProgressMonitor PROGRESS_MONITOR = new TextProgressMonitor();
     private final static CredentialsProvider CREDENTIALS_PROV = new UsernamePasswordCredentialsProvider(ALLREP_TOKEN, "");
     private final static PersonIdent         AUTOMATION_IDENT = new PersonIdent("automation", "automation@modelingvalue.org");
     private final static boolean             DRY_RUN          = "DRY".equals(ALLREP_TOKEN);
 
-    public static void push(Path root, Set<Path> changes) {
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public static List<String> getAllTags(Path root) {
+        return calcWithGit(root, GitUtil::doListTags);
+    }
+
+    public static String getBranch(Path root) {
+        return calcWithGit(root, git -> git.getRepository().getBranch());
+    }
+
+    public static void push(Path root, Set<Path> changes, String message) {
+        calcWithGit(root, git -> {
+            doAdd(git, changes);
+            doCommit(git, message);
+            doPush(git);
+            return null;
+        });
+    }
+
+    public static void tag(Path root, String tag) {
+        calcWithGit(root, git -> {
+            doTag(git, tag);
+            doPush(git);
+            return null;
+        });
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    @FunctionalInterface
+    public interface Function<T, R> {
+        R apply(T t) throws GitAPIException, IOException;
+    }
+
+    public static <T> T calcWithGit(Path root, Function<Git, T> f) {
         try {
             try (Repository repository = new FileRepositoryBuilder()
                     .findGitDir(root.toFile())
                     .readEnvironment()
                     .build();
                  Git git = new Git(repository)) {
-
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
-                LOGGER.info("pushing {} files under {} to branch '{}'{}", changes.size(), root.toAbsolutePath(), repository.getBranch(), DRY_RUN ? " (dry)" : "");
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("changed files:");
-                    changes.forEach(x -> LOGGER.trace(" - {}", x));
-                }
-
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
-                AddCommand add = git.add();
-                changes.forEach(f -> add.addFilepattern(f.toString()));
-                add.call();
-
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
-                RevCommit rc = git
-                        .commit()
-                        .setAuthor(AUTOMATION_IDENT)
-                        .setCommitter(AUTOMATION_IDENT)
-                        .setMessage("~changed by corrector")
-                        .call();
-                LOGGER.info("commit result: {}", rc);
-
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
-                Iterable<PushResult> result = git
-                        .push()
-                        .setDryRun(DRY_RUN)
-                        .setCredentialsProvider(CREDENTIALS_PROV)
-                        .setProgressMonitor(PROGRESS_MONITOR)
-                        .call();
-                if (LOGGER.isInfoEnabled()) {
-                    result.forEach(pr -> {
-                        LOGGER.info("push result  : {}", pr.getMessages());
-                        pr.getRemoteUpdates().forEach(x -> LOGGER.info("remote update     - {}", x));
-                        pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("tracking update   - {}", x));
-                    });
-                }
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
+                return f.apply(git);
             }
         } catch (TransportException e) {
             if (!DRY_RUN || !e.getMessage().contains("not authorized")) {
-                throw new GradleException("push to git failed: " + e.getMessage(), e);
+                throw new GradleException("git push failed: " + e.getMessage(), e);
             }
+            return null;
         } catch (Throwable e) {
-            throw new GradleException("push to git failed: " + e.getMessage(), e);
+            throw new GradleException("git tag failed: " + e.getMessage(), e);
         }
     }
 
-    public static List<String> getAllTags(Path root) {
-        try {
-            try (Repository repository = new FileRepositoryBuilder()
-                    .findGitDir(root.toFile())
-                    .readEnvironment()
-                    .build();
-                 Git git = new Git(repository)) {
-
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
-                return git.tagList()
-                        .call()
-                        .stream()
-                        .map(ref -> ref.getName().replaceAll("^refs/tags/", ""))
-                        .collect(Collectors.toList());
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
-            }
-        } catch (Throwable e) {
-            throw new GradleException("push to git failed: " + e.getMessage(), e);
+    private static void doAdd(Git git, Set<Path> changes) throws GitAPIException, IOException {
+        Path   root   = git.getRepository().getDirectory().toPath().toAbsolutePath();
+        String branch = git.getRepository().getBranch();
+        LOGGER.info("add {} files under {} to branch '{}'", changes.size(), root, branch);
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("added files:");
+            changes.forEach(x -> LOGGER.trace(" - {}", x));
         }
+        AddCommand add = git.add();
+        changes.forEach(f -> add.addFilepattern(f.toString()));
+        add.call();
     }
 
-    public static void tag(Path root,String tag) {
-        try {
-            try (Repository repository = new FileRepositoryBuilder()
-                    .findGitDir(root.toFile())
-                    .readEnvironment()
-                    .build();
-                 Git git = new Git(repository)) {
+    private static void doCommit(Git git, String message) throws GitAPIException {
+        LOGGER.info("commit with message '{}'", message);
+        RevCommit rc = git
+                .commit()
+                .setAuthor(AUTOMATION_IDENT)
+                .setCommitter(AUTOMATION_IDENT)
+                .setMessage(message)
+                .call();
+        LOGGER.info("commit result: {}", rc);
+    }
 
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
-                Ref ref = git.tag()
-                        .setName(tag)
-                        .setForceUpdate(true)
-                        .call();
-                LOGGER.info("added tag '{}', id={}", tag, ref.getObjectId());
+    private static List<String> doListTags(Git git) throws GitAPIException {
+        return git.tagList()
+                .call()
+                .stream()
+                .map(ref -> ref.getName().replaceAll("^refs/tags/", ""))
+                .collect(Collectors.toList());
+    }
 
-                // Pushing the commit and tag
-                Iterable<PushResult> result = git.push()
-                        .setPushTags()
-                        .setDryRun(DRY_RUN)
-                        .setCredentialsProvider(CREDENTIALS_PROV)
-                        .setProgressMonitor(PROGRESS_MONITOR)
-                        .call();
-                if (LOGGER.isInfoEnabled()) {
-                    result.forEach(pr -> {
-                        LOGGER.info("push result  : {}", pr.getMessages());
-                        pr.getRemoteUpdates().forEach(x -> LOGGER.info("remote update     - {}", x));
-                        pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("tracking update   - {}", x));
-                    });
-                }
-                ///////////////////////////////////////////////////////////////////////////////////////////////////
-            }
-        } catch (Throwable e) {
-            throw new GradleException("push to git failed: " + e.getMessage(), e);
+    private static void doTag(Git git, String tag) throws GitAPIException {
+        LOGGER.info("tagging with '{}'", tag);
+        Ref ref = git.tag()
+                .setName(tag)
+                .setForceUpdate(true)
+                .call();
+        LOGGER.info("added tag '{}', id={}", tag, ref.getObjectId());
+    }
+
+    private static void doPush(Git git) throws GitAPIException {
+        LOGGER.info("{}push", DRY_RUN ? "[dry] " : "");
+        Iterable<PushResult> result = git.push()
+                .setPushTags()
+                .setDryRun(DRY_RUN)
+                .setCredentialsProvider(CREDENTIALS_PROV)
+                .setProgressMonitor(PROGRESS_MONITOR)
+                .call();
+        if (LOGGER.isInfoEnabled()) {
+            result.forEach(pr -> {
+                LOGGER.info("push result  : {}", pr.getMessages());
+                pr.getRemoteUpdates().forEach(x -> LOGGER.info("remote update     - {}", x));
+                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("tracking update   - {}", x));
+            });
         }
     }
 }
