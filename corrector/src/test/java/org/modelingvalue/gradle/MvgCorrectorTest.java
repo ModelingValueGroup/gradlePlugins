@@ -79,7 +79,7 @@ public class MvgCorrectorTest {
     @Test
     public void checkFunctionality() throws IOException {
         System.setProperty("CI", "true");
-        System.setProperty("TOKEN", "DRY");
+        System.setProperty("ALLREP_TOKEN", "DRY");
 
         // Setup the test build
         cp(null, settingsFile, javaFile, gradlePropsFile);

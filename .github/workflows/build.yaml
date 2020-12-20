@@ -7,6 +7,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-20.04
+    if: "!contains(github.event.head_commit.message, '[no-ci]')"
+    env:
+      GITHUB_TOKEN: "${{secrets.GITHUB_TOKEN}}"
+      ALLREP_TOKEN: "${{secrets.ALLREP_TOKEN}}"
+      TOKEN: "${{secrets.ALLREP_TOKEN}}"
+      CI: "true"
 
     steps:
       - uses: actions/checkout@v2.3.4
@@ -16,13 +22,10 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: 11
-          #      - run: git checkout "${GITHUB_REF#refs/heads/}"
 
       ################################################################################
       - name: "publish gradle plugin"
         run: |
-          export    CI=true
-          export TOKEN=${{secrets.ALLREP_TOKEN}}
           ./gradlew \
               --info \
               -Pgradle.publish.key=${{secrets.GRADLE_KEY}} \

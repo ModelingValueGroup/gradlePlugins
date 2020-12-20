@@ -63,9 +63,9 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
         changes.addAll(new EolCorrector(extension).generate().getChangedFiles());
         changes.addAll(new VerCorrector(extension).generate().getChangedFiles());
 
-        LOGGER.info("changed {} files (CI={}, TOKEN={})", changes.size(), Info.CI, Info.TOKEN != null);
+        LOGGER.info("changed {} files (CI={}, have-token={})", changes.size(), Info.CI, Info.ALLREP_TOKEN != null);
 
-        if (!changes.isEmpty() && Info.CI && Info.TOKEN != null) {
+        if (!changes.isEmpty() && Info.CI && Info.ALLREP_TOKEN != null) {
             GitUtil.push(extension.getRoot(), changes);
             // since we pushed changes it is not needed to finish ths build
             // so we stop here in expectation that a new build will have been started

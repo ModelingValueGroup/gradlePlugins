@@ -16,7 +16,7 @@
 package org.modelingvalue.gradle.corrector;
 
 import static org.modelingvalue.gradle.corrector.Info.LOGGER;
-import static org.modelingvalue.gradle.corrector.Info.TOKEN;
+import static org.modelingvalue.gradle.corrector.Info.ALLREP_TOKEN;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -39,9 +39,9 @@ import org.gradle.api.GradleException;
 
 public class GitUtil {
     private final static TextProgressMonitor PROGRESS_MONITOR = new TextProgressMonitor();
-    private final static CredentialsProvider CREDENTIALS_PROV = new UsernamePasswordCredentialsProvider(TOKEN, "");
+    private final static CredentialsProvider CREDENTIALS_PROV = new UsernamePasswordCredentialsProvider(ALLREP_TOKEN, "");
     private final static PersonIdent         AUTOMATION_IDENT = new PersonIdent("automation", "automation@modelingvalue.org");
-    private final static boolean             DRY_RUN          = "DRY".equals(TOKEN);
+    private final static boolean             DRY_RUN          = "DRY".equals(ALLREP_TOKEN);
 
     public static void push(Path root, Set<Path> changes) {
         try {
