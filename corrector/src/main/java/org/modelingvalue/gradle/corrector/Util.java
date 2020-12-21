@@ -74,8 +74,8 @@ public class Util {
         return line;
     }
 
-    public static String envOrProp(String name) {
-        return elvis(System.getenv(name), () -> System.getProperty(name));
+    public static String envOrProp(String name, String def) {
+        return elvis(System.getProperty(name), () -> elvis(System.getenv(name), () -> def));
     }
 
     public static <T> T elvis(T o, Supplier<T> f) {

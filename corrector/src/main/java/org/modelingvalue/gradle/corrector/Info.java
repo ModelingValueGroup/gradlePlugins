@@ -24,6 +24,6 @@ public interface Info {
     String  CORRECTOR_TASK_NAME = "mvgCorrector";
     String  TAG_TASK_NAME       = "mvgTagger";
     Logger  LOGGER              = Logging.getLogger(CORRECTOR_TASK_NAME);
-    boolean CI                  = Boolean.parseBoolean(envOrProp("CI"));
-    String  ALLREP_TOKEN        = envOrProp("ALLREP_TOKEN");
+    boolean CI                  = Boolean.parseBoolean(envOrProp("CI","false"));
+    String  ALLREP_TOKEN        = envOrProp("ALLREP_TOKEN","DRY");
 }
