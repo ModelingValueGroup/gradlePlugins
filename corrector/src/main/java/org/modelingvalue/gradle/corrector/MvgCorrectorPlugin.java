@@ -65,7 +65,7 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
         changes.addAll(new HdrCorrector(extension).generate().getChangedFiles());
         changes.addAll(new VerCorrector(extension).generate().getChangedFiles());
 
-        LOGGER.info("changed {} files (CI={}, have-token={})", changes.size(), Info.CI, Info.ALLREP_TOKEN != null);
+        LOGGER.info("+ changed {} files (CI={}, have-token={})", changes.size(), Info.CI, Info.ALLREP_TOKEN != null);
 
         if (!changes.isEmpty() && Info.CI && Info.ALLREP_TOKEN != null) {
             GitUtil.push(extension.getRoot(), changes, GitUtil.NO_CI_MESSAGE + " updated by corrector");
@@ -91,7 +91,7 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
         if (branch.equals("master")) {
             GitUtil.tag(root, tag);
         } else {
-            LOGGER.info("not tagging this version with '{}' because this is branch '{}' which is not master", tag, branch);
+            LOGGER.info("+ not tagging this version with '{}' because this is branch '{}' which is not master", tag, branch);
         }
     }
 }

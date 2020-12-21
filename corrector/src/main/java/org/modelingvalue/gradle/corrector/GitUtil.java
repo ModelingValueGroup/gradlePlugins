@@ -47,10 +47,6 @@ public class GitUtil {
     private final static PersonIdent         AUTOMATION_IDENT = new PersonIdent("automation", "automation@modelingvalue.org");
     private final static boolean             DRY_RUN          = "DRY".equals(ALLREP_TOKEN);
 
-    static {
-        LOGGER.info("+ GitUtil: DRY_RUN={} ALLREP_TOKEN={}", DRY_RUN, ALLREP_TOKEN);
-    }
-
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,10 +113,10 @@ public class GitUtil {
     private static void doAdd(Git git, Set<Path> changes) throws GitAPIException, IOException {
         Path   root   = git.getRepository().getDirectory().toPath().toAbsolutePath();
         String branch = git.getRepository().getBranch();
-        LOGGER.info("add {} files under {} to branch '{}'", changes.size(), root, branch);
+        LOGGER.info("+ add {} files under {} to branch '{}'", changes.size(), root, branch);
         if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("added files:");
-            changes.forEach(x -> LOGGER.trace(" - {}", x));
+            LOGGER.trace("++ added files:");
+            changes.forEach(x -> LOGGER.trace("++  - {}", x));
         }
         AddCommand add = git.add();
         changes.forEach(f -> add.addFilepattern(f.toString()));
@@ -128,14 +124,14 @@ public class GitUtil {
     }
 
     private static void doCommit(Git git, String message) throws GitAPIException {
-        LOGGER.info("commit with message '{}'", message);
+        LOGGER.info("+ commit with message '{}'", message);
         RevCommit rc = git
                 .commit()
                 .setAuthor(AUTOMATION_IDENT)
                 .setCommitter(AUTOMATION_IDENT)
                 .setMessage(message)
                 .call();
-        LOGGER.info("commit result: {}", rc);
+        LOGGER.info("+ commit result: {}", rc);
     }
 
     private static List<String> doListTags(Git git) throws GitAPIException {
@@ -147,24 +143,24 @@ public class GitUtil {
     }
 
     private static void doTag(Git git, String tag) throws GitAPIException {
-        LOGGER.info("tagging with '{}'", tag);
+        LOGGER.info("+ tagging with '{}'", tag);
         Ref ref = git.tag()
                 .setName(tag)
                 .setForceUpdate(true)
                 .call();
-        LOGGER.info("added tag '{}', id={}", tag, ref.getObjectId());
+        LOGGER.info("+ added tag '{}', id={}", tag, ref.getObjectId());
     }
 
     private static void doDeleteTag(Git git, String... tags) throws GitAPIException {
-        LOGGER.info("delete tags: {}", Arrays.asList(tags));
+        LOGGER.info("+ delete tags: {}", Arrays.asList(tags));
         List<String> l = git.tagDelete()
                 .setTags(tags)
                 .call();
-        LOGGER.info("deleted tags {}", l);
+        LOGGER.info("+ deleted tags {}", l);
     }
 
     private static void doPush(Git git) throws GitAPIException {
-        LOGGER.info("{}push", DRY_RUN ? "[dry] " : "");
+        LOGGER.info("+ {}push", DRY_RUN ? "[dry] " : "");
         Iterable<PushResult> result = git.push()
                 .setDryRun(DRY_RUN)
                 .setCredentialsProvider(CREDENTIALS_PROV)
@@ -172,15 +168,15 @@ public class GitUtil {
                 .call();
         if (LOGGER.isInfoEnabled()) {
             result.forEach(pr -> {
-                LOGGER.info("push result  : {}", pr.getMessages());
-                pr.getRemoteUpdates().forEach(x -> LOGGER.info("remote update     - {}", x));
-                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("tracking update   - {}", x));
+                LOGGER.info("+ push result  : {}", pr.getMessages());
+                pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ remote update     - {}", x));
+                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ tracking update   - {}", x));
             });
         }
     }
 
     private static void doPushTags(Git git) throws GitAPIException {
-        LOGGER.info("{}push", DRY_RUN ? "[dry] " : "");
+        LOGGER.info("+ {}push", DRY_RUN ? "[dry] " : "");
         Iterable<PushResult> result = git.push()
                 .setPushTags()
                 .setDryRun(DRY_RUN)
@@ -189,9 +185,9 @@ public class GitUtil {
                 .call();
         if (LOGGER.isInfoEnabled()) {
             result.forEach(pr -> {
-                LOGGER.info("push result  : {}", pr.getMessages());
-                pr.getRemoteUpdates().forEach(x -> LOGGER.info("remote update     - {}", x));
-                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("tracking update   - {}", x));
+                LOGGER.info("+ push result  : {}", pr.getMessages());
+                pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ remote update     - {}", x));
+                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ tracking update   - {}", x));
             });
         }
     }

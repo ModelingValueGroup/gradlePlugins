@@ -36,10 +36,10 @@ public class EolCorrector extends CorrectorBase {
         textFiles = ext.getTextFiles();
         noTextFiles = ext.getNoTextFiles();
         if (LOGGER.isTraceEnabled()) {
-            textExtensions/*  */.forEach(x -> LOGGER.trace("# eols   textExtensions  : " + x));
-            noTextExtensions/**/.forEach(x -> LOGGER.trace("# eols   noTextExtensions: " + x));
-            textFiles/*       */.forEach(x -> LOGGER.trace("# eols   textFiles       : " + x));
-            noTextFiles/*     */.forEach(x -> LOGGER.trace("# eols   noTextFiles     : " + x));
+            textExtensions/*  */.forEach(x -> LOGGER.trace("++ # eols   textExtensions  : " + x));
+            noTextExtensions/**/.forEach(x -> LOGGER.trace("++ # eols   noTextExtensions: " + x));
+            textFiles/*       */.forEach(x -> LOGGER.trace("++ # eols   textFiles       : " + x));
+            noTextFiles/*     */.forEach(x -> LOGGER.trace("++ # eols   noTextFiles     : " + x));
         }
     }
 
@@ -79,7 +79,7 @@ public class EolCorrector extends CorrectorBase {
         if (noTextExtensions.contains(ext.get())) {
             return false;
         }
-        LOGGER.info("unknown file type (not correcting EOLs): {}", f);
+        LOGGER.info("+ unknown file type (not correcting EOLs): {}", f);
         return false;
     }
 

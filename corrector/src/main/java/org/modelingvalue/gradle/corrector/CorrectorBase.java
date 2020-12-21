@@ -40,8 +40,8 @@ public abstract class CorrectorBase {
         this.root = root;
         this.excludes = excludes;
         if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("========================================");
-            excludes.forEach(x -> LOGGER.trace("# " + name + " excludes        : " + x));
+            LOGGER.trace("++ ========================================");
+            excludes.forEach(x -> LOGGER.trace("++ # " + name + " excludes        : " + x));
         }
     }
 
@@ -79,7 +79,7 @@ public abstract class CorrectorBase {
                 }
                 if (!req.equals(was)) {
                     LOGGER.info("+ {} regenerated : {}", name, file);
-                    LOGGER.trace("====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
+                    LOGGER.trace("++ ====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
                     Files.write(file, lines);
                     changedFiles.add(file);
                 } else {

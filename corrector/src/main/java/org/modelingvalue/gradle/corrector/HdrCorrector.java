@@ -39,8 +39,8 @@ public class HdrCorrector extends CorrectorBase {
         URL headerUrl = ext.getHeaderUrl();
         headerLines = Util.downloadAndSubstitute(getVarMapping(), headerUrl);
         if (LOGGER.isTraceEnabled()) {
-            extensions.forEach((e, p) -> LOGGER.trace("# header extensions      : " + e + " (" + p + ")"));
-            LOGGER.trace("# header                 : {}", headerUrl);
+            extensions.forEach((e, p) -> LOGGER.trace("++ # header extensions      : " + e + " (" + p + ")"));
+            LOGGER.trace("++ # header                 : {}", headerUrl);
         }
     }
 
