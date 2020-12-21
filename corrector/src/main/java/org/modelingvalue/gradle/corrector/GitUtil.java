@@ -70,7 +70,7 @@ public class GitUtil {
     public static void tag(Path root, String tag) {
         calcWithGit(root, git -> {
             doTag(git, tag);
-            doPush(git);
+            doPushTags(git);
             return null;
         });
     }
@@ -78,7 +78,7 @@ public class GitUtil {
     public static void untag(Path root, String... tags) {
         calcWithGit(root, git -> {
             doDeleteTag(git, tags);
-            doPush(git);
+            doPushTags(git);
             return null;
         });
     }
@@ -160,6 +160,22 @@ public class GitUtil {
     }
 
     private static void doPush(Git git) throws GitAPIException {
+        LOGGER.info("{}push", DRY_RUN ? "[dry] " : "");
+        Iterable<PushResult> result = git.push()
+                .setDryRun(DRY_RUN)
+                .setCredentialsProvider(CREDENTIALS_PROV)
+                .setProgressMonitor(PROGRESS_MONITOR)
+                .call();
+        if (LOGGER.isInfoEnabled()) {
+            result.forEach(pr -> {
+                LOGGER.info("push result  : {}", pr.getMessages());
+                pr.getRemoteUpdates().forEach(x -> LOGGER.info("remote update     - {}", x));
+                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("tracking update   - {}", x));
+            });
+        }
+    }
+
+    private static void doPushTags(Git git) throws GitAPIException {
         LOGGER.info("{}push", DRY_RUN ? "[dry] " : "");
         Iterable<PushResult> result = git.push()
                 .setPushTags()
