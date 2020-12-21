@@ -52,6 +52,7 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
                 .filter(t -> !t.getName().matches("(?i)clean"))
                 .filter(t -> !("" + t.getGroup()).matches("(?i)(build setup|help)"))
                 .filter(t -> t != task)
+                .peek(t -> LOGGER.info("+ adding task dependency: {} dependsOn {}", t.getName(), task.getName()))
                 .forEach(t -> t.dependsOn(task));
     }
 
