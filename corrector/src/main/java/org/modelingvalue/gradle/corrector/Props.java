@@ -14,12 +14,12 @@ public class Props {
 
     public Props(Path f) {
         if (!Files.isReadable(f)) {
-            throw new GradleException("properties file not found: " + f);
+            throw new GradleException("properties file not found: " + f.toAbsolutePath());
         }
         try {
             lines = Files.readAllLines(f);
         } catch (IOException e) {
-            throw new GradleException("properties file could not be read: " + f, e);
+            throw new GradleException("properties file could not be read: " + f.toAbsolutePath(), e);
         }
     }
 

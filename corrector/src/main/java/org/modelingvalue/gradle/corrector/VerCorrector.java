@@ -35,7 +35,7 @@ public class VerCorrector extends CorrectorBase {
     public VerCorrector(CorrectorExtension ext) {
         super("vers  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
         project = ext.getProject();
-        propFile = ext.getFileWithVersion();
+        propFile = ext.getPropFileWithVersion();
         propName = ext.getVersionName();
         projectVersion = ext.getProjectVersion();
         absPropFile = getAbsPropFile(propFile);
@@ -50,41 +50,43 @@ public class VerCorrector extends CorrectorBase {
     }
 
     public VerCorrector generate() {
-        if (propFile != null) {
+        if (propFile == null) {
+            LOGGER.info("+ can not find a a proper version: no properties file specified");
+        } else {
             Props  props      = new Props(propFile);
             String oldVersion = props.getProp(propName, "0.0.1");
             String newVersion = findVacantVersion(oldVersion);
             if (!oldVersion.equals(newVersion)) {
-                props.setProp(propName, propName + "=" + newVersion);
+                props.setProp(propName, newVersion);
                 overwrite(absPropFile, props.getLines());
-                Info.LOGGER.info("+ version updated from " + oldVersion + " to " + newVersion);
             }
             project.getAllprojects().forEach(p -> {
                 if (p.getVersion().equals(oldVersion)) {
-                    LOGGER.info("version of project '{}' adjusted to {}", p.getName(), newVersion);
+                    LOGGER.info("+ version of project '{}' adjusted to from {} to {}", p.getName(), oldVersion, newVersion);
                     p.setVersion(newVersion);
                 } else {
-                    LOGGER.info("version of project '{}' NOT adjusted to {}, because it is not {} but {}", p.getName(), newVersion, oldVersion, p.getVersion());
+                    LOGGER.info("+ version of project '{}' NOT adjusted to {}, because it is not {} but {}", p.getName(), newVersion, oldVersion, p.getVersion());
                 }
             });
         }
         return this;
     }
 
-    private String findVacantVersion(String v) {
+    private String findVacantVersion(String oldVersion) {
         List<String> tags           = GitUtil.getAllTags(getRoot());
         String       versionPattern = "\\d\\d*[.]\\d\\d*[.]\\d\\d*";
-        if (!v.matches(versionPattern)) {
-            throw new GradleException("the current version '" + v + "' does not match the version pattern '" + versionPattern + "'");
+        if (!oldVersion.matches(versionPattern)) {
+            throw new GradleException("the current version '" + oldVersion + "' does not match the version pattern '" + versionPattern + "'");
         }
         Set<String> versionTags  = tags.stream().filter(t -> t.matches("^[vV]" + versionPattern + "$")).collect(Collectors.toSet());
-        String[]    versionParts = v.split("[.]");
-        while (versionTags.contains("v" + v)) {
+        String[]    versionParts = oldVersion.split("[.]");
+        String      newVersion   = oldVersion;
+        while (versionTags.contains("v" + newVersion)) {
             versionParts[versionParts.length - 1] = Integer.toString(Integer.parseInt(versionParts[versionParts.length - 1]) + 1);
-            v = String.join(".", versionParts);
-            Info.LOGGER.trace("+ ...trying next version: {}", v);
+            newVersion = String.join(".", versionParts);
+            Info.LOGGER.trace("+ ...trying next version: {}", newVersion);
         }
-        Info.LOGGER.info("+ found vacant version version: {}", v);
-        return v;
+        Info.LOGGER.info("+ found vacant version: {} (was {})", newVersion, oldVersion);
+        return newVersion;
     }
 }

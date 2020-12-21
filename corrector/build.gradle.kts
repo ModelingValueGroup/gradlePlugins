@@ -28,7 +28,7 @@ val corrector_displayname: String by project
 plugins {
     `java-gradle-plugin`
     id("com.gradle.plugin-publish") version "0.12.0"
-    //id("com.dorongold.task-tree") version "1.5"
+    id("org.modelingvalue.gradle.corrector")
 }
 
 repositories {

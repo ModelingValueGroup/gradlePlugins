@@ -19,7 +19,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.gradle.internal.impldep.org.junit.Assert.assertEquals;
 import static org.gradle.internal.impldep.org.junit.Assert.assertFalse;
 import static org.gradle.internal.impldep.org.junit.Assert.assertNotNull;
-import static org.gradle.internal.impldep.org.junit.Assert.assertThrows;
 import static org.gradle.internal.impldep.org.junit.Assert.assertTrue;
 import static org.modelingvalue.gradle.corrector.Util.numOccurences;
 
@@ -30,6 +29,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Scanner;
@@ -38,15 +38,15 @@ import java.util.function.Function;
 import org.gradle.api.Project;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.gradle.testkit.runner.GradleRunner;
-import org.gradle.testkit.runner.UnexpectedBuildFailure;
 import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.corrector.GitUtil;
 import org.modelingvalue.gradle.corrector.Info;
 import org.modelingvalue.gradle.corrector.MvgCorrectorPlugin;
 
 public class MvgCorrectorTest {
     private static final String PLUGIN_PACKAGE_NAME = MvgCorrectorPlugin.class.getPackageName();
     private static final String PLUGIN_CLASS_NAME   = MvgCorrectorPlugin.class.getName();
-    private static final Path   testWorkspaceDir    = Paths.get("build").resolve("testWorkspace");
+    private static final Path   testWorkspaceDir    = Paths.get("build").resolve("testWorkspace").toAbsolutePath();
     private static final Path   settingsFile        = Paths.get("settings.gradle");
     private static final Path   buildFile           = Paths.get("build.gradle.kts");
     private static final Path   gradlePropsFile     = Paths.get("gradle.properties");
@@ -87,31 +87,42 @@ public class MvgCorrectorTest {
         cp(s -> s.replaceAll("\n", "\r"), prop1File);
         cp(s -> s.replaceAll("\n", "\n\r"), pruup2File);
 
+        // prepare git tags:
+        GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
+        GitUtil.tag(testWorkspaceDir, "v0.0.1");
+        GitUtil.tag(testWorkspaceDir, "v0.0.2");
+        GitUtil.tag(testWorkspaceDir, "v0.0.3");
+
         // Run the build
         StringWriter outWriter = new StringWriter();
         StringWriter errWriter = new StringWriter();
-        assertThrows(UnexpectedBuildFailure.class, () -> GradleRunner.create()
+        GradleRunner.create()
                 .forwardStdOutput(outWriter)
                 .forwardStdError(errWriter)
                 .withPluginClasspath()
                 .withProjectDir(testWorkspaceDir.toFile())
-                .withArguments("--info", Info.CORRECTOR_TASK_NAME, "compileJava", Info.TAG_TASK_NAME)
-                .build());
+                .withArguments("--info", "--stacktrace", Info.CORRECTOR_TASK_NAME, "compileJava", Info.TAG_TASK_NAME)
+                .build();
         String out = outWriter.toString();
         String err = errWriter.toString();
 
-        System.out.println("================================== out ====================================");
-        System.out.println(out);
-        System.out.println("================================== err ====================================");
-        System.out.println(err);
-        System.out.println("===========================================================================");
+        System.out.println("/================================= out ====================================");
+        Arrays.stream(out.split("\n")).forEach(l -> System.out.println("| " + l));
+        System.out.println("+================================= err ====================================");
+        Arrays.stream(err.split("\n")).forEach(l -> System.out.println("| " + l));
+        System.out.println("\\==========================================================================");
+
+        GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
 
         // Verify the result
         assertEquals(3, numOccurences("+ header regenerated : ", out));
         assertEquals(2, numOccurences("+ eols   regenerated : ", out));
         assertEquals(4, numOccurences("+ eols   untouched   : ", out));
-        assertEquals(1, numOccurences("abandoned build run", err));
-        assertEquals(1, numOccurences("+ version updated from 0.0.1 to 0.0.3", out));
+        assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out));
+        assertEquals(1, numOccurences("+ version of project 'testWorkspace' adjusted to from 0.0.1 to 0.0.4", out));
+
+        assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r"));
 
         assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r"));

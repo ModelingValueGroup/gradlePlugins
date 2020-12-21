@@ -20,6 +20,7 @@ import static org.modelingvalue.gradle.corrector.Info.LOGGER;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -69,6 +70,14 @@ public class GitUtil {
     public static void tag(Path root, String tag) {
         calcWithGit(root, git -> {
             doTag(git, tag);
+            doPush(git);
+            return null;
+        });
+    }
+
+    public static void untag(Path root, String... tags) {
+        calcWithGit(root, git -> {
+            doDeleteTag(git, tags);
             doPush(git);
             return null;
         });
@@ -140,6 +149,14 @@ public class GitUtil {
                 .setForceUpdate(true)
                 .call();
         LOGGER.info("added tag '{}', id={}", tag, ref.getObjectId());
+    }
+
+    private static void doDeleteTag(Git git, String... tags) throws GitAPIException {
+        LOGGER.info("delete tags: {}", Arrays.asList(tags));
+        List<String> l = git.tagDelete()
+                .setTags(tags)
+                .call();
+        LOGGER.info("deleted tags {}", l);
     }
 
     private static void doPush(Git git) throws GitAPIException {

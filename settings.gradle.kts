@@ -21,5 +21,19 @@ pluginManagement {
     val PUBLISHED_VERSION: String by settings
     plugins {
         id("org.modelingvalue.gradle.corrector") version PUBLISHED_VERSION
+        id("com.gradle.enterprise") version ("3.5")
+    }
+}
+
+plugins {
+    //id("org.modelingvalue.gradle.corrector")
+    id("com.gradle.enterprise")
+}
+
+gradleEnterprise {
+    buildScan {
+        termsOfServiceUrl = "https://gradle.com/terms-of-service"
+        termsOfServiceAgree = "yes"
+        publishAlways()
     }
 }
