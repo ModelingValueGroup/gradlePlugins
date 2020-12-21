@@ -5,5 +5,4 @@ plugins {
 }
 <myExtension> {
     addTextFileExtension("pruuperties")
-    gitPush = true
 }

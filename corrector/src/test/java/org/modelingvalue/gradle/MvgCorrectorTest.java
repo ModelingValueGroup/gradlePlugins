@@ -50,9 +50,9 @@ public class MvgCorrectorTest {
     private static final Path   settingsFile        = Paths.get("settings.gradle");
     private static final Path   buildFile           = Paths.get("build.gradle.kts");
     private static final Path   gradlePropsFile     = Paths.get("gradle.properties");
-    private static final Path javaFile  = Paths.get("main", "java", "A.java");
-    private static final Path propFile  = Paths.get("main", "java", "testCR.properties");
-    private static final Path pruupFile = Paths.get("main", "java", "testCRLF.pruuperties");
+    private static final Path   javaFile            = Paths.get("main", "java", "A.java");
+    private static final Path   propFile            = Paths.get("main", "java", "testCR.properties");
+    private static final Path   pruupFile           = Paths.get("main", "java", "testCRLF.pruuperties");
 
     @Test
     public void checkId() throws IOException {
@@ -78,9 +78,6 @@ public class MvgCorrectorTest {
 
     @Test
     public void checkFunctionality() throws IOException {
-        System.setProperty("CI", "true");
-        System.setProperty("ALLREP_TOKEN", "DRY");
-
         // Setup the test build
         cp(null, settingsFile, javaFile, gradlePropsFile);
         cp(s -> s.replaceAll("<my-package>", PLUGIN_PACKAGE_NAME).replaceAll("<myExtension>", Info.CORRECTOR_TASK_NAME), buildFile);

@@ -30,17 +30,15 @@ import java.util.stream.Stream;
 
 @SuppressWarnings({"WeakerAccess"})
 public abstract class CorrectorBase {
-    private final        String      name;
-    private final        Path        root;
-    private final        Set<String> excludes;
-    private final        boolean     dry;
-    private final        Set<Path>   changedFiles = new HashSet<>();
+    private final String      name;
+    private final Path        root;
+    private final Set<String> excludes;
+    private final Set<Path>   changedFiles = new HashSet<>();
 
-    public CorrectorBase(String name, Path root, Set<String> excludes, boolean dry) {
+    public CorrectorBase(String name, Path root, Set<String> excludes) {
         this.name = name;
         this.root = root;
         this.excludes = excludes;
-        this.dry = dry;
         if (LOGGER.isTraceEnabled()) {
             LOGGER.trace("========================================");
             excludes.forEach(x -> LOGGER.trace("# " + name + " excludes        : " + x));
@@ -71,10 +69,8 @@ public abstract class CorrectorBase {
         try {
             if (!Files.isRegularFile(file)) {
                 LOGGER.info("+ {} generated   : {}", name, file);
-                if (!dry) {
-                    Files.write(file, lines);
-                    changedFiles.add(file);
-                }
+                Files.write(file, lines);
+                changedFiles.add(file);
             } else {
                 String was = Files.readString(file);
                 String req = String.join("\n", lines);
@@ -84,10 +80,8 @@ public abstract class CorrectorBase {
                 if (!req.equals(was)) {
                     LOGGER.info("+ {} regenerated : {}", name, file);
                     LOGGER.trace("====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
-                    if (!dry) {
-                        Files.write(file, lines);
-                        changedFiles.add(file);
-                    }
+                    Files.write(file, lines);
+                    changedFiles.add(file);
                 } else {
                     LOGGER.info("+ {} untouched   : {}", name, file);
                 }

@@ -34,7 +34,7 @@ public class HdrCorrector extends CorrectorBase {
     private final Map<String, List<String>> ext2header = new HashMap<>();
 
     public HdrCorrector(CorrectorExtension ext) {
-        super("header", ext.getRoot(), ext.getHeaderFileExcludes(), ext.getDry());
+        super("header", ext.getRoot(), ext.getHeaderFileExcludes());
         extensions = ext.getHeaderFileExtensions();
         URL headerUrl = ext.getHeaderUrl();
         headerLines = Util.downloadAndSubstitute(getVarMapping(), headerUrl);

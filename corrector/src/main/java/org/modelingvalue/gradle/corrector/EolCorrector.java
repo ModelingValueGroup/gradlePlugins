@@ -30,7 +30,7 @@ public class EolCorrector extends CorrectorBase {
     private final        Set<String> noTextFiles;
 
     public EolCorrector(CorrectorExtension ext) {
-        super("eols  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
+        super("eols  ", ext.getRoot(), ext.getEolFileExcludes());
         textExtensions = ext.getTextFileExtensions();
         noTextExtensions = ext.getNoTextFileExtensions();
         textFiles = ext.getTextFiles();

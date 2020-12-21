@@ -34,8 +34,6 @@ public class CorrectorExtension {
 
     private final Project             project;
     private       URL                 headerUrl;
-    private       boolean             dry;
-    private       boolean             gitpush;
     private       Path                propFileWithVersion;
     private       String              versionName;
     private final Set<String>         textFiles;
@@ -144,22 +142,6 @@ public class CorrectorExtension {
 
     public URL getHeaderUrl() {
         return headerUrl;
-    }
-
-    public void setDry(boolean dry) {
-        this.dry = dry;
-    }
-
-    public boolean getDry() {
-        return dry;
-    }
-
-    public void setGitPush(boolean gitpush) {
-        this.gitpush = gitpush;
-    }
-
-    public boolean getGitPush() {
-        return gitpush;
     }
 
     public void addTextFile(String pattern) {

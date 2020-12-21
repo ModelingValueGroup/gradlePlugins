@@ -33,7 +33,7 @@ public class VerCorrector extends CorrectorBase {
     private final Path    absPropFile;
 
     public VerCorrector(CorrectorExtension ext) {
-        super("vers  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
+        super("vers  ", ext.getRoot(), ext.getEolFileExcludes());
         project = ext.getProject();
         propFile = ext.getPropFileWithVersion();
         propName = ext.getVersionName();

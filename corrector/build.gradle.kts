@@ -37,6 +37,9 @@ repositories {
 
 tasks.test {
     useJUnitPlatform()
+
+    systemProperty("CI", "true")
+    systemProperty("ALLREP_TOKEN", "DRY")
 }
 
 dependencies {
