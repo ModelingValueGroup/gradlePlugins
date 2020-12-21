@@ -68,3 +68,7 @@ pluginBundle {
         }
     }
 }
+mvgCorrector {
+    addTextFileExtension("pruuperties")
+    addHeaderFileExclude("corrector/src/test/resources/.*")
+}

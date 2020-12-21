@@ -99,6 +99,7 @@ public class CorrectorExtension {
                 "kt", "//",
                 "kts", "//",
                 "gradle", "//",
+                "properties", "##",
                 "sh", "##",
                 "yaml", "##",
                 "yml", "##"

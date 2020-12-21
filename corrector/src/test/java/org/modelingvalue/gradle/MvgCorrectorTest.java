@@ -50,9 +50,9 @@ public class MvgCorrectorTest {
     private static final Path   settingsFile        = Paths.get("settings.gradle");
     private static final Path   buildFile           = Paths.get("build.gradle.kts");
     private static final Path   gradlePropsFile     = Paths.get("gradle.properties");
-    private static final Path   javaFile            = Paths.get("main", "java", "A.java");
-    private static final Path   prop1File           = Paths.get("main", "java", "testCR.properties");
-    private static final Path   pruup2File          = Paths.get("main", "java", "testCRLF.pruuperties");
+    private static final Path javaFile  = Paths.get("main", "java", "A.java");
+    private static final Path propFile  = Paths.get("main", "java", "testCR.properties");
+    private static final Path pruupFile = Paths.get("main", "java", "testCRLF.pruuperties");
 
     @Test
     public void checkId() throws IOException {
@@ -84,14 +84,20 @@ public class MvgCorrectorTest {
         // Setup the test build
         cp(null, settingsFile, javaFile, gradlePropsFile);
         cp(s -> s.replaceAll("<my-package>", PLUGIN_PACKAGE_NAME).replaceAll("<myExtension>", Info.CORRECTOR_TASK_NAME), buildFile);
-        cp(s -> s.replaceAll("\n", "\r"), prop1File);
-        cp(s -> s.replaceAll("\n", "\n\r"), pruup2File);
+        cp(s -> s.replaceAll("\n", "\r"), propFile);
+        cp(s -> s.replaceAll("\n", "\n\r"), pruupFile);
 
         // prepare git tags:
         GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
         GitUtil.tag(testWorkspaceDir, "v0.0.1");
         GitUtil.tag(testWorkspaceDir, "v0.0.2");
         GitUtil.tag(testWorkspaceDir, "v0.0.3");
+
+        assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright"));
 
         // Run the build
         StringWriter outWriter = new StringWriter();
@@ -115,29 +121,25 @@ public class MvgCorrectorTest {
         GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
 
         // Verify the result
-        assertEquals(3, numOccurences("+ header regenerated : ", out));
+        assertEquals(5, numOccurences("+ header regenerated : ", out));
         assertEquals(2, numOccurences("+ eols   regenerated : ", out));
         assertEquals(4, numOccurences("+ eols   untouched   : ", out));
         assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out));
         assertEquals(1, numOccurences("+ version of project 'testWorkspace' adjusted to from 0.0.1 to 0.0.4", out));
 
         assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r"));
-
         assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r"));
-
         assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r"));
-
         assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright"));
+        assertTrue(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright"));
+
+        assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r"));
-
-        assertFalse(Files.readString(testWorkspaceDir.resolve(prop1File)).contains("Copyright"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(prop1File)).contains("\r"));
-
-        assertFalse(Files.readString(testWorkspaceDir.resolve(pruup2File)).contains("Copyright"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(pruup2File)).contains("\r"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("\r"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("\r"));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

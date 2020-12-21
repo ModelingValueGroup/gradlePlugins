@@ -52,15 +52,17 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
                 .filter(t -> !t.getName().matches("(?i)clean"))
                 .filter(t -> !("" + t.getGroup()).matches("(?i)(build setup|help)"))
                 .filter(t -> t != task)
-                .peek(t -> LOGGER.info("+ adding task dependency: {} dependsOn {}", t.getName(), task.getName()))
+                .peek(t -> LOGGER.info("+ adding task dependency on {}: {}", task.getName(), t.getName()))
                 .forEach(t -> t.dependsOn(task));
     }
 
     private void correctorTaskLogic(Project project, CorrectorExtension extension) throws IOException {
+        LOGGER.info("+ running corrector on project {}, dir={}", project.getName(), project.getRootDir());
+
         Set<Path> changes = new HashSet<>();
 
-        changes.addAll(new HdrCorrector(extension).generate().getChangedFiles());
         changes.addAll(new EolCorrector(extension).generate().getChangedFiles());
+        changes.addAll(new HdrCorrector(extension).generate().getChangedFiles());
         changes.addAll(new VerCorrector(extension).generate().getChangedFiles());
 
         LOGGER.info("changed {} files (CI={}, have-token={})", changes.size(), Info.CI, Info.ALLREP_TOKEN != null);
