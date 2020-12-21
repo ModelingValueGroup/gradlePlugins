@@ -11,7 +11,8 @@ jobs:
     env:
       GITHUB_TOKEN: "${{secrets.GITHUB_TOKEN}}"
       ALLREP_TOKEN: "${{secrets.ALLREP_TOKEN}}"
-      TOKEN: "${{secrets.ALLREP_TOKEN}}"
+      GRADLE_KEY: "${{secrets.GRADLE_KEY}}"
+      GRADLE_SECRET: "${{secrets.GRADLE_SECRET}}"
       CI: "true"
 
     steps:
@@ -24,13 +25,10 @@ jobs:
           java-version: 11
 
       ################################################################################
-      - name: "publish gradle plugin"
-        run: |
-          ./gradlew \
-              --info \
-              -Pgradle.publish.key=${{secrets.GRADLE_KEY}} \
-              -Pgradle.publish.secret=${{secrets.GRADLE_SECRET}} \
-              mvgCorrector \
-              publishPlugins \
-              mvgTagger
+      - name: "build gradle plugin"
+        run: ./gradlew --info mvgCorrector build
+
+      - name: "if master: publish gradle plugin"
+        if: github.ref == 'refs/heads/master'
+        run: ./gradlew --info -Pgradle.publish.key=$GRADLE_KEY -Pgradle.publish.secret=$GRADLE_SECRET publishPlugins mvgTagger
 
