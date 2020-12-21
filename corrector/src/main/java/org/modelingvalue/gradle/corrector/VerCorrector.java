@@ -17,21 +17,29 @@ package org.modelingvalue.gradle.corrector;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.Project;
 
 public class VerCorrector extends CorrectorBase {
-    private final Path   propFile;
-    private final String propName;
-    private final String projectVersion;
-    private final Path   absPropFile;
+    private final Project project;
+    private final Path    propFile;
+    private final String  propName;
+    private final String  projectVersion;
+    private final Path    absPropFile;
+
+    public VerCorrector(CorrectorExtension ext) {
+        super("vers  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
+        project = ext.getProject();
+        propFile = ext.getFileWithVersion();
+        propName = ext.getVersionName();
+        projectVersion = ext.getProjectVersion();
+        absPropFile = getAbsPropFile(propFile);
+    }
 
     private Path getAbsPropFile(Path propFile) {
         Path f = propFile;
@@ -41,50 +49,26 @@ public class VerCorrector extends CorrectorBase {
         return f;
     }
 
-    public VerCorrector(CorrectorExtension ext) {
-        super("vers  ", ext.getRoot(), ext.getEolFileExcludes(), ext.getDry());
-        propFile = ext.getFileWithVersion();
-        propName = ext.getVersionName();
-        projectVersion = ext.getProjectVersion();
-        absPropFile = getAbsPropFile(propFile);
-    }
-
-    public VerCorrector generate() throws IOException {
+    public VerCorrector generate() {
         if (propFile != null) {
-            List<String> lines      = getPropertyLines(absPropFile);
-            int          index      = getPropertyIndex(lines);
-            String       oldVersion = getPropValue(lines, index);
-            String       newVersion = findVacantVersion(oldVersion);
+            Props  props      = new Props(propFile);
+            String oldVersion = props.getProp(propName, "0.0.1");
+            String newVersion = findVacantVersion(oldVersion);
             if (!oldVersion.equals(newVersion)) {
-                lines.set(index, propName + "=" + newVersion);
-                overwrite(absPropFile, lines);
+                props.setProp(propName, propName + "=" + newVersion);
+                overwrite(absPropFile, props.getLines());
                 Info.LOGGER.info("+ version updated from " + oldVersion + " to " + newVersion);
             }
-            if (!projectVersion.equals(oldVersion)) {
-                LOGGER.error("the project's version '{}' is different from the version from the properties file '{}'", projectVersion, oldVersion);
-            }
+            project.getAllprojects().forEach(p -> {
+                if (p.getVersion().equals(oldVersion)) {
+                    LOGGER.info("version of project '{}' adjusted to {}", p.getName(), newVersion);
+                    p.setVersion(newVersion);
+                } else {
+                    LOGGER.info("version of project '{}' NOT adjusted to {}, because it is not {} but {}", p.getName(), newVersion, oldVersion, p.getVersion());
+                }
+            });
         }
         return this;
-    }
-
-    private List<String> getPropertyLines(Path f) throws IOException {
-        if (!Files.isReadable(f)) {
-            throw new GradleException("properties file with version not found: " + f);
-        }
-        return Files.readAllLines(f);
-    }
-
-    private int getPropertyIndex(List<String> lines) {
-        for (int i = 0; i < lines.size(); i++) {
-            if (lines.get(i).matches("^" + Pattern.quote(propName) + "=.*")) {
-                return i;
-            }
-        }
-        throw new GradleException("property '" + propName + "' not found in: " + absPropFile);
-    }
-
-    private String getPropValue(List<String> lines, int index) {
-        return lines.get(index).replaceAll("[^=]*=", "");
     }
 
     private String findVacantVersion(String v) {

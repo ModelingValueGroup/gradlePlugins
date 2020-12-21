@@ -117,6 +117,10 @@ public class CorrectorExtension {
         this.project = project;
     }
 
+    public Project getProject() {
+        return project;
+    }
+
     public Path getRoot() {
         return project.getRootDir().toPath();
     }
