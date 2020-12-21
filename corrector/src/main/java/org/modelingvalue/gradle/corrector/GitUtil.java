@@ -48,7 +48,7 @@ public class GitUtil {
     private final static boolean             DRY_RUN          = "DRY".equals(ALLREP_TOKEN);
 
     static {
-        LOGGER.info("+ GitUtil: DRY_RUN={}", DRY_RUN);
+        LOGGER.info("+ GitUtil: DRY_RUN={} ALLREP_TOKEN={}", DRY_RUN, ALLREP_TOKEN);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

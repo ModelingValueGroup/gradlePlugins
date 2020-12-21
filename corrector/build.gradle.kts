@@ -40,6 +40,7 @@ tasks.test {
 
     systemProperty("CI", "true")
     systemProperty("ALLREP_TOKEN", "DRY")
+    testLogging.showStandardStreams = true
 }
 
 dependencies {
