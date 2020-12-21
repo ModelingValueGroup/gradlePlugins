@@ -15,6 +15,8 @@
 
 val VERSION: String by project
 val GROUP: String by project
+val COMPANY: String by project
+val ARTIFACT: String by project
 
 group = GROUP
 version = VERSION
@@ -64,7 +66,7 @@ gradlePlugin {
 
 pluginBundle {
     website = "http://www.modelingvalue.org/"
-    vcsUrl = "https://github.com/ModelingValueGroup/gradlePlugins"
+    vcsUrl = "https://github.com/$COMPANY/$ARTIFACT"
     description = "MVG gradle plugins"
     (plugins) {
         corrector_name {
