@@ -26,7 +26,6 @@ pluginManagement {
 }
 
 plugins {
-    //id("org.modelingvalue.gradle.corrector")
     id("com.gradle.enterprise")
 }
 
