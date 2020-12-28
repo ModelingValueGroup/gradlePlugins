@@ -36,6 +36,8 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
 
         TagExtension ext2 = TagExtension.make(project, TAG_TASK_NAME);
         project.getTasks().register(TAG_TASK_NAME, task -> tagTaskSetup(project, task, ext2));
+
+        new DependencySubstitutor(project).attach();
     }
 
     private void correctorTaskSetup(Project project, Task task, CorrectorExtension extension) {

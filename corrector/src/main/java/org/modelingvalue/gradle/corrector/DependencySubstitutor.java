@@ -6,19 +6,28 @@ import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.logging.Logger;
 
-public class DepSubst {
+public class DependencySubstitutor {
     public static final Logger LOGGER              = Info.LOGGER;
     public static final String BRANCH_INDICATOR    = "-BRANCH";
-    public static final String SNAPSHOT_POST       = "-+";//"-SNAPSHOT";
+    public static final String SNAPSHOT_POST       = "-SNAPSHOT";
     public static final String SNAPSHOTS_GROUP_PRE = "snapshots.";
     public static final String REASON              = "making use of Branch Based Building";
+
+    public static String replaceOrNull(Project project, String gav) {
+        return new DependencySubstitutor(project).substitute(gav);
+    }
+
+    public static String replace(Project project, String gav) {
+        String gavNew = replaceOrNull(project, gav);
+        return gavNew == null ? gav : gavNew;
+    }
 
     private final Project project;
     private final boolean isCi;
     private final boolean isMasterBranch;
     private final String  bbbVersion;
 
-    public DepSubst(Project project) {
+    public DependencySubstitutor(Project project) {
         this.project = project;
         isCi = Info.CI;
         isMasterBranch = Info.isMasterBranch(project);
@@ -36,11 +45,22 @@ public class DepSubst {
                         })));
     }
 
+    public String substitute(String gav) {
+        String[] parts = gav.split(":");
+        return parts.length != 3 ? null : substitute(parts[0], parts[1], parts[2]);
+    }
+
+    public String substitute(String g, String a, String v) {
+        return !v.endsWith(BRANCH_INDICATOR) ? null : makeBbbGroup(g) + ":" + makeBbbArtifact(a) + ":" + makeBbbVersion(v);
+    }
+
     private void checkReplacement(DependencySubstitution depSub, ModuleComponentSelector component) {
-        if (component.getVersion().endsWith(BRANCH_INDICATOR)) {
-            String replacement = makeBbbGroup(component.getGroup()) + ":" + makeBbbArtifact(component.getModule()) + ":" + makeBbbVersion(component.getVersion());
+        String replacement = substitute(component.getGroup(), component.getModule(), component.getVersion());
+        if (replacement != null) {
             depSub.useTarget(replacement, REASON);
-            LOGGER.info("+ replaced dependency [" + component + " => " + replacement + "]");
+            LOGGER.info("+ dependency     replaced: " + component + " => " + replacement);
+        } else {
+            LOGGER.info("+ dependency NOT replaced: " + component);
         }
     }
 
