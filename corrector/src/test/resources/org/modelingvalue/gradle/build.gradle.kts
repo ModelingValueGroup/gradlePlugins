@@ -1,5 +1,7 @@
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 
+val TOKEN: String = System.getenv("TOKEN") ?: "DRY"
+
 project.version = "0.0.1"
 plugins {
     java
@@ -15,4 +17,11 @@ dependencies {
 repositories {
     mavenCentral()
     mavenLocal()
+    maven {
+        url = uri("https://maven.pkg.github.com/ModelingValueGroup/packages")
+        credentials {
+            username = "" // can be anything but plugin requires it
+            password = TOKEN
+        }
+    }
 }
