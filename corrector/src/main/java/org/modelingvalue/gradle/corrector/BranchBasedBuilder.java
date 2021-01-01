@@ -19,6 +19,7 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.DependencySubstitution;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
+import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
 
 public class DependencySubstitutor {
@@ -28,36 +29,42 @@ public class DependencySubstitutor {
     public static final String SNAPSHOTS_GROUP_PRE = "snapshots.";
     public static final String REASON              = "making use of Branch Based Building";
 
-    public static String replaceOrNull(Project project, String gav) {
-        return new DependencySubstitutor(project).substitute(gav);
+    public static String replaceOrNull(Gradle gradle, String gav) {
+        return new DependencySubstitutor(gradle).substitute(gav);
     }
 
-    public static String replace(Project project, String gav) {
-        String gavNew = replaceOrNull(project, gav);
+    public static String replace(Gradle gradle, String gav) {
+        String gavNew = replaceOrNull(gradle, gav);
         return gavNew == null ? gav : gavNew;
     }
 
-    private final Project project;
+    private final Gradle  gradle;
     private final boolean isCi;
     private final boolean isMasterBranch;
     private final String  bbbVersion;
 
     public DependencySubstitutor(Project project) {
-        this.project = project;
+        this(project.getGradle());
+        attach();
+    }
+
+    public DependencySubstitutor(Gradle gradle) {
+        this.gradle = gradle;
         isCi = Info.CI;
-        isMasterBranch = Info.isMasterBranch(project);
-        bbbVersion = String.format("%08x", Info.getGithubRef(project).hashCode()) + SNAPSHOT_POST;
+        isMasterBranch = Info.isMasterBranch(gradle);
+        bbbVersion = String.format("%08x", Info.getGithubRef(gradle).hashCode()) + SNAPSHOT_POST;
     }
 
     public void attach() {
-        project.getConfigurations().all(conf ->
-                conf.resolutionStrategy(resolutionStrategy ->
-                        resolutionStrategy.getDependencySubstitution().all(depSub -> {
-                            ComponentSelector component = depSub.getRequested();
-                            if (component instanceof ModuleComponentSelector) {
-                                checkReplacement(depSub, (ModuleComponentSelector) component);
-                            }
-                        })));
+        gradle.allprojects(project ->
+                project.getConfigurations().all(conf ->
+                        conf.resolutionStrategy(resolutionStrategy ->
+                                resolutionStrategy.getDependencySubstitution().all(depSub -> {
+                                    ComponentSelector component = depSub.getRequested();
+                                    if (component instanceof ModuleComponentSelector) {
+                                        checkReplacement(depSub, (ModuleComponentSelector) component);
+                                    }
+                                }))));
     }
 
     public String substitute(String gav) {
