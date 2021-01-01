@@ -18,6 +18,8 @@ package org.modelingvalue.gradle.corrector;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,6 +30,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import org.gradle.api.GradleException;
 
 public class Util {
     public static URL getUrl(String url) {
@@ -90,5 +94,13 @@ public class Util {
             fromIndex++;
         }
         return count;
+    }
+
+    public static URI makeURL(String url) {
+        try {
+            return new URI(url);
+        } catch (URISyntaxException e) {
+            throw new GradleException("unexpected exception", e);
+        }
     }
 }

@@ -18,8 +18,8 @@ package org.modelingvalue.gradle.corrector;
 import org.gradle.api.Project;
 import org.gradle.internal.extensibility.DefaultConvention;
 
-public class TagExtension {
-    public static TagExtension make(Project project, String name) {
-        return ((DefaultConvention) project.getExtensions()).create(name, TagExtension.class);
+public class TaggerExtension {
+    public static TaggerExtension make(Project project, String name) {
+        return ((DefaultConvention) project.getExtensions()).create(name, TaggerExtension.class);
     }
 }

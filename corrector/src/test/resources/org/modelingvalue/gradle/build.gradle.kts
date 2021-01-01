@@ -1,13 +1,12 @@
-import org.gradle.api.artifacts.component.ModuleComponentSelector
-
 val ALLREP_TOKEN: String = System.getenv("ALLREP_TOKEN") ?: "DRY"
 
-project.version = "0.0.1"
+version = "0.0.1"
 plugins {
     java
-    id("<my-package>")
+    id("~my-package~")
+    `maven-publish`
 }
-<myExtension> {
+~myExtension~ {
     addTextFileExtension("pruuperties")
 }
 dependencies {
@@ -25,3 +24,25 @@ repositories {
         }
     }
 }
+gradleEnterprise {
+    buildScan {
+        termsOfServiceUrl = "https://gradle.com/terms-of-service"
+        termsOfServiceAgree = "yes"
+    }
+}
+//publishing {
+//    publications {
+//        create<MavenPublication>("lib") {
+//            from(components["java"])
+//        }
+//    }
+//    repositories {
+//        maven {
+//            url = uri("https://maven.pkg.github.com/ModelingValueGroup/packages")
+//            credentials {
+//                username = "" // can be anything but plugin requires it
+//                password = "INVALID-TOKEN"
+//            }
+//        }
+//    }
+//}

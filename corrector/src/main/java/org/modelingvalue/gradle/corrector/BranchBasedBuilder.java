@@ -15,22 +15,27 @@
 
 package org.modelingvalue.gradle.corrector;
 
+import java.net.URI;
+
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.DependencySubstitution;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
+import org.gradle.api.publish.PublishingExtension;
+import org.gradle.api.publish.maven.MavenPublication;
 
-public class DependencySubstitutor {
+public class BranchBasedBuilder {
     public static final Logger LOGGER              = Info.LOGGER;
     public static final String BRANCH_INDICATOR    = "-BRANCH";
     public static final String SNAPSHOT_POST       = "-SNAPSHOT";
     public static final String SNAPSHOTS_GROUP_PRE = "snapshots.";
-    public static final String REASON              = "making use of Branch Based Building";
+    public static final String REASON              = "using Branch Based Building";
 
     public static String replaceOrNull(Gradle gradle, String gav) {
-        return new DependencySubstitutor(gradle).substitute(gav);
+        return new BranchBasedBuilder(gradle).substitute(gav);
     }
 
     public static String replace(Gradle gradle, String gav) {
@@ -39,19 +44,54 @@ public class DependencySubstitutor {
     }
 
     private final Gradle  gradle;
-    private final boolean isCi;
-    private final boolean isMasterBranch;
+    private final boolean isCiMasterBranch;
     private final String  bbbVersion;
 
-    public DependencySubstitutor(Project project) {
+    public BranchBasedBuilder(Project project) {
         this(project.getGradle());
         attach();
+
+        if (!isCiMasterBranch) {
+            project.getGradle().afterProject(p -> {
+                LOGGER.info("+ running BranchBasedBuilder on project {}", p.getName());
+                PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
+                if (publishing != null) {
+                    publishing.getRepositories()
+                            .stream()
+                            .filter(x -> x instanceof MavenArtifactRepository)
+                            .map(x -> (MavenArtifactRepository) x)
+                            .forEach(mar -> {
+                                URI newUrl = makeBbbRepo(mar.getUrl());
+                                LOGGER.info("+ replaced maven publish URL '{}'  in repository {} by '{}'", mar.getUrl(), mar.getName(), newUrl);
+                                mar.setUrl(newUrl);
+                            });
+                    publishing.getPublications()
+                            .stream()
+                            .filter(x -> x instanceof MavenPublication)
+                            .map(x -> (MavenPublication) x)
+                            .forEach(mp -> {
+                                String newGroup    = makeBbbGroup(mp.getGroupId());
+                                String newArtifact = makeBbbArtifact(mp.getArtifactId());
+                                String newVersion  = makeBbbVersion(mp.getVersion());
+
+                                LOGGER.info("+ replaced group    '{}'  in publication {} by '{}'", mp.getGroupId(), mp.getName(), newGroup);
+                                LOGGER.info("+ replaced artifact '{}'  in publication {} by '{}'", mp.getArtifactId(), mp.getName(), newArtifact);
+                                LOGGER.info("+ replaced version  '{}'  in publication {} by '{}'", mp.getVersion(), mp.getName(), newVersion);
+
+                                mp.setGroupId(newGroup);
+                                mp.setArtifactId(newArtifact);
+                                mp.setVersion(newVersion);
+
+                            });
+                }
+            });
+        }
     }
 
-    public DependencySubstitutor(Gradle gradle) {
+    public BranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
-        isCi = Info.CI;
-        isMasterBranch = Info.isMasterBranch(gradle);
+        isCiMasterBranch = Info.CI && Info.isMasterBranch(gradle);
+
         bbbVersion = String.format("%08x", Info.getGithubRef(gradle).hashCode()) + SNAPSHOT_POST;
     }
 
@@ -86,15 +126,19 @@ public class DependencySubstitutor {
         }
     }
 
+    private URI makeBbbRepo(URI u) {
+        return isCiMasterBranch ? u : Util.makeURL(u.toString() + "-snapshots");
+    }
+
     private String makeBbbGroup(String g) {
-        return isCi && isMasterBranch ? g : SNAPSHOTS_GROUP_PRE + g;
+        return isCiMasterBranch ? g : SNAPSHOTS_GROUP_PRE + g;
     }
 
     private String makeBbbArtifact(String a) {
-        return a;
+        return isCiMasterBranch ? a : a;
     }
 
     private String makeBbbVersion(String v) {
-        return isCi && isMasterBranch ? v : bbbVersion;
+        return isCiMasterBranch ? v : bbbVersion;
     }
 }
