@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2020 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -18,6 +18,8 @@ package org.modelingvalue.gradle.corrector;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,6 +30,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import org.gradle.api.GradleException;
 
 public class Util {
     public static URL getUrl(String url) {
@@ -90,5 +94,13 @@ public class Util {
             fromIndex++;
         }
         return count;
+    }
+
+    public static URI makeURL(String url) {
+        try {
+            return new URI(url);
+        } catch (URISyntaxException e) {
+            throw new GradleException("unexpected exception", e);
+        }
     }
 }

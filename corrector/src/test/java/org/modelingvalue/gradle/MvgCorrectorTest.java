@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2020 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -46,13 +46,14 @@ import org.modelingvalue.gradle.corrector.MvgCorrectorPlugin;
 public class MvgCorrectorTest {
     private static final String PLUGIN_PACKAGE_NAME = MvgCorrectorPlugin.class.getPackageName();
     private static final String PLUGIN_CLASS_NAME   = MvgCorrectorPlugin.class.getName();
-    private static final Path   testWorkspaceDir    = Paths.get("build").resolve("testWorkspace").toAbsolutePath();
+    private static final Path   testWorkspaceDir    = Paths.get("build", "testWorkspace").toAbsolutePath();
     private static final Path   settingsFile        = Paths.get("settings.gradle");
     private static final Path   buildFile           = Paths.get("build.gradle.kts");
     private static final Path   gradlePropsFile     = Paths.get("gradle.properties");
-    private static final Path   javaFile            = Paths.get("main", "java", "A.java");
-    private static final Path   propFile            = Paths.get("main", "java", "testCR.properties");
-    private static final Path   pruupFile           = Paths.get("main", "java", "testCRLF.pruuperties");
+    private static final Path   headFile            = Paths.get(".git", "HEAD");
+    private static final Path   javaFile            = Paths.get("src", "main", "java", "A.java");
+    private static final Path   propFile            = Paths.get("src", "main", "java", "testCR.properties");
+    private static final Path   pruupFile           = Paths.get("src", "main", "java", "testCRLF.pruuperties");
 
     @Test
     public void checkId() throws IOException {
@@ -79,8 +80,8 @@ public class MvgCorrectorTest {
     @Test
     public void checkFunctionality() throws IOException {
         // Setup the test build
-        cp(null, settingsFile, javaFile, gradlePropsFile);
-        cp(s -> s.replaceAll("<my-package>", PLUGIN_PACKAGE_NAME).replaceAll("<myExtension>", Info.CORRECTOR_TASK_NAME), buildFile);
+        cp(null, settingsFile, javaFile, gradlePropsFile, headFile);
+        cp(s -> s.replaceAll("~my-package~", PLUGIN_PACKAGE_NAME).replaceAll("~myExtension~", Info.CORRECTOR_TASK_NAME), buildFile);
         cp(s -> s.replaceAll("\n", "\r"), propFile);
         cp(s -> s.replaceAll("\n", "\n\r"), pruupFile);
 
@@ -95,6 +96,7 @@ public class MvgCorrectorTest {
         assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright"));
 
         // Run the build
         StringWriter outWriter = new StringWriter();
@@ -104,7 +106,7 @@ public class MvgCorrectorTest {
                 .forwardStdError(errWriter)
                 .withPluginClasspath()
                 .withProjectDir(testWorkspaceDir.toFile())
-                .withArguments("--info", "--stacktrace", Info.CORRECTOR_TASK_NAME, "compileJava", Info.TAG_TASK_NAME)
+                .withArguments("--scan", "--info", "--stacktrace", "compileJava")
                 .build();
         String out = outWriter.toString();
         String err = errWriter.toString();
@@ -123,6 +125,8 @@ public class MvgCorrectorTest {
         assertEquals(4, numOccurences("+ eols   untouched   : ", out));
         assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out));
         assertEquals(1, numOccurences("+ version of project 'testWorkspace' adjusted to from 0.0.1 to 0.0.4", out));
+        assertEquals(1, numOccurences("+ dependency     replaced: ", out));
+        assertEquals(18, numOccurences("+ dependency NOT replaced: ", out));
 
         assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n"));
         assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright"));
@@ -130,6 +134,7 @@ public class MvgCorrectorTest {
         assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright"));
         assertTrue(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright"));
 
         assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r"));

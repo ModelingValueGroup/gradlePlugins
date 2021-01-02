@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2020 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -18,8 +18,8 @@ package org.modelingvalue.gradle.corrector;
 import org.gradle.api.Project;
 import org.gradle.internal.extensibility.DefaultConvention;
 
-public class TagExtension {
-    public static TagExtension make(Project project, String name) {
-        return ((DefaultConvention) project.getExtensions()).create(name, TagExtension.class);
+public class TaggerExtension {
+    public static TaggerExtension make(Project project, String name) {
+        return ((DefaultConvention) project.getExtensions()).create(name, TaggerExtension.class);
     }
 }
