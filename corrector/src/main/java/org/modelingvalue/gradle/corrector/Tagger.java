@@ -29,7 +29,7 @@ import org.gradle.api.tasks.TaskProvider;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 class Tagger {
-    private final Project project;
+    private final Project         project;
     private final TaggerExtension ext;
 
     public Tagger(Project project) {
@@ -38,10 +38,14 @@ class Tagger {
         TaskProvider<Task> tp = project.getTasks().register(TAG_TASK_NAME, this::setup);
 
         // let me depend on all publish tasks...
-        project.getTasks().stream()
-                .filter(t -> t.getName().matches(quote(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) + ".*"))
-                .peek(t -> LOGGER.info("+ adding task dependency: {} after {}", tp.getName(), t.getName()))
-                .forEach(t -> t.finalizedBy(tp));
+        project.getTasks().all(t -> {
+            LOGGER.info("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
+            if (t.getName().matches(quote(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) + ".*")) {
+                LOGGER.info("+ adding task dependency: {} after {}", tp.getName(), t.getName());
+                t.finalizedBy(tp);
+
+            }
+        });
     }
 
     private void setup(Task task) {

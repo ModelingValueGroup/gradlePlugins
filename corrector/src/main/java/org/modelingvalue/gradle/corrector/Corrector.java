@@ -43,14 +43,18 @@ class Corrector {
         TaskProvider<Task> tp = project.getTasks().register(CORRECTOR_TASK_NAME, this::setup);
 
         // let all tasks depend on me...
-        project.getTasks().stream()
-                .filter(t -> !t.getName().equals(tp.getName()))                                                           // ... not myself (duh)
-                .filter(t -> !t.getName().matches("(?i)" + quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*"))      // ... not the cleaning tasks
-                .filter(t -> !("" + t.getGroup()).matches("(?i)" + quote(HelpTasksPlugin.HELP_GROUP)))              // ... not the help group tasks
-                .filter(t -> !("" + t.getGroup()).matches("(?i)build setup"))                                       // ... not the build setup group tasks
-                .filter(t -> !("" + t.getGroup()).matches("(?i)gradle enterprise"))                                 // ... not the gradle enterprise group tasks
-                .peek(t -> LOGGER.info("+ adding task dependency: {} before {}", tp.getName(), t.getName()))
-                .forEach(t -> t.dependsOn(tp));
+        project.getTasks().all(t -> {
+            LOGGER.info("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
+            if (!t.getName().equals(tp.getName())                                                               // ... not myself (duh)
+                    && !t.getName().matches("(?i)" + quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*")   // ... not the cleaning tasks
+                    && !("" + t.getGroup()).matches("(?i)" + quote(HelpTasksPlugin.HELP_GROUP))           // ... not the help group tasks
+                    && !("" + t.getGroup()).matches("(?i)build setup")                                    // ... not the build setup group tasks
+                    && !("" + t.getGroup()).matches("(?i)gradle enterprise")                              // ... not the gradle enterprise group tasks
+            ) {
+                LOGGER.info("+ adding task dependency: {} before {}", tp.getName(), t.getName());
+                t.dependsOn(tp);
+            }
+        });
     }
 
     private void setup(Task task) {
