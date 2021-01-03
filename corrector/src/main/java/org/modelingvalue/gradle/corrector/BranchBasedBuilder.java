@@ -90,7 +90,7 @@ public class BranchBasedBuilder {
                 if (scheme.startsWith("http")) {
                     URI newUrl = makeBbbRepo(oldUrl);
                     if (!oldUrl.equals(newUrl)) {
-                        LOGGER.info("+ bbb: replaced maven publish URL '{}'  in repository {} by '{}'", oldUrl, mr.getName(), newUrl);
+                        LOGGER.info("+ bbb: replaced maven publish URL '{}' in repository {} by '{}'", oldUrl, mr.getName(), newUrl);
                         mr.setUrl(newUrl);
                     }
                 }
