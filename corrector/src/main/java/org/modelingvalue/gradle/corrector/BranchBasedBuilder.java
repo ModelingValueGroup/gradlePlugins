@@ -15,6 +15,8 @@
 
 package org.modelingvalue.gradle.corrector;
 
+import static org.gradle.api.artifacts.ArtifactRepositoryContainer.DEFAULT_MAVEN_LOCAL_REPO_NAME;
+
 import java.net.URI;
 
 import org.gradle.api.Project;
@@ -28,76 +30,110 @@ import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 
 public class BranchBasedBuilder {
-    public static final Logger LOGGER              = Info.LOGGER;
-    public static final String BRANCH_INDICATOR    = "-BRANCH";
-    public static final String SNAPSHOT_POST       = "-SNAPSHOT";
-    public static final String SNAPSHOTS_GROUP_PRE = "snapshots.";
-    public static final String REASON              = "using Branch Based Building";
+    public static final Logger LOGGER                = Info.LOGGER;
+    public static final String BRANCH_INDICATOR      = "-BRANCH";
+    public static final String SNAPSHOT_VERSION_POST = "-SNAPSHOT";
+    public static final String SNAPSHOTS_REPO_POST   = "-snapshots";
+    public static final String SNAPSHOTS_GROUP_PRE   = "snapshots.";
+    public static final String REASON                = "using Branch Based Building";
 
-    public static String replaceOrNull(Gradle gradle, String gav) {
-        return new BranchBasedBuilder(gradle).substitute(gav);
-    }
-
-    public static String replace(Gradle gradle, String gav) {
-        String gavNew = replaceOrNull(gradle, gav);
-        return gavNew == null ? gav : gavNew;
-    }
-
-    private final Gradle  gradle;
-    private final boolean isCiMasterBranch;
-    private final String  bbbVersion;
+    private final Gradle gradle;
 
     public BranchBasedBuilder(Project project) {
-        this(project.getGradle());
-        attach();
+        gradle = project.getGradle();
 
-        if (!isCiMasterBranch) {
-            project.getGradle().afterProject(p -> {
-                LOGGER.info("+ running BranchBasedBuilder on project {}", p.getName());
-                PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
-                if (publishing != null) {
-                    publishing.getRepositories()
-                            .stream()
-                            .filter(x -> x instanceof MavenArtifactRepository)
-                            .map(x -> (MavenArtifactRepository) x)
-                            .forEach(mar -> {
-                                URI newUrl = makeBbbRepo(mar.getUrl());
-                                LOGGER.info("+ replaced maven publish URL '{}'  in repository {} by '{}'", mar.getUrl(), mar.getName(), newUrl);
-                                mar.setUrl(newUrl);
-                            });
-                    publishing.getPublications()
-                            .stream()
-                            .filter(x -> x instanceof MavenPublication)
-                            .map(x -> (MavenPublication) x)
-                            .forEach(mp -> {
-                                String newGroup    = makeBbbGroup(mp.getGroupId());
-                                String newArtifact = makeBbbArtifact(mp.getArtifactId());
-                                String newVersion  = makeBbbVersion(mp.getVersion());
+        boolean isLocal       = !Info.CI;
+        boolean isOtherBranch = !Info.isMasterBranch(gradle);
 
-                                LOGGER.info("+ replaced group    '{}'  in publication {} by '{}'", mp.getGroupId(), mp.getName(), newGroup);
-                                LOGGER.info("+ replaced artifact '{}'  in publication {} by '{}'", mp.getArtifactId(), mp.getName(), newArtifact);
-                                LOGGER.info("+ replaced version  '{}'  in publication {} by '{}'", mp.getVersion(), mp.getName(), newVersion);
-
-                                mp.setGroupId(newGroup);
-                                mp.setArtifactId(newArtifact);
-                                mp.setVersion(newVersion);
-
-                            });
-                }
-            });
+        if (isLocal) {
+            makeAllDependenciesBbb();
+        } else if (isOtherBranch) {
+            makeAllDependenciesBbb();
         }
+
+        gradle.afterProject(p -> {
+            LOGGER.info("+ bbb: running BranchBasedBuilder on project {}", p.getName());
+            PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
+            if (publishing != null) {
+                if (isLocal) {
+                    onlyPublishToMavenLocal(publishing);
+                    makePublicationsBbb(publishing);
+                } else if (isOtherBranch) {
+                    onlyPublishToSnapShots(publishing);
+                    makePublicationsBbb(publishing);
+                }
+            }
+        });
     }
 
-    public BranchBasedBuilder(Gradle gradle) {
-        this.gradle = gradle;
-        isCiMasterBranch = Info.CI && Info.isMasterBranch(gradle);
-
-        bbbVersion = String.format("%08x", Info.getGithubRef(gradle).hashCode()) + SNAPSHOT_POST;
+    private void onlyPublishToMavenLocal(PublishingExtension publishing) {
+        publishing.getRepositories().all(r -> {
+            if (publishing.getRepositories().stream().anyMatch(repo -> repo.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME))) {
+                LOGGER.info("+ bbb: adding publishing repo {}", DEFAULT_MAVEN_LOCAL_REPO_NAME);
+                publishing.getRepositories().mavenLocal();
+            }
+        });
+        publishing.getRepositories().all(r -> {
+            if (!r.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME)) {
+                LOGGER.info("+ bbb: removing publishing repo {}", r.getName());
+                publishing.getRepositories().remove(r);
+            }
+        });
     }
 
-    public void attach() {
-        gradle.allprojects(project ->
-                project.getConfigurations().all(conf ->
+    private void onlyPublishToSnapShots(PublishingExtension publishing) {
+        publishing.getRepositories().all(r -> {
+            if (r instanceof MavenArtifactRepository) {
+                MavenArtifactRepository mr     = (MavenArtifactRepository) r;
+                URI                     oldUrl = mr.getUrl();
+                String                  scheme = oldUrl.getScheme();
+                if (scheme.startsWith("http")) {
+                    URI newUrl = makeBbbRepo(oldUrl);
+                    if (!oldUrl.equals(newUrl)) {
+                        LOGGER.info("+ bbb: replaced maven publish URL '{}'  in repository {} by '{}'", oldUrl, mr.getName(), newUrl);
+                        mr.setUrl(newUrl);
+                    }
+                }
+            }
+        });
+        publishing.getRepositories().all(r -> {
+            if (r.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME)) {
+                LOGGER.info("+ bbb: removing publishing repo {}", r.getName());
+                publishing.getRepositories().remove(r);
+            }
+        });
+    }
+
+    private void makePublicationsBbb(PublishingExtension publishing) {
+        publishing.getPublications().all(pub -> {
+            if (pub instanceof MavenPublication) {
+                MavenPublication mpub = (MavenPublication) pub;
+
+                String oldGroup    = mpub.getGroupId();
+                String oldArtifact = mpub.getArtifactId();
+                String oldVersion  = mpub.getVersion();
+
+                String newGroup    = makeBbbGroup(oldGroup);
+                String newArtifact = makeBbbArtifact(oldArtifact);
+                String newVersion  = makeBbbVersion(oldVersion);
+
+                //noinspection ConstantConditions
+                if (!oldGroup.equals(newGroup) || !oldArtifact.equals(newArtifact) || !oldVersion.equals(newVersion)) {
+                    LOGGER.info("+ bbb: replaced group    '{}'  in publication {} by '{}'", oldGroup, mpub.getName(), newGroup);
+                    LOGGER.info("+ bbb: replaced artifact '{}'  in publication {} by '{}'", oldArtifact, mpub.getName(), newArtifact);
+                    LOGGER.info("+ bbb: replaced version  '{}'  in publication {} by '{}'", oldVersion, mpub.getName(), newVersion);
+
+                    mpub.setGroupId(newGroup);
+                    mpub.setArtifactId(newArtifact);
+                    mpub.setVersion(newVersion);
+                }
+            }
+        });
+    }
+
+    private void makeAllDependenciesBbb() {
+        gradle.allprojects(p ->
+                p.getConfigurations().all(conf ->
                         conf.resolutionStrategy(resolutionStrategy ->
                                 resolutionStrategy.getDependencySubstitution().all(depSub -> {
                                     ComponentSelector component = depSub.getRequested();
@@ -107,38 +143,34 @@ public class BranchBasedBuilder {
                                 }))));
     }
 
-    public String substitute(String gav) {
-        String[] parts = gav.split(":");
-        return parts.length != 3 ? null : substitute(parts[0], parts[1], parts[2]);
+    private void checkReplacement(DependencySubstitution depSub, ModuleComponentSelector component) {
+        String replacement = substitute(component.getGroup(), component.getModule(), component.getVersion());
+        if (replacement != null) {
+            depSub.useTarget(replacement, REASON);
+            LOGGER.info("+ bbb: dependency     replaced: " + component + " => " + replacement);
+        } else {
+            LOGGER.info("+ bbb: dependency NOT replaced: " + component);
+        }
     }
 
     public String substitute(String g, String a, String v) {
         return !v.endsWith(BRANCH_INDICATOR) ? null : makeBbbGroup(g) + ":" + makeBbbArtifact(a) + ":" + makeBbbVersion(v);
     }
 
-    private void checkReplacement(DependencySubstitution depSub, ModuleComponentSelector component) {
-        String replacement = substitute(component.getGroup(), component.getModule(), component.getVersion());
-        if (replacement != null) {
-            depSub.useTarget(replacement, REASON);
-            LOGGER.info("+ dependency     replaced: " + component + " => " + replacement);
-        } else {
-            LOGGER.info("+ dependency NOT replaced: " + component);
-        }
-    }
-
     private URI makeBbbRepo(URI u) {
-        return isCiMasterBranch ? u : Util.makeURL(u.toString() + "-snapshots");
+        String s = u.toString().replaceAll("/$", "");
+        return s.endsWith(SNAPSHOTS_REPO_POST) ? u : Util.makeURL(s + SNAPSHOTS_REPO_POST);
     }
 
     private String makeBbbGroup(String g) {
-        return isCiMasterBranch ? g : SNAPSHOTS_GROUP_PRE + g;
+        return g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
     }
 
     private String makeBbbArtifact(String a) {
-        return isCiMasterBranch ? a : a;
+        return a;
     }
 
     private String makeBbbVersion(String v) {
-        return isCiMasterBranch ? v : bbbVersion;
+        return v.endsWith(SNAPSHOT_VERSION_POST) ? v : String.format("%08x", Info.getGithubRef(gradle).hashCode()) + SNAPSHOT_VERSION_POST;
     }
 }
