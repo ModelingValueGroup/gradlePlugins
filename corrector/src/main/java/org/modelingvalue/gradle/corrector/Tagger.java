@@ -39,7 +39,7 @@ class Tagger {
 
         // let me depend on all publish tasks...
         project.getTasks().all(t -> {
-            LOGGER.info("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
+            LOGGER.trace("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
             if (t.getName().matches(quote(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) + ".*")) {
                 LOGGER.info("+ adding task dependency: {} after {}", tp.getName(), t.getName());
                 t.finalizedBy(tp);
