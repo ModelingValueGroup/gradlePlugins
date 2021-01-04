@@ -15,8 +15,6 @@
 
 package org.modelingvalue.gradle.corrector;
 
-import static org.gradle.api.artifacts.ArtifactRepositoryContainer.DEFAULT_MAVEN_LOCAL_REPO_NAME;
-
 import java.net.URI;
 
 import org.gradle.api.Project;
@@ -91,67 +89,53 @@ public class BranchBasedBuilder {
         LOGGER.info("+ bbb: running BranchBasedBuilder on project {} (local={} otherBranch={})", project.getName(), isLocal, isOtherBranch);
         TOMTOMTOM_report(project);
 
-        if (isLocal) {
-            makeAllDependenciesBbb();
-        } else if (isOtherBranch) {
+        if (isLocal || isOtherBranch) {
             makeAllDependenciesBbb();
         }
 
         gradle.afterProject(p -> {
             LOGGER.info("+ bbb: running afterProject on project {}", p.getName());
-            PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
+            PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
             if (publishing != null) {
+                if (!publishing.getRepositories().isEmpty()){
+                    LOGGER.warn("the repository set is not empty, bbb will not insert the right repo. Make it empty to activate bbb.");
+                }
+                if (isLocal || isOtherBranch) {
+                    makePublicationsBbb(publishing);
+                }
                 if (isLocal) {
-                    onlyPublishToMavenLocal(publishing);
-                    makePublicationsBbb(publishing);
-                } else if (isOtherBranch) {
-                    onlyPublishToSnapShots(publishing);
-                    makePublicationsBbb(publishing);
+                    publishToMavenLocal(publishing);
+                } else {
+                    publishToGitHub(publishing, isOtherBranch);
                 }
             }
         });
     }
 
-    private void onlyPublishToMavenLocal(PublishingExtension publishing) {
-        publishing.getRepositories().all(r -> {
-            if (publishing.getRepositories().stream().anyMatch(repo -> repo.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME))) {
-                LOGGER.info("+ bbb: adding publishing repo {}", DEFAULT_MAVEN_LOCAL_REPO_NAME);
-                publishing.getRepositories().mavenLocal();
-                TOMTOMTOM_report(publishing);
-            }
-        });
-        publishing.getRepositories().all(r -> {
-            if (!r.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME)) {
-                LOGGER.info("+ bbb: removing publishing repo {}", r.getName());
-                publishing.getRepositories().remove(r);
-                TOMTOMTOM_report(publishing);
-            }
-        });
+    private void publishToMavenLocal(PublishingExtension publishing) {
+        if (publishing.getRepositories().isEmpty()) {
+            LOGGER.info("+ bbb: adding publishing repo...");
+            publishing.getRepositories().mavenLocal();
+            TOMTOMTOM_report(publishing);
+        }
     }
 
-    private void onlyPublishToSnapShots(PublishingExtension publishing) {
-        publishing.getRepositories().all(r -> {
-            if (r instanceof MavenArtifactRepository) {
-                MavenArtifactRepository mr     = (MavenArtifactRepository) r;
-                URI                     oldUrl = mr.getUrl();
-                String                  scheme = oldUrl.getScheme();
-                if (scheme.startsWith("http")) {
-                    URI newUrl = makeBbbRepo(oldUrl);
-                    if (!oldUrl.equals(newUrl)) {
-                        LOGGER.info("+ bbb: replaced maven publish URL '{}' in repository {} by '{}'", oldUrl, mr.getName(), newUrl);
-                        mr.setUrl(newUrl);
-                        TOMTOMTOM_report(publishing);
-                    }
+    private void publishToGitHub(PublishingExtension publishing, boolean snapshot) {
+        if (publishing.getRepositories().isEmpty()) {
+            LOGGER.info("+ bbb: adding {} repo...", snapshot ? "snapshot" : "main");
+            publishing.getRepositories().maven(mar -> {
+                URI url = URI.create("https://maven.pkg.github.com/ModelingValueGroup/packages");
+                if (snapshot) {
+                    url = makeBbbRepo(url);
                 }
-            }
-        });
-        publishing.getRepositories().all(r -> {
-            if (r.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME)) {
-                LOGGER.info("+ bbb: removing publishing repo {}", r.getName());
-                publishing.getRepositories().remove(r);
-                TOMTOMTOM_report(publishing);
-            }
-        });
+                mar.setUrl(url);
+                mar.credentials(cr -> {
+                    cr.setPassword(Info.ALLREP_TOKEN);
+                    cr.setUsername("");
+                });
+            });
+            TOMTOMTOM_report(publishing);
+        }
     }
 
     private void makePublicationsBbb(PublishingExtension publishing) {
