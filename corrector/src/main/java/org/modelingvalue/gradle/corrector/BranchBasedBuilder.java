@@ -30,12 +30,13 @@ import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 
 public class BranchBasedBuilder {
-    public static final Logger LOGGER                = Info.LOGGER;
-    public static final String BRANCH_INDICATOR      = "-BRANCH";
-    public static final String SNAPSHOT_VERSION_POST = "-SNAPSHOT";
-    public static final String SNAPSHOTS_REPO_POST   = "-snapshots";
-    public static final String SNAPSHOTS_GROUP_PRE   = "snapshots.";
-    public static final String REASON                = "using Branch Based Building";
+    public static final Logger LOGGER                     = Info.LOGGER;
+    public static final String BRANCH_INDICATOR           = "-BRANCH";
+    public static final String SNAPSHOT_VERSION_POST      = "-SNAPSHOT";
+    public static final String SNAPSHOTS_REPO_POST        = "-snapshots";
+    public static final String SNAPSHOTS_GROUP_PRE        = "snapshots.";
+    public static final String REASON                     = "using Branch Based Building";
+    public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
     private final Gradle gradle;
 
@@ -194,11 +195,11 @@ public class BranchBasedBuilder {
 
     private URI makeBbbRepo(URI u) {
         String s = u.toString().replaceAll("/$", "");
-        return s.endsWith(SNAPSHOTS_REPO_POST) ? u : Util.makeURL(s + SNAPSHOTS_REPO_POST);
+        return s.length() == 0 || s.endsWith(SNAPSHOTS_REPO_POST) ? u : Util.makeURL(s + SNAPSHOTS_REPO_POST);
     }
 
     private String makeBbbGroup(String g) {
-        return g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
+        return g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
     }
 
     private String makeBbbArtifact(String a) {
@@ -206,16 +207,17 @@ public class BranchBasedBuilder {
     }
 
     private String makeBbbVersion(String v) {
-        return v.endsWith(SNAPSHOT_VERSION_POST) ? v : cacheBbbId();
+        return v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
     }
 
     private String bbbId;
 
-    private String cacheBbbId() {
+    private String cachedBbbId() {
         if (bbbId == null) {
             String branch = Info.getGithubRef(gradle).replaceAll("^refs/heads/", "");
             String part   = branch.replaceAll("\\W", "_");
-            bbbId = String.format("%s_%08x_%s", part, branch.hashCode(), SNAPSHOT_VERSION_POST);
+            part = part.substring(0, Math.min(part.length(), MAX_BRANCHNAME_PART_LENGTH));
+            bbbId = String.format("%s-%08x%s", part, branch.hashCode(), SNAPSHOT_VERSION_POST);
         }
         return bbbId;
     }

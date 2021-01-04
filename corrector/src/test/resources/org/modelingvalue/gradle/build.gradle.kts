@@ -23,6 +23,13 @@ repositories {
             password = ALLREP_TOKEN
         }
     }
+    maven {
+        url = uri("https://maven.pkg.github.com/ModelingValueGroup/packages-snapshots")
+        credentials {
+            username = "" // can be anything but plugin requires it
+            password = ALLREP_TOKEN
+        }
+    }
 }
 gradleEnterprise {
     buildScan {
