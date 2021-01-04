@@ -23,9 +23,11 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.DependencySubstitution;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
+import org.gradle.api.artifacts.repositories.ArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
+import org.gradle.api.publish.Publication;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 
@@ -39,11 +41,55 @@ public class BranchBasedBuilder {
 
     private final Gradle gradle;
 
+    private void TOMTOMTOM_report(Project project) {
+        PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
+        LOGGER.info("+ bbb ---------------------------[ proj={}", project.getName());
+        if (publishing == null) {
+            LOGGER.info("+      bbb publishing==null");
+        } else {
+            publishing.getRepositories().forEach(x -> LOGGER.info("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+            publishing.getPublications().forEach(x -> LOGGER.info("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+        }
+        LOGGER.info("+ bbb ---------------------------] proj={}", project.getName());
+    }
+
+    private String TOMTOMTOM_describe(Publication x) {
+        if (x instanceof MavenPublication) {
+            MavenPublication xx = (MavenPublication) x;
+            return xx.getGroupId() + ":" + xx.getArtifactId() + ":" + xx.getVersion();
+        } else {
+            return "IS " + x.getClass();
+        }
+    }
+
+    private String TOMTOMTOM_describe(ArtifactRepository x) {
+        if (x instanceof MavenArtifactRepository) {
+            MavenArtifactRepository xx = (MavenArtifactRepository) x;
+            return "url=" + xx.getUrl();
+        } else {
+            return "IS " + x.getClass();
+        }
+    }
+
+    private void TOMTOMTOM_report(PublishingExtension publishing) {
+        LOGGER.info("+ bbb ---------------------------[");
+        if (publishing == null) {
+            LOGGER.info("+      bbb publishing==null");
+        } else {
+            publishing.getRepositories().forEach(x -> LOGGER.info("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+            publishing.getPublications().forEach(x -> LOGGER.info("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+        }
+        LOGGER.info("+ bbb ---------------------------]");
+    }
+
     public BranchBasedBuilder(Project project) {
         gradle = project.getGradle();
 
         boolean isLocal       = !Info.CI;
         boolean isOtherBranch = !Info.isMasterBranch(gradle);
+
+        LOGGER.info("+ bbb: running BranchBasedBuilder on project {} (local={} otherBranch={})", project.getName(), isLocal, isOtherBranch);
+        TOMTOMTOM_report(project);
 
         if (isLocal) {
             makeAllDependenciesBbb();
@@ -52,7 +98,7 @@ public class BranchBasedBuilder {
         }
 
         gradle.afterProject(p -> {
-            LOGGER.info("+ bbb: running BranchBasedBuilder on project {}", p.getName());
+            LOGGER.info("+ bbb: running afterProject on project {}", p.getName());
             PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
             if (publishing != null) {
                 if (isLocal) {
@@ -71,12 +117,14 @@ public class BranchBasedBuilder {
             if (publishing.getRepositories().stream().anyMatch(repo -> repo.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME))) {
                 LOGGER.info("+ bbb: adding publishing repo {}", DEFAULT_MAVEN_LOCAL_REPO_NAME);
                 publishing.getRepositories().mavenLocal();
+                TOMTOMTOM_report(publishing);
             }
         });
         publishing.getRepositories().all(r -> {
             if (!r.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME)) {
                 LOGGER.info("+ bbb: removing publishing repo {}", r.getName());
                 publishing.getRepositories().remove(r);
+                TOMTOMTOM_report(publishing);
             }
         });
     }
@@ -92,6 +140,7 @@ public class BranchBasedBuilder {
                     if (!oldUrl.equals(newUrl)) {
                         LOGGER.info("+ bbb: replaced maven publish URL '{}' in repository {} by '{}'", oldUrl, mr.getName(), newUrl);
                         mr.setUrl(newUrl);
+                        TOMTOMTOM_report(publishing);
                     }
                 }
             }
@@ -100,6 +149,7 @@ public class BranchBasedBuilder {
             if (r.getName().equals(DEFAULT_MAVEN_LOCAL_REPO_NAME)) {
                 LOGGER.info("+ bbb: removing publishing repo {}", r.getName());
                 publishing.getRepositories().remove(r);
+                TOMTOMTOM_report(publishing);
             }
         });
     }
@@ -126,6 +176,7 @@ public class BranchBasedBuilder {
                     mpub.setGroupId(newGroup);
                     mpub.setArtifactId(newArtifact);
                     mpub.setVersion(newVersion);
+                    TOMTOMTOM_report(publishing);
                 }
             }
         });

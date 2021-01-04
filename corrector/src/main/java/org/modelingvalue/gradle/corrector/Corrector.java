@@ -44,7 +44,7 @@ class Corrector {
 
         // let all tasks depend on me...
         project.getTasks().all(t -> {
-            LOGGER.info("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
+            LOGGER.trace("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
             if (!t.getName().equals(tp.getName())                                                               // ... not myself (duh)
                     && !t.getName().matches("(?i)" + quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*")   // ... not the cleaning tasks
                     && !("" + t.getGroup()).matches("(?i)" + quote(HelpTasksPlugin.HELP_GROUP))           // ... not the help group tasks
