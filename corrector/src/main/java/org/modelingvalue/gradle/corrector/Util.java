@@ -33,6 +33,9 @@ import java.util.stream.Collectors;
 
 import org.gradle.api.GradleException;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+
 public class Util {
     public static URL getUrl(String url) {
         try {
@@ -102,5 +105,11 @@ public class Util {
         } catch (URISyntaxException e) {
             throw new GradleException("unexpected exception", e);
         }
+    }
+
+    static Map<?, ?> readYaml(Path path) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+        objectMapper.findAndRegisterModules();
+        return objectMapper.readValue(path.toFile(), Map.class);
     }
 }

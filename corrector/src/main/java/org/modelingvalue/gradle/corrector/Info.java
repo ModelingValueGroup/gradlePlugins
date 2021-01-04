@@ -52,11 +52,4 @@ public interface Info {
     static boolean isMasterBranch(Gradle gradle) {
         return getGithubRef(gradle).equals("refs/heads/master");
     }
-
-    String IGNORE_PLEASE = trace();
-
-    static String trace() {
-        LOGGER.info("INFO: prop-CI={} env-CI={}", System.getProperty("CI"), System.getenv("CI"));
-        return null;
-    }
 }

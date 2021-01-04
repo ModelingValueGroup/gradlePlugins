@@ -30,7 +30,6 @@ public class VerCorrector extends CorrectorBase {
     private final Project project;
     private final Path    propFile;
     private final String  propName;
-    private final String  projectVersion;
     private final Path    absPropFile;
     private final boolean forceVersionAdjustForTesting;
 
@@ -39,7 +38,6 @@ public class VerCorrector extends CorrectorBase {
         project = ext.getProject();
         propFile = ext.getPropFileWithVersion();
         propName = ext.getVersionName();
-        projectVersion = ext.getProjectVersion();
         absPropFile = getAbsPropFile(propFile);
         forceVersionAdjustForTesting = project.getGradle().getRootProject().getName().equals("testWorkspace");
         LOGGER.info("forceVersionAdjustForTesting={}", forceVersionAdjustForTesting);
@@ -56,8 +54,8 @@ public class VerCorrector extends CorrectorBase {
     public VerCorrector generate() {
         if (propFile == null) {
             LOGGER.info("+ can not find a a proper version: no properties file specified");
-        } else if (!forceVersionAdjustForTesting && (!CI || !Info.isMasterBranch(project.getGradle()))) {
-            LOGGER.info("+ version not adjusted: not on CI or not on master (CI={}, onmaster={})", CI, Info.isMasterBranch(project.getGradle()));
+        } else if (!forceVersionAdjustForTesting && !CI) {
+            LOGGER.info("+ version not adjusted: not on CI (CI={})", CI);
         } else {
             Props  props      = new Props(propFile);
             String oldVersion = props.getProp(propName, "0.0.1");

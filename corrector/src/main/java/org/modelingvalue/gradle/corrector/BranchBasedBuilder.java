@@ -83,13 +83,13 @@ public class BranchBasedBuilder {
     public BranchBasedBuilder(Project project) {
         gradle = project.getGradle();
 
-        boolean isLocal       = !Info.CI;
-        boolean isOtherBranch = !Info.isMasterBranch(gradle);
+        boolean ci       = Info.CI;
+        boolean isMaster = Info.isMasterBranch(gradle);
 
-        LOGGER.info("+ bbb: running BranchBasedBuilder on project {} (local={} otherBranch={})", project.getName(), isLocal, isOtherBranch);
+        LOGGER.info("+ bbb: running BranchBasedBuilder on project {} (ci={} master={})", project.getName(), ci, isMaster);
         TOMTOMTOM_report(project);
 
-        if (isLocal || isOtherBranch) {
+        if (!(ci && isMaster)) {
             makeAllDependenciesBbb();
         }
 
@@ -97,16 +97,16 @@ public class BranchBasedBuilder {
             LOGGER.info("+ bbb: running afterProject on project {}", p.getName());
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
             if (publishing != null) {
-                if (!publishing.getRepositories().isEmpty()){
+                if (!publishing.getRepositories().isEmpty()) {
                     LOGGER.warn("the repository set is not empty, bbb will not insert the right repo. Make it empty to activate bbb.");
                 }
-                if (isLocal || isOtherBranch) {
+                if (!(ci && isMaster)) {
                     makePublicationsBbb(publishing);
                 }
-                if (isLocal) {
-                    publishToMavenLocal(publishing);
+                if (ci) {
+                    publishToGitHub(publishing, isMaster);
                 } else {
-                    publishToGitHub(publishing, isOtherBranch);
+                    publishToMavenLocal(publishing);
                 }
             }
         });
@@ -120,12 +120,12 @@ public class BranchBasedBuilder {
         }
     }
 
-    private void publishToGitHub(PublishingExtension publishing, boolean snapshot) {
+    private void publishToGitHub(PublishingExtension publishing, boolean master) {
         if (publishing.getRepositories().isEmpty()) {
-            LOGGER.info("+ bbb: adding {} repo...", snapshot ? "snapshot" : "main");
+            LOGGER.info("+ bbb: adding {} repo...", master ? "master" : "snapshot");
             publishing.getRepositories().maven(mar -> {
                 URI url = URI.create("https://maven.pkg.github.com/ModelingValueGroup/packages");
-                if (snapshot) {
+                if (!master) {
                     url = makeBbbRepo(url);
                 }
                 mar.setUrl(url);
@@ -206,6 +206,17 @@ public class BranchBasedBuilder {
     }
 
     private String makeBbbVersion(String v) {
-        return v.endsWith(SNAPSHOT_VERSION_POST) ? v : String.format("%08x", Info.getGithubRef(gradle).hashCode()) + SNAPSHOT_VERSION_POST;
+        return v.endsWith(SNAPSHOT_VERSION_POST) ? v : cacheBbbId();
+    }
+
+    private String bbbId;
+
+    private String cacheBbbId() {
+        if (bbbId == null) {
+            String branch = Info.getGithubRef(gradle).replaceAll("^refs/heads/", "");
+            String part   = branch.replaceAll("\\W", "_");
+            bbbId = String.format("%s_%08x_%s", part, branch.hashCode(), SNAPSHOT_VERSION_POST);
+        }
+        return bbbId;
     }
 }
