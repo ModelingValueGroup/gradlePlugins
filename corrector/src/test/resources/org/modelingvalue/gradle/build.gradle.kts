@@ -36,13 +36,4 @@ publishing {
             from(components["java"])
         }
     }
-    repositories {
-        maven {
-            url = uri("https://maven.pkg.github.com/ModelingValueGroup/packages")
-            credentials {
-                username = "" // can be anything but plugin requires it
-                password = "INVALID-TOKEN"
-            }
-        }
-    }
 }
