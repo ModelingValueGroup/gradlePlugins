@@ -16,6 +16,7 @@
 package org.modelingvalue.gradle.corrector;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
+import static org.modelingvalue.gradle.corrector.Info.CI;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -31,6 +32,7 @@ public class VerCorrector extends CorrectorBase {
     private final String  propName;
     private final String  projectVersion;
     private final Path    absPropFile;
+    private final boolean forceVersionAdjustForTesting;
 
     public VerCorrector(CorrectorExtension ext) {
         super("vers  ", ext.getRoot(), ext.getEolFileExcludes());
@@ -39,6 +41,7 @@ public class VerCorrector extends CorrectorBase {
         propName = ext.getVersionName();
         projectVersion = ext.getProjectVersion();
         absPropFile = getAbsPropFile(propFile);
+        forceVersionAdjustForTesting = project.getGradle().getRootProject().getName().equals("testWorkspace");
     }
 
     private Path getAbsPropFile(Path propFile) {
@@ -52,6 +55,8 @@ public class VerCorrector extends CorrectorBase {
     public VerCorrector generate() {
         if (propFile == null) {
             LOGGER.info("+ can not find a a proper version: no properties file specified");
+        } else if (!CI || !Info.isMasterBranch(project.getGradle()) && !forceVersionAdjustForTesting) {
+            LOGGER.info("+ version not adjusted: not on CI or not on master (CI={}, onmaster={})", CI, Info.isMasterBranch(project.getGradle()));
         } else {
             Props  props      = new Props(propFile);
             String oldVersion = props.getProp(propName, "0.0.1");

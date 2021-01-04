@@ -72,7 +72,7 @@ class Corrector {
             changes.addAll(new HdrCorrector(ext).generate().getChangedFiles());
             changes.addAll(new VerCorrector(ext).generate().getChangedFiles());
 
-            LOGGER.info("+ changed {} files (CI={}, have-token={})", changes.size(), CI, ALLREP_TOKEN != null);
+            LOGGER.info("+ changed {} files (CI={}, master={}, have-token={})", changes.size(), CI, Info.isMasterBranch(project.getGradle()), ALLREP_TOKEN != null);
 
             if (!changes.isEmpty() && CI && ALLREP_TOKEN != null) {
                 GitUtil.push(ext.getRoot(), changes, GitUtil.NO_CI_MESSAGE + " updated by corrector");
