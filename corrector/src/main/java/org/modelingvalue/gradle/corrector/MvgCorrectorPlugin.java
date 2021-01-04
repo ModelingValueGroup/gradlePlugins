@@ -36,6 +36,10 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
     private BranchBasedBuilder branchBasedBuilder;
 
     public void apply(Project project) {
+        //TOMTOMTOM
+        //        DefaultConvention ext = (DefaultConvention) project.getExtensions();
+        //        ext.getAsMap().forEach((k, v) -> System.out.printf("@@@@@ %-20s : %s\n", k, v));
+
         checkWorkflowFiles(project.getRootProject().getRootDir().toPath());
 
         corrector = new Corrector(project);
