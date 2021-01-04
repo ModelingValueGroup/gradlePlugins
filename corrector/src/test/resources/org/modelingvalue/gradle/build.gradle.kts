@@ -11,7 +11,7 @@ plugins {
 }
 dependencies {
     implementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
-    implementation("demo-lib:lib:3.0.2-BRANCH")
+    //TOMTOMTOM implementation("demo-lib:lib:3.0.2-BRANCH")
 }
 repositories {
     mavenCentral()

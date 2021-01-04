@@ -15,18 +15,68 @@
 
 package org.modelingvalue.gradle.corrector;
 
+import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class MvgCorrectorPlugin implements Plugin<Project> {
+    public static final String NO_CI_GUARD = "!contains(github.event.head_commit.message, '[no-ci]')";
+
     private Corrector          corrector;
     private Tagger             tagger;
     private BranchBasedBuilder branchBasedBuilder;
 
     public void apply(Project project) {
+        checkWorkflowFiles(project.getRootProject().getRootDir().toPath());
+
         corrector = new Corrector(project);
         tagger = new Tagger(project);
         branchBasedBuilder = new BranchBasedBuilder(project);
+    }
+
+    private static void checkWorkflowFiles(Path root) {
+        Path workflowsDir = root.resolve(".github").resolve("workflows");
+        if (!Files.isDirectory(workflowsDir)) {
+            LOGGER.warn("RECURSION DANGER: workflows dir not found ({}): can not check for build loop dangers", workflowsDir);
+        } else {
+            try {
+                AtomicBoolean errorsDetected = new AtomicBoolean();
+                Files.list(workflowsDir)
+                        .filter(f -> Files.isRegularFile(f) && f.getFileName().toString().matches(".*\\.ya?ml"))
+                        .forEach(f -> {
+                            try {
+                                Map<?, ?> jobs = (Map<?, ?>) Util.readYaml(f).get("jobs");
+                                if (jobs == null) {
+                                    LOGGER.warn("RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
+                                } else {
+                                    jobs.keySet().forEach(jobName -> {
+                                        Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
+                                        String    theIf = (String) job.get("if");
+                                        if (theIf == null || !theIf.equals(NO_CI_GUARD)) {
+                                            LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, NO_CI_GUARD);
+                                            errorsDetected.set(true);
+                                        }
+                                    });
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                if (errorsDetected.get()) {
+                    throw new GradleException("RECURSION DANGER in a workflow file");
+                }
+            } catch (IOException e) {
+                throw new GradleException("can not scan workflows dir", e);
+            }
+        }
     }
 }
