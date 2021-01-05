@@ -16,6 +16,7 @@
 package org.modelingvalue.gradle.corrector;
 
 import java.net.URI;
+import java.util.regex.Pattern;
 
 import org.gradle.api.artifacts.DependencySubstitution;
 import org.gradle.api.artifacts.component.ComponentSelector;
@@ -151,7 +152,7 @@ public class BranchBasedBuilder {
     }
 
     public String substitute(String g, String a, String v) {
-        return !v.endsWith(BRANCH_INDICATOR) ? null : makeBbbGroup(g) + ":" + makeBbbArtifact(a) + ":" + makeBbbVersion(v);
+        return !v.endsWith(BRANCH_INDICATOR) ? null : makeBbbGroup(g) + ":" + makeBbbArtifact(a) + ":" + makeBbbVersion(v.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
     }
 
     private URI makeBbbRepo(URI u) {
@@ -187,7 +188,7 @@ public class BranchBasedBuilder {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private void TOMTOMTOM_report(Gradle gradle) {
-        gradle.allprojects(p->{
+        gradle.allprojects(p -> {
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
             LOGGER.info("+ bbb ---------------------------[ proj={}", p.getName());
             if (publishing == null) {
