@@ -43,7 +43,6 @@ class Tagger {
             if (t.getName().matches(quote(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) + ".*")) {
                 LOGGER.info("+ adding task dependency: {} after {}", tp.getName(), t.getName());
                 t.finalizedBy(tp);
-
             }
         });
     }

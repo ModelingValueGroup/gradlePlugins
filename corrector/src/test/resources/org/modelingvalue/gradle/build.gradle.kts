@@ -1,6 +1,8 @@
 val ALLREP_TOKEN: String = System.getenv("ALLREP_TOKEN") ?: "DRY"
 
+group = "mygroup"
 version = "0.0.1"
+
 plugins {
     java
     id("~my-package~")
@@ -11,7 +13,7 @@ plugins {
 }
 dependencies {
     implementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
-    //TOMTOMTOM implementation("demo-lib:lib:3.0.2-BRANCH")
+    //TOMTOMTOM implementation("demo-lib:lib:3.0.52-BRANCH")
 }
 repositories {
     mavenCentral()
