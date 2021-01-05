@@ -20,6 +20,7 @@ import static org.modelingvalue.gradle.corrector.Info.LOGGER;
 import static org.modelingvalue.gradle.corrector.Info.TAG_TASK_NAME;
 import static org.modelingvalue.gradle.corrector.Info.WRAP_UP_GROUP;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.publish.plugins.PublishingPlugin;
@@ -54,7 +55,10 @@ class Tagger {
     private void execute() {
         LOGGER.info("+ execute {} task", TAG_TASK_NAME);
         String tag = "v" + gradle.getRootProject().getVersion();
-        if (Info.isMasterBranch(gradle)) {
+        if (tag.equals("v") || tag.equals("vnull") || tag.equals("vunspecified")) {
+            LOGGER.error("+ can not tag with the version: version of the rootProject is not set: {}", tag);
+            throw new GradleException("version of the rootProject is not set");
+        } else if (Info.isMasterBranch(gradle)) {
             LOGGER.info("+ tagging this version with '{}' because this is the master branch", tag);
             GitUtil.tag(gradle.getRootProject().getRootDir().toPath(), tag);
         } else {
