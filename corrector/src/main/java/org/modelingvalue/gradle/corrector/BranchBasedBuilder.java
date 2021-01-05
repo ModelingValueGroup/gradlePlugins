@@ -17,7 +17,6 @@ package org.modelingvalue.gradle.corrector;
 
 import java.net.URI;
 
-import org.gradle.api.Project;
 import org.gradle.api.artifacts.DependencySubstitution;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
@@ -40,14 +39,14 @@ public class BranchBasedBuilder {
 
     private final Gradle gradle;
 
-    public BranchBasedBuilder(Project project) {
-        gradle = project.getGradle();
+    public BranchBasedBuilder(Gradle gradle) {
+        this.gradle = gradle;
 
         boolean ci       = Info.CI;
         boolean isMaster = Info.isMasterBranch(gradle);
 
-        LOGGER.info("+ bbb: running BranchBasedBuilder on project {} (ci={} master={})", project.getName(), ci, isMaster);
-        TOMTOMTOM_report(project);
+        LOGGER.info("+ bbb: creating BranchBasedBuilder (ci={} master={})", ci, isMaster);
+        TOMTOMTOM_report(gradle);
 
         if (!(ci && isMaster)) {
             makeAllDependenciesBbb();
@@ -187,16 +186,29 @@ public class BranchBasedBuilder {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private void TOMTOMTOM_report(Project project) {
-        PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
-        LOGGER.info("+ bbb ---------------------------[ proj={}", project.getName());
+    private void TOMTOMTOM_report(Gradle gradle) {
+        gradle.allprojects(p->{
+            PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
+            LOGGER.info("+ bbb ---------------------------[ proj={}", p.getName());
+            if (publishing == null) {
+                LOGGER.info("+      bbb publishing==null");
+            } else {
+                publishing.getPublications().forEach(x -> LOGGER.info("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+                publishing.getRepositories().forEach(x -> LOGGER.info("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+            }
+            LOGGER.info("+ bbb ---------------------------] proj={}", p.getName());
+        });
+    }
+
+    private void TOMTOMTOM_report(PublishingExtension publishing) {
+        LOGGER.info("+ bbb ---------------------------[");
         if (publishing == null) {
             LOGGER.info("+      bbb publishing==null");
         } else {
-            publishing.getRepositories().forEach(x -> LOGGER.info("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
             publishing.getPublications().forEach(x -> LOGGER.info("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+            publishing.getRepositories().forEach(x -> LOGGER.info("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
         }
-        LOGGER.info("+ bbb ---------------------------] proj={}", project.getName());
+        LOGGER.info("+ bbb ---------------------------]");
     }
 
     private String TOMTOMTOM_describe(Publication x) {
@@ -215,17 +227,6 @@ public class BranchBasedBuilder {
         } else {
             return "IS " + x.getClass();
         }
-    }
-
-    private void TOMTOMTOM_report(PublishingExtension publishing) {
-        LOGGER.info("+ bbb ---------------------------[");
-        if (publishing == null) {
-            LOGGER.info("+      bbb publishing==null");
-        } else {
-            publishing.getRepositories().forEach(x -> LOGGER.info("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
-            publishing.getPublications().forEach(x -> LOGGER.info("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
-        }
-        LOGGER.info("+ bbb ---------------------------]");
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

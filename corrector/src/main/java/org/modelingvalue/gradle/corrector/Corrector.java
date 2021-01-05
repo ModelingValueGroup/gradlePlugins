@@ -27,23 +27,23 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.HelpTasksPlugin;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 class Corrector {
-    private final Project            project;
+    private final Gradle             gradle;
     private final CorrectorExtension ext;
 
-    public Corrector(Project project) {
-        this.project = project;
-        ext = CorrectorExtension.make(project, CORRECTOR_TASK_NAME);
-        TaskProvider<Task> tp = project.getTasks().register(CORRECTOR_TASK_NAME, this::setup);
+    public Corrector(Gradle gradle) {
+        this.gradle = gradle;
+        ext = CorrectorExtension.make(gradle.getRootProject(), CORRECTOR_TASK_NAME);
+        TaskProvider<Task> tp = gradle.getRootProject().getTasks().register(CORRECTOR_TASK_NAME, this::setup);
 
         // let all tasks depend on me...
-        project.getTasks().all(t -> {
+        gradle.allprojects(p -> p.getTasks().all(t -> {
             LOGGER.trace("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
             if (!t.getName().equals(tp.getName())                                                               // ... not myself (duh)
                     && !t.getName().matches("(?i)" + quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*")   // ... not the cleaning tasks
@@ -54,7 +54,7 @@ class Corrector {
                 LOGGER.info("+ adding task dependency: {} before {}", tp.getName(), t.getName());
                 t.dependsOn(tp);
             }
-        });
+        }));
     }
 
     private void setup(Task task) {
@@ -64,7 +64,7 @@ class Corrector {
     }
 
     private void execute() {
-        LOGGER.info("+ running corrector task on project {}, dir={}", project.getName(), project.getRootDir());
+        LOGGER.info("+ execute {} task", CORRECTOR_TASK_NAME);
         try {
             Set<Path> changes = new HashSet<>();
 
@@ -72,7 +72,7 @@ class Corrector {
             changes.addAll(new HdrCorrector(ext).generate().getChangedFiles());
             changes.addAll(new VerCorrector(ext).generate().getChangedFiles());
 
-            LOGGER.info("+ changed {} files (CI={}, master={}, have-token={})", changes.size(), CI, Info.isMasterBranch(project.getGradle()), ALLREP_TOKEN != null);
+            LOGGER.info("+ changed {} files (CI={}, master={}, have-token={})", changes.size(), CI, Info.isMasterBranch(gradle), ALLREP_TOKEN != null);
 
             if (!changes.isEmpty() && CI && ALLREP_TOKEN != null) {
                 GitUtil.push(ext.getRoot(), changes, GitUtil.NO_CI_MESSAGE + " updated by corrector");

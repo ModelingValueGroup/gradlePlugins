@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.invocation.Gradle;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class MvgCorrectorPlugin implements Plugin<Project> {
@@ -36,9 +37,12 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
     private BranchBasedBuilder branchBasedBuilder;
 
     public void apply(Project project) {
+        Gradle gradle = project.getGradle();
+        Project rootProject = gradle.getRootProject();
+
         LOGGER.info("apply {} on project {}", this.getClass().getSimpleName(), project.getName());
-        if (project.getGradle().getRootProject()!=project){
-            LOGGER.error("the plugin {} can only be applied to the root project ({})", this.getClass().getSimpleName(), project.getGradle().getRootProject());
+        if (rootProject !=project){
+            LOGGER.error("the plugin {} can only be applied to the root project ({})", this.getClass().getSimpleName(), rootProject);
             throw new GradleException("the plugin " + this.getClass().getSimpleName() + " can onlly be applied to the root project");
         }
 
@@ -48,9 +52,9 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
 
         checkWorkflowFiles(project.getRootProject().getRootDir().toPath());
 
-        corrector = new Corrector(project);
-        tagger = new Tagger(project);
-        branchBasedBuilder = new BranchBasedBuilder(project);
+        corrector = new Corrector(gradle);
+        tagger = new Tagger(gradle);
+        branchBasedBuilder = new BranchBasedBuilder(gradle);
     }
 
     private static void checkWorkflowFiles(Path root) {
