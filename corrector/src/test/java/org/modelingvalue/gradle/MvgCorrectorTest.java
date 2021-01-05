@@ -126,8 +126,8 @@ public class MvgCorrectorTest {
         assertEquals(4, numOccurences("+ eols   untouched   : ", out));
         assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out));
         assertEquals(1, numOccurences("+ version of project 'testWorkspace' adjusted to from 0.0.1 to 0.0.4", out));
-        //TOMTOMTOM assertEquals(1, numOccurences("+ bbb: dependency     replaced: ", out));
-        //TOMTOMTOM assertEquals(18, numOccurences("+ bbb: dependency NOT replaced: ", out));
+        assertEquals(1, numOccurences("+ bbb: dependency replaced: ", out));
+        assertEquals(18, numOccurences("+ bbb: no need to replace dependency: ", out));
 
         assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n"));
         assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright"));
