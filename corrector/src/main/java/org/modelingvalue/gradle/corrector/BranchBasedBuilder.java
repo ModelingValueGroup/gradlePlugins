@@ -31,28 +31,45 @@ import org.gradle.api.publish.maven.MavenPublication;
 
 public class BranchBasedBuilder {
     public static final Logger LOGGER                     = Info.LOGGER;
-    public static final String BRANCH_INDICATOR           = "-BRANCH";
+    public static final String BRANCH_INDICATOR           = "-BRANCHED";
     public static final String SNAPSHOT_VERSION_POST      = "-SNAPSHOT";
     public static final String SNAPSHOTS_REPO_POST        = "-snapshots";
     public static final String SNAPSHOTS_GROUP_PRE        = "snapshots.";
     public static final String REASON                     = "using Branch Based Building";
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
-    private final Gradle gradle;
+    private final Gradle  gradle;
+    private final boolean ci;
+    private final boolean isMaster;
 
     public BranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
 
-        boolean ci       = Info.CI;
-        boolean isMaster = Info.isMasterBranch(gradle);
+        ci = Info.CI;
+        isMaster = Info.isMasterBranch(gradle);
 
         LOGGER.info("+ bbb: creating BranchBasedBuilder (ci={} master={})", ci, isMaster);
         TOMTOMTOM_report(gradle);
 
-        if (!(ci && isMaster)) {
-            makeAllDependenciesBbb();
-        }
+        adjustDependencies();
+        adjustPublications(gradle);
+    }
 
+    private void adjustDependencies() {
+        gradle.allprojects(p ->
+                p.getConfigurations().all(conf ->
+                        conf.resolutionStrategy(strategy ->
+                                strategy.getDependencySubstitution().all(depSub -> {
+                                    ComponentSelector component = depSub.getRequested();
+                                    if (component instanceof ModuleComponentSelector) {
+                                        checkReplacement(depSub, (ModuleComponentSelector) component);
+                                    } else {
+                                        LOGGER.info("+ bbb: can not handle unknown dependency class: " + component.getClass());
+                                    }
+                                }))));
+    }
+
+    private void adjustPublications(Gradle gradle) {
         gradle.afterProject(p -> {
             LOGGER.info("+ bbb: running afterProject on project {}", p.getName());
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
@@ -127,41 +144,19 @@ public class BranchBasedBuilder {
         });
     }
 
-    private void makeAllDependenciesBbb() {
-        gradle.allprojects(p ->
-                p.getConfigurations().all(conf ->
-                        conf.resolutionStrategy(resolutionStrategy ->
-                                resolutionStrategy.getDependencySubstitution().all(depSub -> {
-                                    ComponentSelector component = depSub.getRequested();
-                                    if (component instanceof ModuleComponentSelector) {
-                                        checkReplacement(depSub, (ModuleComponentSelector) component);
-                                    } else {
-                                        LOGGER.info("+ bbb: unknown dependency: " + component.getClass());
-                                    }
-                                }))));
-    }
-
     private void checkReplacement(DependencySubstitution depSub, ModuleComponentSelector component) {
-        String replacement = substitute(component.getGroup(), component.getModule(), component.getVersion());
-        if (replacement != null) {
+        String version = component.getVersion();
+        if (version.endsWith(BRANCH_INDICATOR)) {
+            String replacement = makeBbbGroup(component.getGroup()) + ":" + makeBbbArtifact(component.getModule()) + ":" + makeBbbVersion(version.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
+            LOGGER.info("+ bbb: dependency replaced: " + component + " => " + replacement);
             depSub.useTarget(replacement, REASON);
-            LOGGER.info("+ bbb: dependency     replaced: " + component + " => " + replacement);
         } else {
-            LOGGER.info("+ bbb: dependency NOT replaced: " + component);
+            LOGGER.info("+ bbb: no need to replace dependency: " + component);
         }
     }
 
-    public String substitute(String g, String a, String v) {
-        return !v.endsWith(BRANCH_INDICATOR) ? null : makeBbbGroup(g) + ":" + makeBbbArtifact(a) + ":" + makeBbbVersion(v.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
-    }
-
-    private URI makeBbbRepo(URI u) {
-        String s = u.toString().replaceAll("/$", "");
-        return s.length() == 0 || s.endsWith(SNAPSHOTS_REPO_POST) ? u : Util.makeURL(s + SNAPSHOTS_REPO_POST);
-    }
-
     private String makeBbbGroup(String g) {
-        return g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
+        return (ci && isMaster) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
     }
 
     private String makeBbbArtifact(String a) {
@@ -169,7 +164,12 @@ public class BranchBasedBuilder {
     }
 
     private String makeBbbVersion(String v) {
-        return v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
+        return (ci && isMaster) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
+    }
+
+    private URI makeBbbRepo(URI u) {
+        String s = u.toString().replaceAll("/$", "");
+        return s.length() == 0 || s.endsWith(SNAPSHOTS_REPO_POST) ? u : Util.makeURL(s + SNAPSHOTS_REPO_POST);
     }
 
     private String bbbId;
