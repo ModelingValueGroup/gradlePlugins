@@ -40,7 +40,9 @@ public class VerCorrector extends CorrectorBase {
         propName = ext.getVersionName();
         absPropFile = getAbsPropFile(propFile);
         forceVersionAdjustForTesting = project.getGradle().getRootProject().getName().equals("testWorkspace");
-        LOGGER.info("forceVersionAdjustForTesting={}", forceVersionAdjustForTesting);
+        if (forceVersionAdjustForTesting) {
+            LOGGER.info("TESTING: forceVersionAdjustForTesting is on");
+        }
     }
 
     private Path getAbsPropFile(Path propFile) {
@@ -55,23 +57,24 @@ public class VerCorrector extends CorrectorBase {
         if (propFile == null) {
             LOGGER.info("+ can not find a a proper version: no properties file specified");
         } else if (!forceVersionAdjustForTesting && !CI) {
-            LOGGER.info("+ version not adjusted: not on CI (CI={})", CI);
+            LOGGER.info("+ version not adjusted: not on CI");
         } else {
             Props  props      = new Props(propFile);
             String oldVersion = props.getProp(propName, "0.0.1");
             String newVersion = findVacantVersion(oldVersion);
-            if (!oldVersion.equals(newVersion)) {
+            if (newVersion != null) {
+                LOGGER.info("+ in property file {}: overwriting property {} with new version {}", propFile, propName, newVersion);
                 props.setProp(propName, newVersion);
                 overwrite(absPropFile, props.getLines());
+                project.getAllprojects().forEach(p -> {
+                    if (p.getVersion().equals(oldVersion)) {
+                        LOGGER.info("+ version of project '{}' adjusted to from {} to {}", p.getName(), oldVersion, newVersion);
+                        p.setVersion(newVersion);
+                    } else {
+                        LOGGER.info("+ version of project '{}' NOT adjusted to {}, because it is not {} but {}", p.getName(), newVersion, oldVersion, p.getVersion());
+                    }
+                });
             }
-            project.getAllprojects().forEach(p -> {
-                if (p.getVersion().equals(oldVersion)) {
-                    LOGGER.info("+ version of project '{}' adjusted to from {} to {}", p.getName(), oldVersion, newVersion);
-                    p.setVersion(newVersion);
-                } else {
-                    LOGGER.info("+ version of project '{}' NOT adjusted to {}, because it is not {} but {}", p.getName(), newVersion, oldVersion, p.getVersion());
-                }
-            });
         }
         return this;
     }
@@ -90,7 +93,12 @@ public class VerCorrector extends CorrectorBase {
             newVersion = String.join(".", versionParts);
             Info.LOGGER.trace("+ ...trying next version: {}", newVersion);
         }
-        Info.LOGGER.info("+ found vacant version: {} (was {})", newVersion, oldVersion);
-        return newVersion;
+        if (newVersion.equals(oldVersion)) {
+            Info.LOGGER.info("+ mentioned version is vacant: {}", newVersion);
+            return null;
+        } else {
+            Info.LOGGER.info("+ found vacant version: {} (was {})", newVersion, oldVersion);
+            return newVersion;
+        }
     }
 }
