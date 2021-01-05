@@ -30,7 +30,6 @@ jobs:
           ./gradlew \
               --info \
               --scan \
-              build \
               test
 
       - name: "if master: publish gradle plugin"
@@ -42,4 +41,3 @@ jobs:
               -Pgradle.publish.key=$GRADLE_KEY \
               -Pgradle.publish.secret=$GRADLE_SECRET \
               publishPlugins
-

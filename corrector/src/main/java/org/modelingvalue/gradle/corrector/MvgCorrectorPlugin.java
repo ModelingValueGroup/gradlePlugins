@@ -36,6 +36,12 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
     private BranchBasedBuilder branchBasedBuilder;
 
     public void apply(Project project) {
+        LOGGER.info("apply {} on project {}", this.getClass().getSimpleName(), project.getName());
+        if (project.getGradle().getRootProject()!=project){
+            LOGGER.error("the plugin {} can only be applied to the root project ({})", this.getClass().getSimpleName(), project.getGradle().getRootProject());
+            throw new GradleException("the plugin " + this.getClass().getSimpleName() + " can onlly be applied to the root project");
+        }
+
         //TOMTOMTOM
         //        DefaultConvention ext = (DefaultConvention) project.getExtensions();
         //        ext.getAsMap().forEach((k, v) -> System.out.printf("@@@@@ %-20s : %s\n", k, v));
