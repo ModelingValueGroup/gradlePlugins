@@ -39,7 +39,6 @@ repositories {
 
 tasks.test {
     useJUnitPlatform()
-    systemProperty("ALLREP_TOKEN", "DRY")
     testLogging.showStandardStreams = true
 }
 
