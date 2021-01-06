@@ -114,7 +114,7 @@ public class MvgCorrectorTest {
                 .forwardStdOutput(outWriter)
                 .forwardStdError(errWriter)
                 .withPluginClasspath()
-                //.withEnvironment()
+                .withEnvironment(env)
                 .withProjectDir(testWorkspaceDir.toFile())
                 .withArguments("--scan", "--info", "--stacktrace", "compileJava")
                 .build();
