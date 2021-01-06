@@ -34,6 +34,7 @@ plugins {
 
 repositories {
     jcenter()
+    gradlePluginPortal()
 }
 
 tasks.test {
@@ -49,6 +50,7 @@ dependencies {
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.1")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.11.1")
+    implementation("com.gradle:gradle-enterprise-gradle-plugin:3.5")
 }
 
 tasks.withType<Javadoc> {

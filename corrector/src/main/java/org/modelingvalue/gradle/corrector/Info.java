@@ -21,19 +21,36 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.gradle.api.Action;
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
 public interface Info {
-    String  CORRECTOR_TASK_NAME = "mvgCorrector";
-    String  TAG_TASK_NAME       = "mvgTagger";
-    Logger  LOGGER              = Logging.getLogger(CORRECTOR_TASK_NAME);
-    boolean CI                  = Boolean.parseBoolean(envOrProp("CI", "false"));
-    String  ALLREP_TOKEN        = envOrProp("ALLREP_TOKEN", "DRY");
-    String  DEFAULT_BRANCH      = "refs/heads/develop";
-    String  PREPARATION_GROUP   = "preparation";
-    String  WRAP_UP_GROUP       = "wrap-up";
+    String                          CORRECTOR_TASK_NAME            = "mvgCorrector";
+    String                          TAG_TASK_NAME                  = "mvgTagger";
+    Logger                          LOGGER                         = Logging.getLogger(CORRECTOR_TASK_NAME);
+    boolean                         CI                             = Boolean.parseBoolean(envOrProp("CI", "false"));
+    String                          ALLREP_TOKEN                   = envOrProp("ALLREP_TOKEN", "DRY");
+    String                          DEFAULT_BRANCH                 = "refs/heads/develop";
+    String                          PREPARATION_GROUP              = "preparation";
+    String                          WRAP_UP_GROUP                  = "wrap-up";
+    String                          MVG_MAVEN_REPO_URL             = "https://maven.pkg.github.com/ModelingValueGroup/packages";
+    String                          MVG_MAVEN_REPO_SNAPSHOTS_URL   = "https://maven.pkg.github.com/ModelingValueGroup/packages-snapshots";
+    Action<MavenArtifactRepository> MVG_MAVEN_REPO_MAKER           = getRepoMaker("MvgMaven", MVG_MAVEN_REPO_URL);
+    Action<MavenArtifactRepository> MVG_MAVEN_SNAPSHOTS_REPO_MAKER = getRepoMaker("MvgMavenSnapshots", MVG_MAVEN_REPO_SNAPSHOTS_URL);
+
+    static Action<MavenArtifactRepository> getRepoMaker(String name, String url) {
+        return mar -> {
+            mar.setUrl(url);
+            mar.credentials(c -> {
+                mar.setName(name);
+                c.setUsername("");
+                c.setPassword(ALLREP_TOKEN);
+            });
+        };
+    }
 
     static String getGithubRef(Gradle gradle) {
         Path headFile = gradle.getRootProject().getRootDir().toPath().resolve(".git/HEAD").toAbsolutePath();
