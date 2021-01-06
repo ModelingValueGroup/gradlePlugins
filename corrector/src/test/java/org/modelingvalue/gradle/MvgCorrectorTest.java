@@ -16,10 +16,7 @@
 package org.modelingvalue.gradle;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.gradle.internal.impldep.org.junit.Assert.assertEquals;
-import static org.gradle.internal.impldep.org.junit.Assert.assertFalse;
-import static org.gradle.internal.impldep.org.junit.Assert.assertNotNull;
-import static org.gradle.internal.impldep.org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.modelingvalue.gradle.corrector.Util.numOccurences;
 
 import java.io.FileInputStream;
@@ -102,13 +99,12 @@ public class MvgCorrectorTest {
         assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright"));
 
         Map<String, String> env = new HashMap<>(System.getenv());
-        System.out.println("TOMTOMTOM pre  env ALLREP = "+env.get("ALLREP_TOKEN"));
         env.putIfAbsent("ALLREP_TOKEN", "DRY");
-        System.out.println("TOMTOMTOM post env ALLREP = "+env.get("ALLREP_TOKEN"));
 
         // Run the build
         StringWriter outWriter = new StringWriter();
         StringWriter errWriter = new StringWriter();
+        //noinspection UnstableApiUsage
         GradleRunner.create()
                 //.withDebug(true) // use this if you need to debug
                 .forwardStdOutput(outWriter)
@@ -130,28 +126,30 @@ public class MvgCorrectorTest {
         GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
 
         // Verify the result
-        assertEquals(5, numOccurences("+ header regenerated : ", out));
-        assertEquals(2, numOccurences("+ eols   regenerated : ", out));
-        assertEquals(4, numOccurences("+ eols   untouched   : ", out));
-        assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out));
-        assertEquals(1, numOccurences("+ version of project 'testWorkspace' adjusted to from 0.0.1 to 0.0.4", out));
-        assertEquals(1, numOccurences("+ bbb: dependency replaced: ", out));
-        assertEquals(18, numOccurences("+ bbb: no need to replace dependency: ", out));
+        assertAll(
+                () -> assertEquals(5, numOccurences("+ header regenerated : ", out)),
+                () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
+                () -> assertEquals(4, numOccurences("+ eols   untouched   : ", out)),
+                () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
+                () -> assertEquals(1, numOccurences("+ version of project 'testWorkspace' adjusted to from 0.0.1 to 0.0.4", out)),
+                () -> assertEquals(1, numOccurences("+ bbb: dependency replaced: ", out)),
+                () -> assertEquals(1, numOccurences("+ bbb: no need to replace dependency: ", out)),
 
-        assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n"));
-        assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright"));
-        assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright"));
-        assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright"));
-        assertTrue(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright"));
+                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n")),
+                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
+                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright")),
+                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright")),
+                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright")),
+                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright")),
+                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright")),
 
-        assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("\r"));
-        assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("\r"));
+                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r")),
+                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r")),
+                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
+                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
+                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("\r")),
+                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("\r"))
+        );
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

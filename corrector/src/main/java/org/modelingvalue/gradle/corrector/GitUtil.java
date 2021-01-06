@@ -160,29 +160,21 @@ public class GitUtil {
     }
 
     private static void doPush(Git git) throws GitAPIException {
-        LOGGER.info("+ {}push", DRY_RUN ? "[dry] " : "");
-        Iterable<PushResult> result = git.push()
-                .setDryRun(DRY_RUN)
-                .setCredentialsProvider(CREDENTIALS_PROV)
-                .setProgressMonitor(PROGRESS_MONITOR)
-                .call();
-        if (LOGGER.isInfoEnabled()) {
-            result.forEach(pr -> {
-                LOGGER.info("+ push result  : {}", pr.getMessages());
-                pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ remote update     - {}", x));
-                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ tracking update   - {}", x));
-            });
-        }
+        doPush(git, false);
     }
 
     private static void doPushTags(Git git) throws GitAPIException {
+        doPush(git, true);
+    }
+
+    private static void doPush(Git git, boolean withTags) throws GitAPIException {
         LOGGER.info("+ {}push", DRY_RUN ? "[dry] " : "");
-        Iterable<PushResult> result = git.push()
-                .setPushTags()
-                .setDryRun(DRY_RUN)
-                .setCredentialsProvider(CREDENTIALS_PROV)
-                .setProgressMonitor(PROGRESS_MONITOR)
-                .call();
+        Iterable<PushResult> result =
+                (withTags ? git.push().setPushTags() : git.push())
+                        .setDryRun(DRY_RUN)
+                        .setCredentialsProvider(CREDENTIALS_PROV)
+                        .setProgressMonitor(PROGRESS_MONITOR)
+                        .call();
         if (LOGGER.isInfoEnabled()) {
             result.forEach(pr -> {
                 LOGGER.info("+ push result  : {}", pr.getMessages());

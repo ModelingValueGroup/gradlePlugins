@@ -31,5 +31,15 @@
       <option name="name" value="Gradle Central Plugin Repository" />
       <option name="url" value="https://plugins.gradle.org/m2" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="MvgMavenSnapshots" />
+      <option name="name" value="MvgMavenSnapshots" />
+      <option name="url" value="https://maven.pkg.github.com/ModelingValueGroup/packages-snapshots" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="MvgMaven" />
+      <option name="name" value="MvgMaven" />
+      <option name="url" value="https://maven.pkg.github.com/ModelingValueGroup/packages" />
+    </remote-repository>
   </component>
 </project>

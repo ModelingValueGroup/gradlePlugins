@@ -27,6 +27,8 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.invocation.Gradle;
+import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.tasks.testing.Test;
 import org.gradle.internal.extensibility.DefaultConvention;
 
 import com.gradle.scan.plugin.BuildScanExtension;
@@ -46,7 +48,11 @@ public class MvgPlugin implements Plugin<Project> {
         checkMustBeRootProject(project);
         checkWorkflowFilesForLoopingDanger();
 
+        trace();
+
+        useJUnitPlatform();
         agreeToBuildScan();
+        tuneJavaPlugin();
         addMVGRepositories();
 
         corrector = new Corrector(gradle);
@@ -54,17 +60,45 @@ public class MvgPlugin implements Plugin<Project> {
         branchBasedBuilder = new BranchBasedBuilder(gradle);
     }
 
+    private void trace() {
+        gradle.afterProject(p -> {
+            LOGGER.info("+ all extension of project {}:", p.getName());
+            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("+   - {} = {}", String.format("%-20s", k), v.getClass()));
+            LOGGER.info("+ all tasks of project {}:", p.getName());
+            p.getTasks().all(t -> LOGGER.info("+   - {} = {}", String.format("%-20s", t.getName()), t.getClass()));
+        });
+    }
+
+    private void useJUnitPlatform() {
+        gradle.afterProject(p -> {
+            Test test = (Test) p.getTasks().findByName("test");
+            if (test != null) {
+                LOGGER.info("+ adding test.useJUnitPlatform");
+                test.useJUnitPlatform();
+            }
+        });
+    }
+
     private void agreeToBuildScan() {
         gradle.afterProject(p -> {
-            BuildScanExtension buildScan = (BuildScanExtension) gradle.getRootProject().getExtensions().findByName("buildScan");
+            BuildScanExtension buildScan = (BuildScanExtension) p.getExtensions().findByName("buildScan");
             if (buildScan != null) {
                 LOGGER.info("+ agreeing to buildScan");
                 buildScan.setTermsOfServiceAgree("yes");
                 buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
             }
+        });
+    }
 
-            LOGGER.info("+ all extension of project {}:", p.getName());
-            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("+   - {} = {}", String.format("%-20s", k), v.getClass()));
+    @SuppressWarnings("UnstableApiUsage")
+    private void tuneJavaPlugin() {
+        gradle.afterProject(p -> {
+            JavaPluginExtension java = (JavaPluginExtension) p.getExtensions().findByName("java");
+            if (java != null) {
+                LOGGER.info("+ adding tasks for javadoc & source jars");
+                java.withJavadocJar();
+                java.withSourcesJar();
+            }
         });
     }
 

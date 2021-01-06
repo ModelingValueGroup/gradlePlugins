@@ -13,13 +13,6 @@ plugins {
     addTextFileExtension("pruuperties")
 }
 dependencies {
-    implementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
     implementation("demo-lib:lib:3.0.52-BRANCHED")
-}
-publishing {
-    publications {
-        create<MavenPublication>("lib") {
-            from(components["java"])
-        }
-    }
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
 }
