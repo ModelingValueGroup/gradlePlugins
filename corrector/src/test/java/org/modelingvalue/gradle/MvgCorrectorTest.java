@@ -41,11 +41,11 @@ import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.corrector.GitUtil;
 import org.modelingvalue.gradle.corrector.Info;
-import org.modelingvalue.gradle.corrector.MvgCorrectorPlugin;
+import org.modelingvalue.gradle.corrector.MvgPlugin;
 
 public class MvgCorrectorTest {
-    private static final String PLUGIN_PACKAGE_NAME = MvgCorrectorPlugin.class.getPackageName();
-    private static final String PLUGIN_CLASS_NAME   = MvgCorrectorPlugin.class.getName();
+    private static final String PLUGIN_PACKAGE_NAME = MvgPlugin.class.getPackageName();
+    private static final String PLUGIN_CLASS_NAME   = MvgPlugin.class.getName();
     private static final Path   testWorkspaceDir    = Paths.get("build", "testWorkspace").toAbsolutePath();
     private static final Path   settingsFile        = Paths.get("settings.gradle");
     private static final Path   buildFile           = Paths.get("build.gradle.kts");
@@ -103,6 +103,7 @@ public class MvgCorrectorTest {
         StringWriter outWriter = new StringWriter();
         StringWriter errWriter = new StringWriter();
         GradleRunner.create()
+                //.withDebug(true) // use this if you need to debug
                 .forwardStdOutput(outWriter)
                 .forwardStdError(errWriter)
                 .withPluginClasspath()

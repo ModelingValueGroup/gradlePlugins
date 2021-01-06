@@ -1,11 +1,12 @@
-val ALLREP_TOKEN: String = System.getenv("ALLREP_TOKEN") ?: "DRY"
+val VERSION: String by project
+val GROUP: String by project
 
-group = "mygroup"
-version = "0.0.1"
+group = GROUP
+version = VERSION
 
 plugins {
-    java
     id("~my-package~")
+    `java-library`
     `maven-publish`
 }
 ~myExtension~ {
@@ -13,32 +14,7 @@ plugins {
 }
 dependencies {
     implementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
-    //TOMTOMTOM
-implementation("demo-lib:lib:3.0.52-BRANCHED")
-}
-repositories {
-    mavenCentral()
-    mavenLocal()
-    maven {
-        url = uri("https://maven.pkg.github.com/ModelingValueGroup/packages")
-        credentials {
-            username = "" // can be anything but plugin requires it
-            password = ALLREP_TOKEN
-        }
-    }
-    maven {
-        url = uri("https://maven.pkg.github.com/ModelingValueGroup/packages-snapshots")
-        credentials {
-            username = "" // can be anything but plugin requires it
-            password = ALLREP_TOKEN
-        }
-    }
-}
-gradleEnterprise {
-    buildScan {
-        termsOfServiceUrl = "https://gradle.com/terms-of-service"
-        termsOfServiceAgree = "yes"
-    }
+    implementation("demo-lib:lib:3.0.52-BRANCHED")
 }
 publishing {
     publications {

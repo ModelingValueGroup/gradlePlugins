@@ -27,40 +27,74 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.invocation.Gradle;
+import org.gradle.internal.extensibility.DefaultConvention;
+
+import com.gradle.scan.plugin.BuildScanExtension;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
-public class MvgCorrectorPlugin implements Plugin<Project> {
+public class MvgPlugin implements Plugin<Project> {
     public static final String NO_CI_GUARD = "!contains(github.event.head_commit.message, '[no-ci]')";
 
+    private Gradle             gradle;
     private Corrector          corrector;
     private Tagger             tagger;
     private BranchBasedBuilder branchBasedBuilder;
 
     public void apply(Project project) {
-        Gradle gradle = project.getGradle();
-        Project rootProject = gradle.getRootProject();
+        gradle = project.getGradle();
 
-        LOGGER.info("apply {} on project {}", this.getClass().getSimpleName(), project.getName());
-        if (rootProject !=project){
-            LOGGER.error("the plugin {} can only be applied to the root project ({})", this.getClass().getSimpleName(), rootProject);
-            throw new GradleException("the plugin " + this.getClass().getSimpleName() + " can onlly be applied to the root project");
-        }
+        checkMustBeRootProject(project);
+        checkWorkflowFilesForLoopingDanger();
 
-        //TOMTOMTOM
-        //        DefaultConvention ext = (DefaultConvention) project.getExtensions();
-        //        ext.getAsMap().forEach((k, v) -> System.out.printf("@@@@@ %-20s : %s\n", k, v));
-
-        checkWorkflowFiles(project.getRootProject().getRootDir().toPath());
+        agreeToBuildScan();
+        addMVGRepositories();
 
         corrector = new Corrector(gradle);
         tagger = new Tagger(gradle);
         branchBasedBuilder = new BranchBasedBuilder(gradle);
     }
 
-    private static void checkWorkflowFiles(Path root) {
+    private void agreeToBuildScan() {
+        gradle.afterProject(p -> {
+            BuildScanExtension buildScan = (BuildScanExtension) gradle.getRootProject().getExtensions().findByName("buildScan");
+            if (buildScan != null) {
+                LOGGER.info("+ agreeing to buildScan");
+                buildScan.setTermsOfServiceAgree("yes");
+                buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
+            }
+
+            LOGGER.info("+ all extension of project {}:", p.getName());
+            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("+   - {} = {}", String.format("%-20s", k), v.getClass()));
+        });
+    }
+
+    private void addMVGRepositories() {
+        gradle.allprojects(p -> {
+            LOGGER.info("+ adding MVG repositories to project {}", p.getName());
+
+            p.getRepositories().jcenter();
+            p.getRepositories().mavenLocal();
+            p.getRepositories().maven(Info.MVG_MAVEN_REPO_MAKER);
+            p.getRepositories().maven(Info.MVG_MAVEN_SNAPSHOTS_REPO_MAKER);
+
+            p.getRepositories().forEach(r -> LOGGER.info("+   - {}", r.getName()));
+        });
+    }
+
+    private void checkMustBeRootProject(Project project) {
+        String pluginName = this.getClass().getSimpleName();
+        LOGGER.info("+ apply {} on project {}", pluginName, project.getName());
+        if (gradle.getRootProject() != project) {
+            LOGGER.error("the plugin {} can only be applied to the root project ({})", pluginName, gradle.getRootProject());
+            throw new GradleException("the plugin " + pluginName + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
+        }
+    }
+
+    private void checkWorkflowFilesForLoopingDanger() {
+        Path root         = gradle.getRootProject().getRootDir().toPath();
         Path workflowsDir = root.resolve(".github").resolve("workflows");
         if (!Files.isDirectory(workflowsDir)) {
-            LOGGER.warn("RECURSION DANGER: workflows dir not found ({}): can not check for build loop dangers", workflowsDir);
+            LOGGER.warn("can not check for BUILD LOOP DANGER: workflows dir not found at {}", workflowsDir);
         } else {
             try {
                 AtomicBoolean errorsDetected = new AtomicBoolean();
@@ -86,7 +120,7 @@ public class MvgCorrectorPlugin implements Plugin<Project> {
                             }
                         });
                 if (errorsDetected.get()) {
-                    throw new GradleException("RECURSION DANGER in a workflow file");
+                    throw new GradleException("BUILD LOOP DANGER in one or more workflow files");
                 }
             } catch (IOException e) {
                 throw new GradleException("can not scan workflows dir", e);

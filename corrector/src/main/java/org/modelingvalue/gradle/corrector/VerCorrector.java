@@ -41,7 +41,7 @@ public class VerCorrector extends CorrectorBase {
         absPropFile = getAbsPropFile(propFile);
         forceVersionAdjustForTesting = project.getGradle().getRootProject().getName().equals("testWorkspace");
         if (forceVersionAdjustForTesting) {
-            LOGGER.info("TESTING: forceVersionAdjustForTesting is on");
+            LOGGER.info("+ TESTING: forceVersionAdjustForTesting is on");
         }
     }
 
