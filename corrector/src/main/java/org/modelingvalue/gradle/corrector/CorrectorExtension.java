@@ -26,7 +26,6 @@ import java.util.Set;
 import org.gradle.api.Project;
 import org.gradle.internal.extensibility.DefaultConvention;
 
-@SuppressWarnings({"FieldCanBeLocal"})
 public class CorrectorExtension {
     public static CorrectorExtension make(Project project, String name) {
         return ((DefaultConvention) project.getExtensions()).create(name, CorrectorExtension.class, project);
@@ -130,10 +129,6 @@ public class CorrectorExtension {
 
     public Path getRoot() {
         return project.getRootDir().toPath();
-    }
-
-    public String getProjectVersion() {
-        return project.getVersion().toString();
     }
 
     public void setHeaderUrl(String url) {
