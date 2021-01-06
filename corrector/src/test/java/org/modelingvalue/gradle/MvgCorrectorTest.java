@@ -30,6 +30,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Scanner;
@@ -99,6 +101,11 @@ public class MvgCorrectorTest {
         assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright"));
 
+        Map<String, String> env = new HashMap<>(System.getenv());
+        System.out.println("TOMTOMTOM pre  env ALLREP = "+env.get("ALLREP_TOKEN"));
+        env.putIfAbsent("ALLREP_TOKEN", "DRY");
+        System.out.println("TOMTOMTOM post env ALLREP = "+env.get("ALLREP_TOKEN"));
+
         // Run the build
         StringWriter outWriter = new StringWriter();
         StringWriter errWriter = new StringWriter();
@@ -107,6 +114,7 @@ public class MvgCorrectorTest {
                 .forwardStdOutput(outWriter)
                 .forwardStdError(errWriter)
                 .withPluginClasspath()
+                .withEnvironment(env)
                 .withProjectDir(testWorkspaceDir.toFile())
                 .withArguments("--scan", "--info", "--stacktrace", "compileJava")
                 .build();

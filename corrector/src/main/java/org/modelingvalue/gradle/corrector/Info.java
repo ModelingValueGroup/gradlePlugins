@@ -43,9 +43,10 @@ public interface Info {
 
     static Action<MavenArtifactRepository> getRepoMaker(String name, String url) {
         return mar -> {
+            LOGGER.info("+ REPOMAKER: name={} url={} pw={}", name, url, ALLREP_TOKEN);
             mar.setUrl(url);
+            mar.setName(name);
             mar.credentials(c -> {
-                mar.setName(name);
                 c.setUsername("");
                 c.setPassword(ALLREP_TOKEN);
             });
