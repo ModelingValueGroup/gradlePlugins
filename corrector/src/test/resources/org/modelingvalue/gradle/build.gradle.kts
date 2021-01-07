@@ -14,5 +14,4 @@ plugins {
 }
 dependencies {
     implementation("demo-lib:lib:3.0.52-BRANCHED")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
 }

@@ -63,9 +63,9 @@ public class MvgPlugin implements Plugin<Project> {
     private void trace() {
         gradle.afterProject(p -> {
             LOGGER.info("+ all extension of project {}:", p.getName());
-            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("+   - {} = {}", String.format("%-20s", k), v.getClass()));
+            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("+   ext - {} = {}", String.format("%-20s", k), v.getClass()));
             LOGGER.info("+ all tasks of project {}:", p.getName());
-            p.getTasks().all(t -> LOGGER.info("+   - {} = {}", String.format("%-20s", t.getName()), t.getClass()));
+            p.getTasks().all(t -> LOGGER.info("+   tsk - {} = {}", String.format("%-20s", t.getName()), t.getClass()));
         });
     }
 
@@ -76,6 +76,9 @@ public class MvgPlugin implements Plugin<Project> {
                 LOGGER.info("+ adding test.useJUnitPlatform");
                 test.useJUnitPlatform();
             }
+
+            p.getDependencies().add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.6.2");
+            p.getDependencies().add("testRuntimeOnly", "org.junit.jupiter:junit-jupiter-engine:5.7.0");
         });
     }
 
