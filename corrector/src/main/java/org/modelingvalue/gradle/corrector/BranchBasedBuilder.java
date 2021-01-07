@@ -59,19 +59,25 @@ public class BranchBasedBuilder {
         gradle.allprojects(p ->
                 p.getConfigurations().all(conf ->
                         conf.resolutionStrategy(strategy ->
-                                strategy.getDependencySubstitution().all(depSub -> {
-                                    ComponentSelector component = depSub.getRequested();
-                                    if (component instanceof ModuleComponentSelector) {
-                                        checkReplacement(depSub, (ModuleComponentSelector) component);
-                                    } else {
-                                        LOGGER.info("+ bbb: can not handle unknown dependency class: " + component.getClass());
-                                    }
-                                }))));
+                                strategy.dependencySubstitution(depSubs ->
+                                        depSubs.all(depSub -> {
+                                                    ComponentSelector component = depSub.getRequested();
+                                                    if (component instanceof ModuleComponentSelector) {
+                                                        checkReplacement(depSub, (ModuleComponentSelector) component);
+                                                    } else {
+                                                        LOGGER.info("+ bbb: can not handle unknown dependency class: " + component.getClass());
+                                                    }
+                                                }
+                                        )
+                                )
+                        )
+                )
+        );
     }
 
     private void adjustPublications(Gradle gradle) {
         gradle.afterProject(p -> {
-            LOGGER.info("+ bbb: running afterProject on project {}", p.getName());
+            LOGGER.info("+ bbb: running adjustPublications on project {}", p.getName());
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
             if (publishing != null) {
                 if (!publishing.getRepositories().isEmpty()) {
@@ -148,10 +154,10 @@ public class BranchBasedBuilder {
         String version = component.getVersion();
         if (version.endsWith(BRANCH_INDICATOR)) {
             String replacement = makeBbbGroup(component.getGroup()) + ":" + makeBbbArtifact(component.getModule()) + ":" + makeBbbVersion(version.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
-            LOGGER.info("+ bbb: dependency replaced: " + component + " => " + replacement);
+            LOGGER.info("+ bbb: dependency     replaced: " + component + " => " + replacement);
             depSub.useTarget(replacement, REASON);
         } else {
-            LOGGER.info("+ bbb: no need to replace dependency: " + component);
+            LOGGER.info("+ bbb: dependency NOT replaced: " + component);
         }
     }
 
