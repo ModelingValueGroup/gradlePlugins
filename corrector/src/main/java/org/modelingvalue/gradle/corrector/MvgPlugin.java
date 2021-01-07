@@ -77,8 +77,12 @@ public class MvgPlugin implements Plugin<Project> {
                 test.useJUnitPlatform();
             }
 
-            p.getDependencies().add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.6.2");
-            p.getDependencies().add("testRuntimeOnly", "org.junit.jupiter:junit-jupiter-engine:5.7.0");
+            Object java = p.getExtensions().findByName("java");
+            if (java != null) {
+                LOGGER.info("+ adding junit5 dependencies");
+                p.getDependencies().add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.6.2");
+                p.getDependencies().add("testRuntimeOnly", "org.junit.jupiter:junit-jupiter-engine:5.7.0");
+            }
         });
     }
 
