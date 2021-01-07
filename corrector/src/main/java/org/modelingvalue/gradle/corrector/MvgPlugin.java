@@ -62,10 +62,11 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void trace() {
         gradle.afterProject(p -> {
-            LOGGER.info("+ all extension of project {}:", p.getName());
-            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("+   ext - {} = {}", String.format("%-20s", k), v.getClass()));
-            LOGGER.info("+ all tasks of project {}:", p.getName());
-            p.getTasks().all(t -> LOGGER.info("+   tsk - {} = {}", String.format("%-20s", t.getName()), t.getClass()));
+            String projectName = String.format("%-30s", p.getName());
+            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("++++ {}.ext [{}] = {}", projectName, String.format("%-30s", k), v.getClass()));
+            p.getTasks().all(x -> LOGGER.info("++++ {}.task[{}] = {}", projectName, String.format("%-30s", x.getName()), x.getClass()));
+            p.getConfigurations().all(x -> LOGGER.info("++++ {}.conf[{}] = {} #{}", projectName, String.format("%-30s", x.getName()), x.getClass(), x.getAllArtifacts().size()));
+            p.getPlugins().all(x -> LOGGER.info("++++ {}.plugin = {}", projectName, x.getClass()));
         });
     }
 
