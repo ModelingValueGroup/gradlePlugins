@@ -24,10 +24,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.Project;
+import org.gradle.api.invocation.Gradle;
 
 public class VerCorrector extends CorrectorBase {
-    private final Project project;
+    private final Gradle  gradle;
     private final Path    propFile;
     private final String  propName;
     private final Path    absPropFile;
@@ -35,11 +35,11 @@ public class VerCorrector extends CorrectorBase {
 
     public VerCorrector(CorrectorExtension ext) {
         super("vers  ", ext.getRoot(), ext.getEolFileExcludes());
-        project = ext.getProject();
+        gradle = ext.getGradle();
         propFile = ext.getPropFileWithVersion();
         propName = ext.getVersionName();
         absPropFile = getAbsPropFile(propFile);
-        forceVersionAdjustForTesting = project.getGradle().getRootProject().getName().equals("testWorkspace");
+        forceVersionAdjustForTesting = gradle.getRootProject().getName().equals("testWorkspace");
         if (forceVersionAdjustForTesting) {
             LOGGER.info("+ TESTING: forceVersionAdjustForTesting is on");
         }
@@ -66,12 +66,13 @@ public class VerCorrector extends CorrectorBase {
                 LOGGER.info("+ in property file {}: overwriting property {} with new version {}", propFile, propName, newVersion);
                 props.setProp(propName, newVersion);
                 overwrite(absPropFile, props.getLines());
-                project.getAllprojects().forEach(p -> {
-                    if (p.getVersion().equals(oldVersion)) {
+                gradle.allprojects(p -> {
+                    String projectVersion = p.getVersion().toString().trim();
+                    if (projectVersion.equals("")|| projectVersion.equals(oldVersion)) {
                         LOGGER.info("+ version of project '{}' adjusted to from {} to {}", p.getName(), oldVersion, newVersion);
                         p.setVersion(newVersion);
                     } else {
-                        LOGGER.info("+ version of project '{}' NOT adjusted to {}, because it is not {} but {}", p.getName(), newVersion, oldVersion, p.getVersion());
+                        LOGGER.info("+ version of project '{}' NOT adjusted to {}, because it is not {} but {}", p.getName(), newVersion, oldVersion, projectVersion);
                     }
                 });
             }

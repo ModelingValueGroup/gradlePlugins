@@ -80,8 +80,8 @@ public class MvgCorrectorTest {
     @Test
     public void checkFunctionality() throws IOException {
         // Setup the test build
-        cp(null, settingsFile, javaFile, gradlePropsFile, headFile, yamlFile);
-        cp(s -> s.replaceAll("~my-package~", PLUGIN_PACKAGE_NAME).replaceAll("~myExtension~", Info.CORRECTOR_TASK_NAME), buildFile);
+        cp(s -> s.replaceAll("~my-package~", PLUGIN_PACKAGE_NAME).replaceAll("~myExtension~", Info.CORRECTOR_TASK_NAME),
+                buildFile, settingsFile, javaFile, gradlePropsFile, headFile, yamlFile);
         cp(s -> s.replaceAll("\n", "\r"), propFile);
         cp(s -> s.replaceAll("\n", "\n\r"), pruupFile);
 

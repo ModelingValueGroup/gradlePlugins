@@ -23,7 +23,7 @@ import java.nio.file.Path;
 
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.invocation.Gradle;
+import org.gradle.api.initialization.Settings;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
@@ -53,8 +53,12 @@ public interface Info {
         };
     }
 
-    static String getGithubRef(Gradle gradle) {
-        Path headFile = gradle.getRootProject().getRootDir().toPath().resolve(".git/HEAD").toAbsolutePath();
+    static boolean isMasterBranch(Settings settings) {
+        return getGithubRef(settings).equals("refs/heads/master");
+    }
+
+    static String getGithubRef(Settings settings) {
+        Path headFile = settings.getRootDir().toPath().resolve(".git/HEAD").toAbsolutePath();
         if (Files.isRegularFile(headFile)) {
             try {
                 String firstLine = Files.readAllLines(headFile).get(0);
@@ -65,9 +69,5 @@ public interface Info {
         }
         LOGGER.warn("could not determine git branch (because {} not found), assuming branch '{}'", headFile, DEFAULT_BRANCH);
         return DEFAULT_BRANCH;
-    }
-
-    static boolean isMasterBranch(Gradle gradle) {
-        return getGithubRef(gradle).equals("refs/heads/master");
     }
 }

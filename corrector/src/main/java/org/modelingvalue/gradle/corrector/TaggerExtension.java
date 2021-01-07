@@ -15,11 +15,11 @@
 
 package org.modelingvalue.gradle.corrector;
 
-import org.gradle.api.Project;
+import org.gradle.api.initialization.Settings;
 import org.gradle.internal.extensibility.DefaultConvention;
 
 public class TaggerExtension {
-    public static TaggerExtension make(Project project, String name) {
-        return ((DefaultConvention) project.getExtensions()).create(name, TaggerExtension.class);
+    public static TaggerExtension make(Settings settings, String name) {
+        return ((DefaultConvention) settings.getExtensions()).create(name, TaggerExtension.class);
     }
 }

@@ -21,29 +21,34 @@ import static org.modelingvalue.gradle.corrector.Info.TAG_TASK_NAME;
 import static org.modelingvalue.gradle.corrector.Info.WRAP_UP_GROUP;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.api.invocation.Gradle;
+import org.gradle.api.initialization.Settings;
 import org.gradle.api.publish.plugins.PublishingPlugin;
 import org.gradle.api.tasks.TaskProvider;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 class Tagger {
-    private final Gradle          gradle;
+    private final boolean         isMaster;
     private final TaggerExtension ext;
+    private       Project         rootProject;
 
-    public Tagger(Gradle gradle) {
-        this.gradle = gradle;
-        ext = TaggerExtension.make(gradle.getRootProject(), TAG_TASK_NAME);
-        TaskProvider<Task> tp = gradle.getRootProject().getTasks().register(TAG_TASK_NAME, this::setup);
+    public Tagger(Settings settings) {
+        isMaster = Info.isMasterBranch(settings);
+        ext = TaggerExtension.make(settings, TAG_TASK_NAME);
 
         // let me depend on all publish tasks...
-        gradle.allprojects(p -> p.getTasks().all(t -> {
-            LOGGER.trace("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
-            if (t.getName().matches(quote(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) + ".*")) {
-                LOGGER.info("+ adding task dependency: {} after {}", tp.getName(), t.getName());
-                t.finalizedBy(tp);
-            }
-        }));
+        settings.getGradle().projectsEvaluated(g -> {
+            rootProject = g.getRootProject();
+            TaskProvider<Task> tp = rootProject.getTasks().register(TAG_TASK_NAME, this::setup);
+            rootProject.getTasks().all(t -> {
+                LOGGER.trace("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
+                if (t.getName().matches(quote(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) + ".*")) {
+                    LOGGER.info("+ adding task dependency: {} after {}", tp.getName(), t.getName());
+                    t.finalizedBy(tp);
+                }
+            });
+        });
     }
 
     private void setup(Task task) {
@@ -54,15 +59,17 @@ class Tagger {
 
     private void execute() {
         LOGGER.info("+ execute {} task", TAG_TASK_NAME);
-        String tag = "v" + gradle.getRootProject().getVersion();
+        String tag = "v" + rootProject.getVersion();
         if (tag.equals("v") || tag.equals("vnull") || tag.equals("vunspecified")) {
             LOGGER.error("+ can not tag with the version: version of the rootProject is not set: {}", tag);
             throw new GradleException("version of the rootProject is not set");
-        } else if (Info.isMasterBranch(gradle)) {
-            LOGGER.info("+ tagging this version with '{}' because this is the master branch", tag);
-            GitUtil.tag(gradle.getRootProject().getRootDir().toPath(), tag);
         } else {
-            LOGGER.info("+ not tagging this version with '{}' because this is not the master branch", tag);
+            if (isMaster) {
+                LOGGER.info("+ tagging this version with '{}' because this is the master branch", tag);
+                GitUtil.tag(rootProject.getRootDir().toPath(), tag);
+            } else {
+                LOGGER.info("+ not tagging this version with '{}' because this is not the master branch", tag);
+            }
         }
     }
 }

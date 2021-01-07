@@ -23,6 +23,7 @@ import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
+import org.gradle.api.initialization.Settings;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.publish.Publication;
@@ -38,24 +39,24 @@ public class BranchBasedBuilder {
     public static final String REASON                     = "using Branch Based Building";
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
-    private final Gradle  gradle;
+    private final Settings settings;
     private final boolean ci;
     private final boolean isMaster;
 
-    public BranchBasedBuilder(Gradle gradle) {
-        this.gradle = gradle;
+    public BranchBasedBuilder(Settings settings) {
+        this.settings = settings;
 
         ci = Info.CI;
-        isMaster = Info.isMasterBranch(gradle);
-
+        isMaster = Info.isMasterBranch(settings);
         LOGGER.info("+ bbb: creating BranchBasedBuilder (ci={} master={})", ci, isMaster);
-        TOMTOMTOM_report(gradle);
 
-        adjustDependencies();
+        Gradle gradle = settings.getGradle();
+        TOMTOMTOM_report(gradle);
+        adjustDependencies(gradle);
         adjustPublications(gradle);
     }
 
-    private void adjustDependencies() {
+    private void adjustDependencies(Gradle gradle) {
         gradle.allprojects(p ->
                 p.getConfigurations().all(conf ->
                         conf.resolutionStrategy(strategy ->
@@ -182,7 +183,7 @@ public class BranchBasedBuilder {
 
     private String cachedBbbId() {
         if (bbbId == null) {
-            String branch = Info.getGithubRef(gradle).replaceAll("^refs/heads/", "");
+            String branch = Info.getGithubRef(settings).replaceAll("^refs/heads/", "");
             String part   = branch.replaceAll("\\W", "_");
             part = part.substring(0, Math.min(part.length(), MAX_BRANCHNAME_PART_LENGTH));
             bbbId = String.format("%s-%08x%s", part, branch.hashCode(), SNAPSHOT_VERSION_POST);

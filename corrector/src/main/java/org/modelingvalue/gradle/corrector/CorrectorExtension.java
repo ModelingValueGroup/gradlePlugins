@@ -23,15 +23,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.gradle.api.Project;
+import org.gradle.api.initialization.Settings;
+import org.gradle.api.invocation.Gradle;
 import org.gradle.internal.extensibility.DefaultConvention;
 
 public class CorrectorExtension {
-    public static CorrectorExtension make(Project project, String name) {
-        return ((DefaultConvention) project.getExtensions()).create(name, CorrectorExtension.class, project);
+    public static CorrectorExtension make(Settings settings, String name) {
+        return ((DefaultConvention) settings.getExtensions()).create(name, CorrectorExtension.class, settings);
     }
 
-    private final Project             project;
+    private final Gradle              gradle;
+    private final Path                rootDir;
     private       URL                 headerUrl;
     private       Path                propFileWithVersion;
     private       String              versionName;
@@ -43,10 +45,11 @@ public class CorrectorExtension {
     private final Set<String>         headerFileExcludes;
     private final Set<String>         eolFileExcludes;
 
-    public CorrectorExtension(Project project) {
-        this.project = project;
+    public CorrectorExtension(Settings settings) {
+        gradle = settings.getGradle();
+        rootDir = settings.getRootDir().toPath();
         headerUrl = Util.getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
-        propFileWithVersion = project.getRootProject().getRootDir().toPath().resolve("gradle.properties");
+        propFileWithVersion = settings.getSettingsDir().toPath().resolve("gradle.properties");
         versionName = "VERSION";
         textFiles = new HashSet<>(List.of(
                 ".gitignore",
@@ -123,12 +126,12 @@ public class CorrectorExtension {
         ));
     }
 
-    public Project getProject() {
-        return project;
+    public Gradle getGradle() {
+        return gradle;
     }
 
     public Path getRoot() {
-        return project.getRootDir().toPath();
+        return rootDir;
     }
 
     public void setHeaderUrl(String url) {

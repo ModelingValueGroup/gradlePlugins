@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
-import org.gradle.api.Project;
+import org.gradle.api.initialization.Settings;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.testing.Test;
@@ -34,7 +34,7 @@ import org.gradle.internal.extensibility.DefaultConvention;
 import com.gradle.scan.plugin.BuildScanExtension;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
-public class MvgPlugin implements Plugin<Project> {
+public class MvgPlugin implements Plugin<Settings> {
     public static final String NO_CI_GUARD = "!contains(github.event.head_commit.message, '[no-ci]')";
 
     private Gradle             gradle;
@@ -42,10 +42,9 @@ public class MvgPlugin implements Plugin<Project> {
     private Tagger             tagger;
     private BranchBasedBuilder branchBasedBuilder;
 
-    public void apply(Project project) {
-        gradle = project.getGradle();
+    public void apply(Settings settings) {
+        gradle = settings.getGradle();
 
-        checkMustBeRootProject(project);
         checkWorkflowFilesForLoopingDanger();
 
         trace();
@@ -55,14 +54,14 @@ public class MvgPlugin implements Plugin<Project> {
         tuneJavaPlugin();
         addMVGRepositories();
 
-        corrector = new Corrector(gradle);
-        tagger = new Tagger(gradle);
-        branchBasedBuilder = new BranchBasedBuilder(gradle);
+        corrector = new Corrector(settings);
+        tagger = new Tagger(settings);
+        branchBasedBuilder = new BranchBasedBuilder(settings);
     }
 
     private void trace() {
         gradle.afterProject(p -> {
-            String projectName = String.format("%-30s", p.getName());
+            String projectName = String.format("%30s", p.getName());
             ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("++++ {}.ext [{}] = {}", projectName, String.format("%-30s", k), v.getClass()));
             p.getTasks().all(x -> LOGGER.info("++++ {}.task[{}] = {}", projectName, String.format("%-30s", x.getName()), x.getClass()));
             p.getConfigurations().all(x -> LOGGER.info("++++ {}.conf[{}] = {} #{}", projectName, String.format("%-30s", x.getName()), x.getClass(), x.getAllArtifacts().size()));
@@ -123,50 +122,43 @@ public class MvgPlugin implements Plugin<Project> {
         });
     }
 
-    private void checkMustBeRootProject(Project project) {
-        String pluginName = this.getClass().getSimpleName();
-        LOGGER.info("+ apply {} on project {}", pluginName, project.getName());
-        if (gradle.getRootProject() != project) {
-            LOGGER.error("the plugin {} can only be applied to the root project ({})", pluginName, gradle.getRootProject());
-            throw new GradleException("the plugin " + pluginName + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
-        }
-    }
-
     private void checkWorkflowFilesForLoopingDanger() {
-        Path root         = gradle.getRootProject().getRootDir().toPath();
-        Path workflowsDir = root.resolve(".github").resolve("workflows");
-        if (!Files.isDirectory(workflowsDir)) {
-            LOGGER.warn("can not check for BUILD LOOP DANGER: workflows dir not found at {}", workflowsDir);
-        } else {
-            try {
-                AtomicBoolean errorsDetected = new AtomicBoolean();
-                Files.list(workflowsDir)
-                        .filter(f -> Files.isRegularFile(f) && f.getFileName().toString().matches(".*\\.ya?ml"))
-                        .forEach(f -> {
-                            try {
-                                Map<?, ?> jobs = (Map<?, ?>) Util.readYaml(f).get("jobs");
-                                if (jobs == null) {
-                                    LOGGER.warn("RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
-                                } else {
-                                    jobs.keySet().forEach(jobName -> {
-                                        Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
-                                        String    theIf = (String) job.get("if");
-                                        if (theIf == null || !theIf.equals(NO_CI_GUARD)) {
-                                            LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, NO_CI_GUARD);
-                                            errorsDetected.set(true);
-                                        }
-                                    });
+        gradle.projectsLoaded(g->{
+            Path root         = gradle.getRootProject().getRootDir().toPath();
+            Path workflowsDir = root.resolve(".github").resolve("workflows");
+            if (!Files.isDirectory(workflowsDir)) {
+                LOGGER.warn("can not check for BUILD LOOP DANGER: workflows dir not found at {}", workflowsDir);
+            } else {
+                try {
+                    AtomicBoolean errorsDetected = new AtomicBoolean();
+                    Files.list(workflowsDir)
+                            .filter(f -> Files.isRegularFile(f) && f.getFileName().toString().matches(".*\\.ya?ml"))
+                            .forEach(f -> {
+                                try {
+                                    Map<?, ?> jobs = (Map<?, ?>) Util.readYaml(f).get("jobs");
+                                    if (jobs == null) {
+                                        LOGGER.warn("RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
+                                    } else {
+                                        jobs.keySet().forEach(jobName -> {
+                                            Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
+                                            String    theIf = (String) job.get("if");
+                                            if (theIf == null || !theIf.equals(NO_CI_GUARD)) {
+                                                LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, NO_CI_GUARD);
+                                                errorsDetected.set(true);
+                                            }
+                                        });
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        });
-                if (errorsDetected.get()) {
-                    throw new GradleException("BUILD LOOP DANGER in one or more workflow files");
+                            });
+                    if (errorsDetected.get()) {
+                        throw new GradleException("BUILD LOOP DANGER in one or more workflow files");
+                    }
+                } catch (IOException e) {
+                    throw new GradleException("can not scan workflows dir", e);
                 }
-            } catch (IOException e) {
-                throw new GradleException("can not scan workflows dir", e);
             }
-        }
+        });
     }
 }
