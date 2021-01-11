@@ -47,7 +47,7 @@ public class MvgCorrectorTest {
     private static final String PLUGIN_PACKAGE_NAME = MvgPlugin.class.getPackageName();
     private static final String PLUGIN_CLASS_NAME   = MvgPlugin.class.getName();
     private static final Path   testWorkspaceDir    = Paths.get("build", "testWorkspace").toAbsolutePath();
-    private static final Path   settingsFile        = Paths.get("settings.gradle");
+    private static final Path   settingsFile        = Paths.get("settings.gradle.kts");
     private static final Path   buildFile           = Paths.get("build.gradle.kts");
     private static final Path   gradlePropsFile     = Paths.get("gradle.properties");
     private static final Path   yamlFile            = Paths.get(".github", "workflows", "xyz.yaml");
@@ -105,7 +105,7 @@ public class MvgCorrectorTest {
                 .forwardStdError(errWriter)
                 .withPluginClasspath()
                 .withProjectDir(testWorkspaceDir.toFile())
-                .withArguments("--scan", "--info", "--stacktrace", "check")
+                .withArguments("--scan", "--debug", "--stacktrace", "check")
                 .build();
         String out = outWriter.toString();
         String err = errWriter.toString();

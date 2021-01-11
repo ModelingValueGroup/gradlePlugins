@@ -19,22 +19,16 @@ rootProject.name = ARTIFACT
 
 include("corrector")
 
-pluginManagement {
-    val CORRECTOR_VERSION: String by settings
-    plugins {
-        id("org.modelingvalue.gradle.corrector") version CORRECTOR_VERSION
-        id("com.gradle.enterprise") version ("3.5")
-    }
-}
-
 plugins {
-    id("com.gradle.enterprise")
+    id("com.gradle.enterprise") version ("3.5")
+    id("org.modelingvalue.gradle.corrector") version "0.3.53"
 }
 
-gradleEnterprise {
-    buildScan {
-        termsOfServiceUrl = "https://gradle.com/terms-of-service"
-        termsOfServiceAgree = "yes"
-        publishAlways()
-    }
-}
+//gradleEnterprise {
+//    buildScan {
+//        termsOfServiceUrl = "https://gradle.com/terms-of-service"
+//        termsOfServiceAgree = "yes"
+//        publishAlways()
+//    }
+//}
+

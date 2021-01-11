@@ -19,10 +19,3 @@ val GROUP: String by project
 group = GROUP
 version = VERSION
 
-plugins {
-    id("org.modelingvalue.gradle.corrector")
-}
-mvgCorrector {
-    addTextFileExtension("pruuperties")
-    addHeaderFileExclude("corrector/src/test/resources/.*")
-}

@@ -25,11 +25,10 @@ import java.util.Set;
 
 import org.gradle.api.initialization.Settings;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.internal.extensibility.DefaultConvention;
 
 public class CorrectorExtension {
     public static CorrectorExtension make(Settings settings, String name) {
-        return ((DefaultConvention) settings.getExtensions()).create(name, CorrectorExtension.class, settings);
+        return settings.getExtensions().create(name, CorrectorExtension.class, settings);
     }
 
     private final Gradle              gradle;
