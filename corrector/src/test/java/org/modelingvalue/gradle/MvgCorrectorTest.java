@@ -16,7 +16,10 @@
 package org.modelingvalue.gradle;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.modelingvalue.gradle.corrector.Util.numOccurences;
 
 import java.io.FileInputStream;
@@ -34,8 +37,6 @@ import java.util.Properties;
 import java.util.Scanner;
 import java.util.function.Function;
 
-import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.corrector.GitUtil;
@@ -67,14 +68,6 @@ public class MvgCorrectorTest {
 
         assertTrue(props.containsKey("corrector_name"));
         assertEquals(Info.CORRECTOR_TASK_NAME, props.get("corrector_name"));
-    }
-
-    @Test
-    public void checkApplicability() {
-        Project project = ProjectBuilder.builder().build();
-        project.getPlugins().apply(PLUGIN_PACKAGE_NAME);
-
-        assertNotNull(project.getTasks().findByName(Info.CORRECTOR_TASK_NAME));
     }
 
     @Test
