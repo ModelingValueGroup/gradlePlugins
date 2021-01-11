@@ -40,3 +40,4 @@ jobs:
               -Pgradle.publish.key=$GRADLE_KEY \
               -Pgradle.publish.secret=$GRADLE_SECRET \
               publishPlugins
+
