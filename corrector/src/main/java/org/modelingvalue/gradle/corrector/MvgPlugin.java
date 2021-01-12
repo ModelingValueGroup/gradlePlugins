@@ -18,7 +18,6 @@ package org.modelingvalue.gradle.corrector;
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
 
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -46,11 +45,9 @@ public class MvgPlugin implements Plugin<Project> {
     public void apply(Project project) {
         gradle = project.getGradle();
 
-        URL location = getClass().getProtectionDomain().getCodeSource().getLocation();
-        LOGGER.info("@@@@@@@@@@@@@@@@URL="+location);
-
         checkMustBeRootProject(project);
         checkWorkflowFilesForLoopingDanger();
+        checkIfWeAreUsingTheLatestPluginVersion();
 
         trace();
 
@@ -62,6 +59,69 @@ public class MvgPlugin implements Plugin<Project> {
         corrector = new Corrector(gradle);
         tagger = new Tagger(gradle);
         branchBasedBuilder = new BranchBasedBuilder(gradle);
+    }
+
+    private void checkMustBeRootProject(Project project) {
+        String pluginName = this.getClass().getSimpleName();
+        LOGGER.info("+ apply {} on project {}", pluginName, project.getName());
+        if (gradle.getRootProject() != project) {
+            LOGGER.error("the plugin {} can only be applied to the root project ({})", pluginName, gradle.getRootProject());
+            throw new GradleException("the plugin " + pluginName + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
+        }
+    }
+
+    private void checkWorkflowFilesForLoopingDanger() {
+        Path root         = gradle.getRootProject().getRootDir().toPath();
+        Path workflowsDir = root.resolve(".github").resolve("workflows");
+        if (!Files.isDirectory(workflowsDir)) {
+            LOGGER.warn("can not check for BUILD LOOP DANGER: workflows dir not found at {}", workflowsDir);
+        } else {
+            try {
+                AtomicBoolean errorsDetected = new AtomicBoolean();
+                Files.list(workflowsDir)
+                        .filter(f -> Files.isRegularFile(f) && f.getFileName().toString().matches(".*\\.ya?ml"))
+                        .forEach(f -> {
+                            try {
+                                Map<?, ?> jobs = (Map<?, ?>) Util.readYaml(f).get("jobs");
+                                if (jobs == null) {
+                                    LOGGER.warn("RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
+                                } else {
+                                    jobs.keySet().forEach(jobName -> {
+                                        Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
+                                        String    theIf = (String) job.get("if");
+                                        if (theIf == null || !theIf.equals(NO_CI_GUARD)) {
+                                            LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, NO_CI_GUARD);
+                                            errorsDetected.set(true);
+                                        }
+                                    });
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                if (errorsDetected.get()) {
+                    throw new GradleException("BUILD LOOP DANGER in one or more workflow files");
+                }
+            } catch (IOException e) {
+                throw new GradleException("can not scan workflows dir", e);
+            }
+        }
+    }
+
+    private void checkIfWeAreUsingTheLatestPluginVersion() {
+        String v = Util.getMyPluginVersion();
+        if (v == null) {
+            LOGGER.info("+ can not determine if using the latest version of corrector plugin: can not determine running version");
+        } else {
+            VersionExtractor extractor = new VersionExtractor(Info.PLUGIN_META_URL);
+            if (extractor.error()) {
+                LOGGER.warn("+ can not determine if using the latest version of corrector plugin: metainfo of myself not readable", extractor.getException());
+            } else if (!extractor.getLatest().equals(v)) {
+                LOGGER.warn("+ NOT using the latest corrector plugin version (using {}, latest is {})", v, extractor.getLatest());
+            } else {
+                LOGGER.info("+ OK: using the latest corrector plugin version ({})", v);
+            }
+        }
     }
 
     private void trace() {
@@ -125,52 +185,5 @@ public class MvgPlugin implements Plugin<Project> {
 
             p.getRepositories().forEach(r -> LOGGER.info("+   - {}", r.getName()));
         });
-    }
-
-    private void checkMustBeRootProject(Project project) {
-        String pluginName = this.getClass().getSimpleName();
-        LOGGER.info("+ apply {} on project {}", pluginName, project.getName());
-        if (gradle.getRootProject() != project) {
-            LOGGER.error("the plugin {} can only be applied to the root project ({})", pluginName, gradle.getRootProject());
-            throw new GradleException("the plugin " + pluginName + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
-        }
-    }
-
-    private void checkWorkflowFilesForLoopingDanger() {
-        Path root         = gradle.getRootProject().getRootDir().toPath();
-        Path workflowsDir = root.resolve(".github").resolve("workflows");
-        if (!Files.isDirectory(workflowsDir)) {
-            LOGGER.warn("can not check for BUILD LOOP DANGER: workflows dir not found at {}", workflowsDir);
-        } else {
-            try {
-                AtomicBoolean errorsDetected = new AtomicBoolean();
-                Files.list(workflowsDir)
-                        .filter(f -> Files.isRegularFile(f) && f.getFileName().toString().matches(".*\\.ya?ml"))
-                        .forEach(f -> {
-                            try {
-                                Map<?, ?> jobs = (Map<?, ?>) Util.readYaml(f).get("jobs");
-                                if (jobs == null) {
-                                    LOGGER.warn("RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
-                                } else {
-                                    jobs.keySet().forEach(jobName -> {
-                                        Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
-                                        String    theIf = (String) job.get("if");
-                                        if (theIf == null || !theIf.equals(NO_CI_GUARD)) {
-                                            LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, NO_CI_GUARD);
-                                            errorsDetected.set(true);
-                                        }
-                                    });
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        });
-                if (errorsDetected.get()) {
-                    throw new GradleException("BUILD LOOP DANGER in one or more workflow files");
-                }
-            } catch (IOException e) {
-                throw new GradleException("can not scan workflows dir", e);
-            }
-        }
     }
 }

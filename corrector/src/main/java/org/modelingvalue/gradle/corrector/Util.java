@@ -24,6 +24,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -61,10 +62,9 @@ public class Util {
         }
     }
 
-    public static List<String> downloadAndSubstitute(Map<String, String> vars, URL url) {
+    public static List<String> download(URL url) {
         try (InputStream in = url.openStream()) {
-            List<String> lines = Arrays.asList(new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n"));
-            return replaceVars(vars, lines);
+            return Arrays.asList(new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n"));
         } catch (IOException e) {
             throw new Error("can not get lines from " + url, e);
         }
@@ -111,5 +111,16 @@ public class Util {
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         objectMapper.findAndRegisterModules();
         return objectMapper.readValue(path.toFile(), Map.class);
+    }
+
+    static String getMyPluginVersion() {
+        URL location = Util.class.getProtectionDomain().getCodeSource().getLocation();
+        if (!location.getFile().isEmpty()) {
+            String version = Paths.get(location.getFile()).getFileName().toString().replaceAll("[.]jar$", "").replaceAll("^.*-", "");
+            if (version.matches("[0-9][0-9]*[.][0-9][0-9.]*")) {
+                return version;
+            }
+        }
+        return null;
     }
 }
