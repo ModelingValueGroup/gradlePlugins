@@ -29,16 +29,23 @@ import org.gradle.api.Project;
 public class VerCorrector extends CorrectorBase {
     private final Project project;
     private final Path    propFile;
-    private final String  propName;
+    private final String  versionName;
+    private final String  groupName;
     private final Path    absPropFile;
     private final boolean forceVersionAdjustForTesting;
+    @SuppressWarnings("FieldCanBeLocal")
+    private final String  defaultVersion = "0.0.1";
+    private final String  defaultGroup;
 
     public VerCorrector(CorrectorExtension ext) {
         super("vers  ", ext.getRoot(), ext.getEolFileExcludes());
         project = ext.getProject();
         propFile = ext.getPropFileWithVersion();
-        propName = ext.getVersionName();
+        versionName = ext.getVersionName();
+        groupName = ext.getGroupName();
         absPropFile = getAbsPropFile(propFile);
+        defaultGroup = propFile.getParent().getFileName().toString();
+
         forceVersionAdjustForTesting = project.getGradle().getRootProject().getName().equals("testWorkspace");
         if (forceVersionAdjustForTesting) {
             LOGGER.info("+ TESTING: forceVersionAdjustForTesting is on");
@@ -55,28 +62,35 @@ public class VerCorrector extends CorrectorBase {
 
     public VerCorrector generate() {
         if (propFile == null) {
-            LOGGER.info("+ can not find a a proper version: no properties file specified");
-        } else if (!forceVersionAdjustForTesting && !CI) {
-            LOGGER.info("+ version not adjusted: not on CI");
+            LOGGER.info("+ can not determine version: no properties file specified");
         } else {
             Props  props      = new Props(propFile);
-            String oldVersion = props.getProp(propName, "0.0.1");
-            String newVersion = findVacantVersion(oldVersion);
-            if (newVersion != null) {
-                LOGGER.info("+ in property file {}: overwriting property {} with new version {}", propFile, propName, newVersion);
-                props.setProp(propName, newVersion);
-                overwrite(absPropFile, props.getLines());
-                project.getAllprojects().forEach(p -> {
-                    if (p.getVersion().equals(oldVersion)) {
-                        LOGGER.info("+ version of project '{}' adjusted to from {} to {}", p.getName(), oldVersion, newVersion);
-                        p.setVersion(newVersion);
-                    } else {
-                        LOGGER.info("+ version of project '{}' NOT adjusted to {}, because it is not {} but {}", p.getName(), newVersion, oldVersion, p.getVersion());
-                    }
-                });
-            }
+            String oldVersion = props.getProp(versionName, defaultVersion);
+            String group      = props.getProp(groupName, defaultGroup);
+            String newVersion = adjustVersion(props, oldVersion);
+
+            project.getAllprojects().forEach(p -> {
+                LOGGER.info("+ project '{}': version: {} => {}, group: {} => {}", p.getName(), p.getVersion(), newVersion, p.getGroup(), group);
+                p.setVersion(newVersion);
+                p.setGroup(group);
+            });
         }
         return this;
+    }
+
+    private String adjustVersion(Props props, String oldVersion) {
+        if (!forceVersionAdjustForTesting && !CI) {
+            LOGGER.info("+ version not adjusted: not on CI (version stays {})", oldVersion);
+            return oldVersion;
+        } else {
+            String newVersion = findVacantVersion(oldVersion);
+            if (!oldVersion.equals(newVersion)) {
+                LOGGER.info("+ overwriting property {} with new version {} (was {}) in property file {}", versionName, newVersion, oldVersion, propFile);
+                props.setProp(versionName, newVersion);
+                overwrite(absPropFile, props.getLines());
+            }
+            return newVersion;
+        }
     }
 
     private String findVacantVersion(String oldVersion) {
@@ -93,12 +107,7 @@ public class VerCorrector extends CorrectorBase {
             newVersion = String.join(".", versionParts);
             Info.LOGGER.trace("+ ...trying next version: {}", newVersion);
         }
-        if (newVersion.equals(oldVersion)) {
-            Info.LOGGER.info("+ mentioned version is vacant: {}", newVersion);
-            return null;
-        } else {
-            Info.LOGGER.info("+ found vacant version: {} (was {})", newVersion, oldVersion);
-            return newVersion;
-        }
+        Info.LOGGER.info("+ found vacant version: {} (was {})", newVersion, oldVersion);
+        return newVersion;
     }
 }
