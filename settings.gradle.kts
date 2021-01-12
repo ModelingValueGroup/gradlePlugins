@@ -13,9 +13,9 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-val ARTIFACT: String by settings
+val artifact: String by settings
 
-rootProject.name = ARTIFACT
+rootProject.name = artifact
 
 include("corrector")
 

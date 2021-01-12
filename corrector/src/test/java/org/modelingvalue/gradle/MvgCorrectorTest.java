@@ -16,7 +16,10 @@
 package org.modelingvalue.gradle;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.modelingvalue.gradle.corrector.Util.numOccurences;
 
 import java.io.FileInputStream;
@@ -34,8 +37,6 @@ import java.util.Properties;
 import java.util.Scanner;
 import java.util.function.Function;
 
-import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.corrector.GitUtil;
@@ -67,14 +68,6 @@ public class MvgCorrectorTest {
 
         assertTrue(props.containsKey("corrector_name"));
         assertEquals(Info.CORRECTOR_TASK_NAME, props.get("corrector_name"));
-    }
-
-    @Test
-    public void checkApplicability() {
-        Project project = ProjectBuilder.builder().build();
-        project.getPlugins().apply(PLUGIN_PACKAGE_NAME);
-
-        assertNotNull(project.getTasks().findByName(Info.CORRECTOR_TASK_NAME));
     }
 
     @Test
@@ -131,11 +124,11 @@ public class MvgCorrectorTest {
                 () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
                 () -> assertEquals(4, numOccurences("+ eols   untouched   : ", out)),
                 () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
-                () -> assertEquals(1, numOccurences("+ version of project 'testWorkspace' adjusted to from 0.0.1 to 0.0.4", out)),
+                () -> assertEquals(1, numOccurences("+ project 'testWorkspace': version: 0.0.1 => 0.0.4, group: group => group", out)),
                 () -> assertEquals(3, numOccurences("+ bbb: dependency     replaced: ", out)),
                 () -> assertEquals(38, numOccurences("+ bbb: dependency NOT replaced: ", out)),
 
-                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n")),
+                //() -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright")),
