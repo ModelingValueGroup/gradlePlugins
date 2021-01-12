@@ -20,6 +20,7 @@ import static org.modelingvalue.gradle.corrector.Info.CI;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -70,9 +71,11 @@ public class VerCorrector extends CorrectorBase {
             String newVersion = adjustVersion(props, oldVersion);
 
             project.getAllprojects().forEach(p -> {
-                LOGGER.info("+ project '{}': version: {} => {}, group: {} => {}", p.getName(), p.getVersion(), newVersion, p.getGroup(), group);
-                p.setVersion(newVersion);
-                p.setGroup(group);
+                if (!Objects.equals(p.getVersion(), newVersion) || !Objects.equals(p.getGroup(), group)) {
+                    LOGGER.info("+ project '{}': version: {} => {}, group: {} => {}", p.getName(), p.getVersion(), newVersion, p.getGroup(), group);
+                    p.setVersion(newVersion);
+                    p.setGroup(group);
+                }
             });
         }
         return this;

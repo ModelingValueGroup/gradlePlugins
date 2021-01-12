@@ -20,9 +20,9 @@ rootProject.name = artifact
 include("corrector")
 
 pluginManagement {
-    val CORRECTOR_VERSION: String by settings
+    val corrector_version_used_on_myself: String by settings
     plugins {
-        id("org.modelingvalue.gradle.corrector") version CORRECTOR_VERSION
+        id("org.modelingvalue.gradle.corrector") version corrector_version_used_on_myself
         id("com.gradle.enterprise") version ("3.5")
     }
 }
