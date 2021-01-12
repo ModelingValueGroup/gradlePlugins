@@ -18,6 +18,7 @@ package org.modelingvalue.gradle.corrector;
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -45,6 +46,9 @@ public class MvgPlugin implements Plugin<Project> {
     public void apply(Project project) {
         gradle = project.getGradle();
 
+        URL location = getClass().getProtectionDomain().getCodeSource().getLocation();
+        LOGGER.info("@@@@@@@@@@@@@@@@URL="+location);
+
         checkMustBeRootProject(project);
         checkWorkflowFilesForLoopingDanger();
 
@@ -62,10 +66,10 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void trace() {
         gradle.afterProject(p -> {
-            String projectName = String.format("%-30s", p.getName());
-            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("++++ {}.ext [{}] = {}", projectName, String.format("%-30s", k), v.getClass()));
-            p.getTasks().all(x -> LOGGER.info("++++ {}.task[{}] = {}", projectName, String.format("%-30s", x.getName()), x.getClass()));
-            p.getConfigurations().all(x -> LOGGER.info("++++ {}.conf[{}] = {} #{}", projectName, String.format("%-30s", x.getName()), x.getClass(), x.getAllArtifacts().size()));
+            String projectName = String.format("%30s", p.getName());
+            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("++++ {}.ext  [{}] = {}", projectName, String.format("%-30s", k), v.getClass()));
+            p.getTasks().all(x -> LOGGER.info("++++ {}.task [{}] = {}", projectName, String.format("%-30s", x.getName()), x.getClass()));
+            p.getConfigurations().all(x -> LOGGER.info("++++ {}.conf [{}] = {} #{}", projectName, String.format("%-30s", x.getName()), x.getClass(), x.getAllArtifacts().size()));
             p.getPlugins().all(x -> LOGGER.info("++++ {}.plugin = {}", projectName, x.getClass()));
         });
     }
