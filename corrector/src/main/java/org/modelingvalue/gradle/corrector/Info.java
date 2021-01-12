@@ -40,6 +40,7 @@ public interface Info {
     String                          MVG_MAVEN_REPO_SNAPSHOTS_URL   = "https://maven.pkg.github.com/ModelingValueGroup/packages-snapshots";
     Action<MavenArtifactRepository> MVG_MAVEN_REPO_MAKER           = getRepoMaker("MvgMaven", MVG_MAVEN_REPO_URL);
     Action<MavenArtifactRepository> MVG_MAVEN_SNAPSHOTS_REPO_MAKER = getRepoMaker("MvgMavenSnapshots", MVG_MAVEN_REPO_SNAPSHOTS_URL);
+    String                          PLUGIN_META_URL                = "https://plugins.gradle.org/m2/gradle/plugin/org/modelingvalue/corrector/maven-metadata.xml";
 
     static Action<MavenArtifactRepository> getRepoMaker(String name, String url) {
         return mar -> {
