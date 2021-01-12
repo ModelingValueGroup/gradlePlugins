@@ -13,8 +13,6 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-val VERSION: String by project
-val GROUP: String by project
 val artifact: String by project
 
 val corrector_name: String by project
@@ -22,9 +20,6 @@ val corrector_id: String by project
 val corrector_version: String? by project
 val corrector_class: String by project
 val corrector_displayname: String by project
-
-group = GROUP
-version = VERSION
 
 plugins {
     `java-gradle-plugin`
@@ -60,7 +55,7 @@ gradlePlugin {
         id = corrector_id
         implementationClass = corrector_class
         displayName = corrector_displayname
-        version = corrector_version ?: VERSION
+        version = corrector_version ?: version
     }
 }
 

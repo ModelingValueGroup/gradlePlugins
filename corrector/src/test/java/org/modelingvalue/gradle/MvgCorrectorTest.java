@@ -128,7 +128,7 @@ public class MvgCorrectorTest {
                 () -> assertEquals(3, numOccurences("+ bbb: dependency     replaced: ", out)),
                 () -> assertEquals(38, numOccurences("+ bbb: dependency NOT replaced: ", out)),
 
-                //() -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nVERSION=0.0.4\n")),
+                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright")),

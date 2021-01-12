@@ -15,7 +15,8 @@ plugins {
 It will scan the complete project dir.
  - all _text-like_ files will be corrected w.r.t. their line endings.
  - all _known_ file types will get a copyright header entry
- - the VERSION in ```gradle.properties``` is updated to a version that is not yet among the tags
+ - the ```version``` in ```gradle.properties``` is updated to a version that is not yet among the tags
+ - all projects will have ```group``` and ```version``` set from what is in the properties file
 
 The plugin carries a number of sensible defaults so that it can be used without any configuration.
 
