@@ -24,7 +24,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -116,7 +115,7 @@ public class Util {
     static String getMyPluginVersion() {
         URL location = Util.class.getProtectionDomain().getCodeSource().getLocation();
         if (!location.getFile().isEmpty()) {
-            String version = Paths.get(location.getFile()).getFileName().toString().replaceAll("[.]jar$", "").replaceAll("^.*-", "");
+            String version = location.getFile().replaceAll(".*/","").replaceAll("[.]jar$", "").replaceAll("^.*-", "");
             if (version.matches("[0-9][0-9]*[.][0-9][0-9.]*")) {
                 return version;
             }
