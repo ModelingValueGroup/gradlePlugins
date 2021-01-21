@@ -13,8 +13,6 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-val artifact: String by project
-
 val mvgplugin_name: String by project
 val mvgplugin_id: String by project
 val mvgplugin_version: String? by project
@@ -62,7 +60,7 @@ gradlePlugin {
 
 pluginBundle {
     website = "http://www.modelingvalue.org/"
-    vcsUrl = "https://github.com/ModelingValueGroup/$artifact"
+    vcsUrl = "https://github.com/ModelingValueGroup/gradlePlugins"
     description = "MVG gradle plugins"
     (plugins) {
         mvgplugin_name {

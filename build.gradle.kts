@@ -16,10 +16,9 @@
 defaultTasks("mvgCorrector", "test", "publishPlugins", "mvgTagger")
 
 plugins {
-    id("org.modelingvalue.gradle.corrector") version ("0.4.2") // TODO: => mvgplugin
+    id("org.modelingvalue.gradle.mvgplugin") version ("0.4.3")
 }
-
-mvgCorrector { // TODO: => mvgplugin
+mvgcorrector { // TODO: => mvgplugin
     addHeaderFileExclude("mvgplugin/src/test/resources/.*")
     addEolFileExclude("mvgplugin/src/test/resources/.*")
 }
