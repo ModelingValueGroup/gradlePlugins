@@ -29,7 +29,6 @@ jobs:
           ls -l
           pwd
           ./gradlew \
-              --debug \
               --scan \
               test
 
@@ -37,7 +36,6 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           ./gradlew \
-              --info \
               --scan \
               -Pgradle.publish.key=$GRADLE_KEY \
               -Pgradle.publish.secret=$GRADLE_SECRET
