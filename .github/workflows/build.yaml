@@ -38,5 +38,4 @@ jobs:
               --info \
               --scan \
               -Pgradle.publish.key=$GRADLE_KEY \
-              -Pgradle.publish.secret=$GRADLE_SECRET \
-              publishPlugins
+              -Pgradle.publish.secret=$GRADLE_SECRET

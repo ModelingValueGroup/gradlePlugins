@@ -2,14 +2,14 @@
 This repo contains the gradle plugins for some build steps in our other projects.
 They might be usable for others but that is not the essence here.
 
-# mvgCorrector
+# mvgplugin
 This plugin can be used to correct certain aspects during (or better before) a build.
 
 Usage in your ```build.gradle.kts``` file:
 
 ```
 plugins {
-    id("org.modelingvalue.gradle.corrector")
+    id("org.modelingvalue.gradle.mvgplugin")
 }
 ```
 It will scan the complete project dir.
@@ -22,7 +22,7 @@ The plugin carries a number of sensible defaults so that it can be used without 
 
 Additional cnfig is possible though:
 ```
-mvgCorrector {
+mvgplugin {
     headerUrl = "http://blablabl"
     dry = true
     addTextFile("xyzzy")
@@ -35,5 +35,5 @@ mvgCorrector {
     addHeaderFileExclude("xyzzy")
 }
 ```
-To download, see: https://plugins.gradle.org/plugin/org.modelingvalue.gradle.corrector
+To download, see: https://plugins.gradle.org/plugin/org.modelingvalue.gradle.mvgplugin
 # ... other plugins might follow in the future

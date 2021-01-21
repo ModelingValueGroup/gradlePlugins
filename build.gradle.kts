@@ -13,10 +13,13 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+defaultTasks("mvgCorrector", "test", "publishPlugins", "mvgTagger")
+
 plugins {
-    id("org.modelingvalue.gradle.corrector")
+    id("org.modelingvalue.gradle.corrector") version ("0.4.2") // TODO: => mvgplugin
 }
-mvgCorrector {
-    addTextFileExtension("pruuperties")
-    addHeaderFileExclude("corrector/src/test/resources/.*")
+
+mvgCorrector { // TODO: => mvgplugin
+    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
+    addEolFileExclude("mvgplugin/src/test/resources/.*")
 }
