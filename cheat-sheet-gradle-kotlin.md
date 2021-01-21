@@ -16,7 +16,7 @@ plugins {
 ```kotlin
 defaultTasks("mvgCorrector", "test", "publish", "mvgTagger")
 plugins {
-    id("org.modelingvalue.gradle.corrector") version "0.4.1"
+    id("org.modelingvalue.gradle.mvgplugin") version "0.4.1"
 }
 ```
 #### build.gradle.kts (java library)

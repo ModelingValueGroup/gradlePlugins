@@ -13,12 +13,9 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-val artifact: String by settings
+import org.gradle.kotlin.dsl.DependencyHandlerScope
 
-rootProject.name = artifact
-
-include("mvgplugin")
-
-plugins {
-    id("com.gradle.enterprise") version ("3.5")
+fun DependencyHandlerScope.tomtomtom(a: String): Any {
+    println("@@@@@@@@@@@@@@@@@@@@ tomtomtom $a")
+    return a
 }

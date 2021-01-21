@@ -13,12 +13,17 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-val artifact: String by settings
+package org.modelingvalue.gradle.mvgplugin;
 
-rootProject.name = artifact
+import static org.modelingvalue.gradle.mvgplugin.Info.TAG_TASK_NAME;
 
-include("mvgplugin")
+import org.gradle.api.invocation.Gradle;
+import org.gradle.internal.extensibility.DefaultConvention;
 
-plugins {
-    id("com.gradle.enterprise") version ("3.5")
+public class MvgTaggerExtension {
+    public static MvgTaggerExtension make(Gradle gradle) {
+        return ((DefaultConvention) gradle.getRootProject().getExtensions()).create(TAG_TASK_NAME, MvgTaggerExtension.class);
+    }
+
+    // nothing here yet...
 }

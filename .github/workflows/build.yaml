@@ -26,8 +26,9 @@ jobs:
       ################################################################################
       - name: "build gradle plugin"
         run: |
+          ls -l
+          pwd
           ./gradlew \
-              --info \
               --scan \
               test
 
@@ -35,8 +36,6 @@ jobs:
         if: github.ref == 'refs/heads/master'
         run: |
           ./gradlew \
-              --info \
               --scan \
               -Pgradle.publish.key=$GRADLE_KEY \
-              -Pgradle.publish.secret=$GRADLE_SECRET \
-              publishPlugins
+              -Pgradle.publish.secret=$GRADLE_SECRET

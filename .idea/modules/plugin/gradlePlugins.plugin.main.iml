@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module external.system.module.type="sourceSet" type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager">
-    <output url="file://$MODULE_DIR$/../../../plugin/build/classes/java/main" />
+    <output url="file://$MODULE_DIR$/../../../mvgplugin/build/classes/java/main" />
     <exclude-output />
-    <content url="file://$MODULE_DIR$/../../../plugin/src/main">
-      <sourceFolder url="file://$MODULE_DIR$/../../../plugin/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../../../plugin/src/main/kotlin" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../../../plugin/src/main/resources" type="java-resource" />
+    <content url="file://$MODULE_DIR$/../../../mvgplugin/src/main">
+      <sourceFolder url="file://$MODULE_DIR$/../../../mvgplugin/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../../mvgplugin/src/main/kotlin" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../../mvgplugin/src/main/resources" type="java-resource" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
