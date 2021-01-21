@@ -31,7 +31,7 @@ jobs:
           ./gradlew \
               --debug \
               --scan \
-              projects tasks dependencies test
+              test
 
       - name: "if master: publish gradle plugin"
         if: github.ref == 'refs/heads/master'

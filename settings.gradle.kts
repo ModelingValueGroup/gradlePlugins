@@ -17,7 +17,7 @@ val artifact: String by settings
 
 rootProject.name = artifact
 
-include("mvgPlugin")
+include("mvgplugin")
 
 plugins {
     id("com.gradle.enterprise") version ("3.5")
