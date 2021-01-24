@@ -41,7 +41,7 @@ public class Util {
         try {
             return new URL(url);
         } catch (MalformedURLException e) {
-            throw new Error("not a valid url in header: " + url, e);
+            throw new GradleException("not a valid url in header: " + url, e);
         }
     }
 
@@ -49,7 +49,7 @@ public class Util {
         try {
             return Files.readAllLines(f);
         } catch (IOException e) {
-            throw new Error("could not read lines: " + f, e);
+            throw new GradleException("could not read lines: " + f, e);
         }
     }
 
@@ -57,7 +57,7 @@ public class Util {
         try {
             return Files.size(f);
         } catch (IOException e) {
-            throw new Error("file size failed", e);
+            throw new GradleException("file size failed", e);
         }
     }
 
@@ -65,7 +65,7 @@ public class Util {
         try (InputStream in = url.openStream()) {
             return Arrays.asList(new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n"));
         } catch (IOException e) {
-            throw new Error("can not get lines from " + url, e);
+            throw new GradleException("can not get lines from " + url, e);
         }
     }
 
@@ -121,5 +121,27 @@ public class Util {
             }
         }
         return null;
+    }
+
+    public static long toBytes(String in) {
+        in = in.trim();
+        if (in.matches("[0-9][0-9]*")) {
+            return Long.parseLong(in);
+        } else if (in.matches("[0-9][0-9]*[kKmMgGtT]?")) {
+            long l = Long.parseLong(in, 0, in.length() - 1, 10);
+            switch (Character.toLowerCase(in.charAt(in.length() - 1))) {
+            case 'k':
+                return l * 1024;
+            case 'm':
+                return l * 1024 * 1024;
+            case 'g':
+                return l * 1024 * 1024 * 1024;
+            case 't':
+                return l * 1024 * 1024 * 1024 * 1024;
+            }
+            return -1; // never reached
+        } else {
+            throw new GradleException("human readable form of memory size '" + in + "' is not valid");
+        }
     }
 }

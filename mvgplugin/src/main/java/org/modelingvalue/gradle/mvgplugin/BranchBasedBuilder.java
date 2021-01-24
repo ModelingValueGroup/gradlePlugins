@@ -35,7 +35,7 @@ public class BranchBasedBuilder {
     public static final String SNAPSHOT_VERSION_POST      = "-SNAPSHOT";
     public static final String SNAPSHOTS_REPO_POST        = "-snapshots";
     public static final String SNAPSHOTS_GROUP_PRE        = "snapshots.";
-    public static final String REASON                     = "using Branch Based Building";
+    public static final String BRANCH_REASON              = "using Branch Based Building";
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
     private final Gradle  gradle;
@@ -73,6 +73,17 @@ public class BranchBasedBuilder {
                         )
                 )
         );
+    }
+
+    private void checkReplacement(DependencySubstitution depSub, ModuleComponentSelector component) {
+        String version = component.getVersion();
+        if (version.endsWith(BRANCH_INDICATOR)) {
+            String replacement = makeBbbGroup(component.getGroup()) + ":" + makeBbbArtifact(component.getModule()) + ":" + makeBbbVersion(version.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
+            LOGGER.info("+ bbb: dependency     replaced: " + component + " => " + replacement);
+            depSub.useTarget(replacement, BRANCH_REASON);
+        } else {
+            LOGGER.info("+ bbb: dependency NOT replaced: " + component);
+        }
     }
 
     private void adjustPublications(Gradle gradle) {
@@ -148,17 +159,6 @@ public class BranchBasedBuilder {
                 }
             }
         });
-    }
-
-    private void checkReplacement(DependencySubstitution depSub, ModuleComponentSelector component) {
-        String version = component.getVersion();
-        if (version.endsWith(BRANCH_INDICATOR)) {
-            String replacement = makeBbbGroup(component.getGroup()) + ":" + makeBbbArtifact(component.getModule()) + ":" + makeBbbVersion(version.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
-            LOGGER.info("+ bbb: dependency     replaced: " + component + " => " + replacement);
-            depSub.useTarget(replacement, REASON);
-        } else {
-            LOGGER.info("+ bbb: dependency NOT replaced: " + component);
-        }
     }
 
     private String makeBbbGroup(String g) {

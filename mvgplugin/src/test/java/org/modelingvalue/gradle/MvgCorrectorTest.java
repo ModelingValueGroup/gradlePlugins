@@ -43,15 +43,15 @@ import org.modelingvalue.gradle.mvgplugin.GitUtil;
 import org.modelingvalue.gradle.mvgplugin.Info;
 
 public class MvgCorrectorTest {
-    private static final Path   testWorkspaceDir    = Paths.get("build", "testWorkspace").toAbsolutePath();
-    private static final Path   settingsFile        = Paths.get("settings.gradle");
-    private static final Path   buildFile           = Paths.get("build.gradle.kts");
-    private static final Path   gradlePropsFile     = Paths.get("gradle.properties");
-    private static final Path   yamlFile            = Paths.get(".github", "workflows", "xyz.yaml");
-    private static final Path   headFile            = Paths.get(".git", "HEAD");
-    private static final Path   javaFile            = Paths.get("src", "main", "java", "A.java");
-    private static final Path   propFile            = Paths.get("src", "main", "java", "testCR.properties");
-    private static final Path   pruupFile           = Paths.get("src", "main", "java", "testCRLF.pruuperties");
+    private static final Path testWorkspaceDir = Paths.get("build", "testWorkspace").toAbsolutePath();
+    private static final Path settingsFile     = Paths.get("settings.gradle");
+    private static final Path buildFile        = Paths.get("build.gradle.kts");
+    private static final Path gradlePropsFile  = Paths.get("gradle.properties");
+    private static final Path yamlFile         = Paths.get(".github", "workflows", "xyz.yaml");
+    private static final Path headFile         = Paths.get(".git", "HEAD");
+    private static final Path javaFile         = Paths.get("src", "main", "java", "A.java");
+    private static final Path propFile         = Paths.get("src", "main", "java", "testCR.properties");
+    private static final Path pruupFile        = Paths.get("src", "main", "java", "testCRLF.pruuperties");
 
     @Test
     public void checkId() throws IOException {
@@ -76,6 +76,7 @@ public class MvgCorrectorTest {
         cp(s -> s
                         .replaceAll("~myPackage~", Info.PLUGIN_PACKAGE_NAME)
                         .replaceAll("~myMvgCorrectorExtension~", Info.CORRECTOR_TASK_NAME)
+                        .replaceAll("~myMvgMpsExtension~", Info.MPS_TASK_NAME)
                 , buildFile);
         cp(s -> s.replaceAll("\n", "\r"), propFile);
         cp(s -> s.replaceAll("\n", "\n\r"), pruupFile);
@@ -129,6 +130,11 @@ public class MvgCorrectorTest {
                 () -> assertEquals(1, numOccurences("+ project 'testWorkspace': version: 0.0.1 => 0.0.4, group: group => group", out)),
                 () -> assertEquals(3, numOccurences("+ bbb: dependency     replaced: ", out)),
                 () -> assertEquals(38, numOccurences("+ bbb: dependency NOT replaced: ", out)),
+                () -> assertEquals(1, numOccurences("+ adding test.useJUnitPlatform", out)),
+                () -> assertEquals(1, numOccurences("+ increasing test heap from default to 2g", out)),
+                () -> assertEquals(1, numOccurences("+ adding junit5 dependencies", out)),
+                () -> assertEquals(1, numOccurences("+ agreeing to buildScan", out)),
+                () -> assertEquals(1, numOccurences("+ adding tasks for javadoc & source jars", out)),
 
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
