@@ -13,9 +13,31 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import org.gradle.kotlin.dsl.DependencyHandlerScope
+package org.modelingvalue.gradle;
 
-fun DependencyHandlerScope.tomtomtom(a: String): Any {
-    println("@@@@@@@@@@@@@@@@@@@@ tomtomtom $a")
-    return a
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
+
+import org.gradle.api.GradleException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+public class UtilTest {
+    @Test
+    public void toBytesTest() {
+        assertEquals(0L, toBytes("0"));
+        assertEquals(12L, toBytes("12"));
+        assertEquals(123456789L, toBytes("123456789"));
+        assertEquals(1024L, toBytes("1k"));
+        assertEquals(1024L, toBytes("1K"));
+        assertEquals(88L * 1024 * 1024, toBytes("88M"));
+        assertEquals(33L * 1024 * 1024 * 1024, toBytes("33g"));
+        assertEquals(44L * 1024 * 1024 * 1024 * 1024, toBytes("44t"));
+
+        Assertions.assertThrows(NullPointerException.class,()-> toBytes(null));
+        Assertions.assertThrows(GradleException.class,()-> toBytes(""));
+        Assertions.assertThrows(GradleException.class,()-> toBytes("k"));
+        Assertions.assertThrows(GradleException.class,()-> toBytes("-10"));
+        Assertions.assertThrows(GradleException.class,()-> toBytes(" "));
+    }
 }

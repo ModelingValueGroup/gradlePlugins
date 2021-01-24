@@ -34,6 +34,9 @@ public interface Info {
     String                          PLUGIN_NAME                    = MvgPlugin.class.getSimpleName().toLowerCase(Locale.ROOT);
     String                          CORRECTOR_TASK_NAME            = MvgCorrector.class.getSimpleName().toLowerCase(Locale.ROOT);
     String                          TAG_TASK_NAME                  = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
+    String                          MPS_TASK_NAME                  = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
+    //
+    String                          MIN_TEST_HEAP_SIZE             = "2g";
     //
     String                          PREPARATION_GROUP              = "preparation";
     String                          WRAP_UP_GROUP                  = "wrap-up";
@@ -44,6 +47,7 @@ public interface Info {
     String                          DEFAULT_BRANCH                 = "refs/heads/develop";
     String                          MASTER_BRANCH                  = "refs/heads/master";
     String                          GIT_HEAD_FILE                  = ".git/HEAD";
+    String                          NO_CI_GUARD                    = "!contains(github.event.head_commit.message, '[no-ci]')";
     //
     String                          MVG_MAVEN_REPO_URL             = "https://maven.pkg.github.com/ModelingValueGroup/packages";
     String                          MVG_MAVEN_REPO_SNAPSHOTS_URL   = "https://maven.pkg.github.com/ModelingValueGroup/packages-snapshots";

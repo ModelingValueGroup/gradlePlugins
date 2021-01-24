@@ -16,6 +16,8 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.Info.MIN_TEST_HEAP_SIZE;
+import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,17 +32,26 @@ import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.internal.extensibility.DefaultConvention;
+import org.jetbrains.annotations.NotNull;
 
 import com.gradle.scan.plugin.BuildScanExtension;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class MvgPlugin implements Plugin<Project> {
-    public static final String NO_CI_GUARD = "!contains(github.event.head_commit.message, '[no-ci]')";
+    public static MvgPlugin singleton;
 
     private Gradle             gradle;
     private MvgCorrector       mvgCorrector;
     private MvgTagger          mvgTagger;
     private BranchBasedBuilder branchBasedBuilder;
+    private MvgMps             mvgMps;
+
+    public MvgPlugin() {
+        if (singleton != null) {
+            LOGGER.error("MvgPlugin created twice, should be singleton!");
+        }
+        singleton = this;
+    }
 
     public void apply(Project project) {
         gradle = project.getGradle();
@@ -51,7 +62,7 @@ public class MvgPlugin implements Plugin<Project> {
 
         trace();
 
-        useJUnitPlatform();
+        tuneTesting();
         agreeToBuildScan();
         tuneJavaPlugin();
         addMVGRepositories();
@@ -59,7 +70,14 @@ public class MvgPlugin implements Plugin<Project> {
         mvgCorrector = new MvgCorrector(gradle);
         mvgTagger = new MvgTagger(gradle);
         branchBasedBuilder = new BranchBasedBuilder(gradle);
+        mvgMps = new MvgMps(gradle);
     }
+
+    @NotNull
+    public Object resolveMpsDependency(@NotNull String dep) {
+        return mvgMps.resolveMpsDependency(dep);
+    }
+
 
     private void checkMustBeRootProject(Project project) {
         String pluginName = this.getClass().getSimpleName();
@@ -89,8 +107,8 @@ public class MvgPlugin implements Plugin<Project> {
                                     jobs.keySet().forEach(jobName -> {
                                         Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
                                         String    theIf = (String) job.get("if");
-                                        if (theIf == null || !theIf.equals(NO_CI_GUARD)) {
-                                            LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, NO_CI_GUARD);
+                                        if (theIf == null || !theIf.equals(Info.NO_CI_GUARD)) {
+                                            LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, Info.NO_CI_GUARD);
                                             errorsDetected.set(true);
                                         }
                                     });
@@ -115,7 +133,7 @@ public class MvgPlugin implements Plugin<Project> {
         } else {
             VersionExtractor extractor = new VersionExtractor(Info.PLUGIN_META_URL);
             if (extractor.error()) {
-                LOGGER.warn("+ can not determine if using the latest version of mvg plugin: metainfo of myself not readable", extractor.getException());
+                LOGGER.warn("+ can not determine if using the latest version of mvg plugin: metainfo of myself not readable ({}, msg={})", Info.PLUGIN_META_URL, extractor.getException().getMessage());
             } else if (!extractor.getLatest().equals(v)) {
                 LOGGER.warn("+ NOT using the latest mvg plugin version (using {}, latest is {})", v, extractor.getLatest());
             } else {
@@ -134,12 +152,17 @@ public class MvgPlugin implements Plugin<Project> {
         });
     }
 
-    private void useJUnitPlatform() {
+    private void tuneTesting() {
         gradle.afterProject(p -> {
             Test test = (Test) p.getTasks().findByName("test");
             if (test != null) {
                 LOGGER.info("+ adding test.useJUnitPlatform");
                 test.useJUnitPlatform();
+
+                if (test.getMaxHeapSize() == null || toBytes(test.getMaxHeapSize()) < toBytes(MIN_TEST_HEAP_SIZE)) {
+                    LOGGER.info("+ increasing test heap from {} to {}", test.getMaxHeapSize() == null ? "default" : test.getMaxHeapSize(), MIN_TEST_HEAP_SIZE);
+                    test.setMaxHeapSize(MIN_TEST_HEAP_SIZE);
+                }
             }
 
             Object java = p.getExtensions().findByName("java");
