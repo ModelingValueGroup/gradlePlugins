@@ -69,5 +69,5 @@ pluginBundle {
     }
 }
 tasks.publishPlugins {
-    enabled = "true".equals(System.getenv("CI"))
+    enabled = "true" == System.getenv("CI")
 }

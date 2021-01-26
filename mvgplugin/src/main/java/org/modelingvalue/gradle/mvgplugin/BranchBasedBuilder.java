@@ -92,7 +92,7 @@ public class BranchBasedBuilder {
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
             if (publishing != null) {
                 if (!publishing.getRepositories().isEmpty()) {
-                    LOGGER.warn("the repository set is not empty, bbb will not insert the right repo. Make it empty to activate bbb.");
+                    LOGGER.warn("The repository set for project {} is not empty; bbb will not set the proper publish repo (local-maven or github-mvg-packages). Make it empty to activate bbb publishing.",p.getName());
                 }
                 if (!(ci && isMaster)) {
                     makePublicationsBbb(publishing);
@@ -104,32 +104,6 @@ public class BranchBasedBuilder {
                 }
             }
         });
-    }
-
-    private void publishToMavenLocal(PublishingExtension publishing) {
-        if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
-            LOGGER.info("+ bbb: adding mavenLocal publishing repo...");
-            publishing.getRepositories().mavenLocal();
-            TOMTOMTOM_report(publishing);
-        }
-    }
-
-    private void publishToGitHub(PublishingExtension publishing, boolean master) {
-        if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
-            LOGGER.info("+ bbb: adding {}-MVG-github publishing repo...", master ? "master" : "snapshot");
-            publishing.getRepositories().maven(mar -> {
-                URI url = URI.create("https://maven.pkg.github.com/ModelingValueGroup/packages");
-                if (!master) {
-                    url = makeBbbRepo(url);
-                }
-                mar.setUrl(url);
-                mar.credentials(cr -> {
-                    cr.setPassword(Info.ALLREP_TOKEN);
-                    cr.setUsername("");
-                });
-            });
-            TOMTOMTOM_report(publishing);
-        }
     }
 
     private void makePublicationsBbb(PublishingExtension publishing) {
@@ -159,6 +133,32 @@ public class BranchBasedBuilder {
                 }
             }
         });
+    }
+
+    private void publishToMavenLocal(PublishingExtension publishing) {
+        if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
+            LOGGER.info("+ bbb: adding mavenLocal publishing repo...");
+            publishing.getRepositories().mavenLocal();
+            TOMTOMTOM_report(publishing);
+        }
+    }
+
+    private void publishToGitHub(PublishingExtension publishing, boolean master) {
+        if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
+            LOGGER.info("+ bbb: adding {}-MVG-github publishing repo...", master ? "master" : "snapshot");
+            publishing.getRepositories().maven(mar -> {
+                URI url = URI.create("https://maven.pkg.github.com/ModelingValueGroup/packages");
+                if (!master) {
+                    url = makeBbbRepo(url);
+                }
+                mar.setUrl(url);
+                mar.credentials(cr -> {
+                    cr.setPassword(Info.ALLREP_TOKEN);
+                    cr.setUsername("");
+                });
+            });
+            TOMTOMTOM_report(publishing);
+        }
     }
 
     private String makeBbbGroup(String g) {
