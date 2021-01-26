@@ -19,6 +19,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
 
 import java.io.File;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.internal.extensibility.DefaultConvention;
 import org.jetbrains.annotations.NotNull;
@@ -61,6 +62,9 @@ public class MvgMpsExtension {
 
     @NotNull
     private String getMajor() {
+        if (version==null) {
+            throw new GradleException("you need to set the MPS version: "+ MPS_TASK_NAME+" { version = \"2020.3\" }");
+        }
         return version.replaceAll("([0-9][0-9]*[.][0-9][0-9]*).*", "$1");
     }
 }

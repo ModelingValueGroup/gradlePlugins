@@ -47,13 +47,16 @@ public class MvgPlugin implements Plugin<Project> {
     private MvgMps             mvgMps;
 
     public MvgPlugin() {
+        LOGGER.info("MvgPlugin {} created", System.identityHashCode(this), new Error("no error"));
         if (singleton != null) {
-            LOGGER.error("MvgPlugin created twice, should be singleton!");
+            LOGGER.info("MvgPlugin {} created twice (prev={}), should be singleton!", System.identityHashCode(this), System.identityHashCode(singleton));
+            LOGGER.error("MvgPlugin {} created twice (prev={}), should be singleton!", System.identityHashCode(this), System.identityHashCode(singleton));
         }
         singleton = this;
     }
 
     public void apply(Project project) {
+        LOGGER.info("MvgPlugin {} .apply to project {}", System.identityHashCode(this), project.getName());
         gradle = project.getGradle();
 
         checkMustBeRootProject(project);
