@@ -20,49 +20,17 @@ import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-@SuppressWarnings({"WeakerAccess"})
-public abstract class CorrectorBase {
-    private final String      name;
-    private final Path        root;
-    private final Set<String> excludes;
-    private final Set<Path>   changedFiles = new HashSet<>();
+public abstract class Corrector {
+    protected final String    name;
+    protected final Set<Path> changedFiles = new HashSet<>();
 
-    public CorrectorBase(String name, Path root, Set<String> excludes) {
+    public Corrector(String name) {
         this.name = name;
-        this.root = root;
-        this.excludes = excludes;
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("++ ========================================");
-            excludes.forEach(x -> LOGGER.debug("++ # " + name + " excludes        : " + x));
-        }
-    }
-
-    protected Stream<Path> allFiles() throws IOException {
-        return Files.walk(root).filter(this::filter);
-    }
-
-    public Path getRoot() {
-        return root;
-    }
-
-    public Set<Path> getChangedFiles() {
-        return changedFiles.stream().map(root::relativize).collect(Collectors.toSet());
-    }
-
-    protected boolean filter(Path p) {
-        return Files.isRegularFile(p) && excludes.stream().noneMatch(pattern -> {
-            String p1 = root.relativize(p).toString();
-            String p2 = Paths.get(".").resolve(p1).toString();
-            return p1.matches(pattern) || p2.matches(pattern);
-        });
     }
 
     protected void overwrite(Path file, List<String> lines) {
@@ -91,13 +59,7 @@ public abstract class CorrectorBase {
         }
     }
 
-    protected static Optional<String> getExtension(Path p) {
-        return getExtension(p.getFileName().toString());
-    }
-
-    protected static Optional<String> getExtension(String filename) {
-        return Optional.ofNullable(filename)
-                .filter(f -> f.contains("."))
-                .map(f -> f.substring(f.lastIndexOf(".") + 1));
+    public Set<Path> getChangedFiles(Path rel) {
+        return changedFiles.stream().map(rel::relativize).collect(Collectors.toSet());
     }
 }

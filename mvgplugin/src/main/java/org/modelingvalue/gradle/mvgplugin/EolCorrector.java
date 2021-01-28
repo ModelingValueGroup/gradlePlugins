@@ -23,7 +23,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
 
-public class EolCorrector extends CorrectorBase {
+public class EolCorrector extends TreeCorrector {
     private final Set<String> textExtensions;
     private final Set<String> noTextExtensions;
     private final Set<String> textFiles;
@@ -60,7 +60,7 @@ public class EolCorrector extends CorrectorBase {
 
     private boolean isTextType(Path f) {
         String           filename = f.getFileName().toString();
-        Optional<String> ext      = getExtension(filename);
+        Optional<String> ext      = Util.getExtension(filename);
         if (size(f) == 0L) {
             return false;
         }

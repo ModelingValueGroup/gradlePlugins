@@ -107,7 +107,7 @@ public class MvgCorrectorExtension {
                 "yaml", "##",
                 "yml", "##"
         ));
-        headerFileExcludes = new HashSet<>(List.of(
+        List<String> defaultExcludes = List.of(
                 ".git.*",
                 ".github/workflows/.*", // github refuses bot pushes of workflows
                 ".idea/.*",
@@ -115,18 +115,11 @@ public class MvgCorrectorExtension {
                 "gradle/.*",
                 "gradlew.*",
                 "MPS/.*",
-                ".*/build/.*"
-        ));
-        eolFileExcludes = new HashSet<>(List.of(
-                ".git.*",
-                ".github/workflows/.*", // github refuses bot pushes of workflows
-                ".idea/.*",
-                ".gradle/.*",
-                "gradle/.*",
-                "gradlew.*",
-                "MPS/.*",
-                ".*/build/.*"
-        ));
+                ".*/build/.*",
+                ".*/[^/]*_gen/.*" // MPS type generation directories
+        );
+        headerFileExcludes = new HashSet<>(defaultExcludes);
+        eolFileExcludes = new HashSet<>(defaultExcludes);
     }
 
     public Project getProject() {
