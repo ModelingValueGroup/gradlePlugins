@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -143,5 +144,15 @@ public class Util {
         } else {
             throw new GradleException("human readable form of memory size '" + in + "' is not valid");
         }
+    }
+
+    public static Optional<String> getExtension(Path p) {
+        return getExtension(p.getFileName().toString());
+    }
+
+    public static Optional<String> getExtension(String filename) {
+        return Optional.ofNullable(filename)
+                .filter(f -> f.contains("."))
+                .map(f -> f.substring(f.lastIndexOf(".") + 1));
     }
 }

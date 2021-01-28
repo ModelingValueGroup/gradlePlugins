@@ -26,19 +26,21 @@ import java.util.stream.Collectors;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 
-public class VersionCorrector extends CorrectorBase {
-    private final Project project;
-    private final Path    propFile;
-    private final String  versionName;
-    private final String  groupName;
-    private final Path    absPropFile;
-    private final boolean forceVersionAdjustForTesting;
-    @SuppressWarnings("FieldCanBeLocal")
-    private final String  defaultVersion = "0.0.1";
-    private final String  defaultGroup;
+public class VersionCorrector extends Corrector {
+    private final static String  DEFAULT_VERSION = "0.0.1";
+    //
+    private final        Path    root;
+    private final        Project project;
+    private final        Path    propFile;
+    private final        String  versionName;
+    private final        String  groupName;
+    private final        Path    absPropFile;
+    private final        boolean forceVersionAdjustForTesting;
+    private final        String  defaultGroup;
 
     public VersionCorrector(MvgCorrectorExtension ext) {
-        super("vers  ", ext.getRoot(), ext.getEolFileExcludes());
+        super("vers  ");
+        root = ext.getRoot();
         project = ext.getProject();
         propFile = ext.getPropFileWithVersion();
         versionName = ext.getVersionName();
@@ -52,10 +54,14 @@ public class VersionCorrector extends CorrectorBase {
         }
     }
 
+    public Set<Path> getChangedFiles() {
+        return getChangedFiles(root);
+    }
+
     private Path getAbsPropFile(Path propFile) {
         Path f = propFile;
         if (f != null && !f.isAbsolute()) {
-            f = getRoot().resolve(propFile);
+            f = root.resolve(propFile);
         }
         return f;
     }
@@ -65,7 +71,7 @@ public class VersionCorrector extends CorrectorBase {
             LOGGER.info("+ can not determine version: no properties file specified");
         } else {
             Props  props      = new Props(propFile);
-            String oldVersion = props.getProp(versionName, defaultVersion);
+            String oldVersion = props.getProp(versionName, DEFAULT_VERSION);
             String group      = props.getProp(groupName, defaultGroup);
             String newVersion = adjustVersion(props, oldVersion);
 
@@ -96,7 +102,7 @@ public class VersionCorrector extends CorrectorBase {
     }
 
     private String findVacantVersion(String oldVersion) {
-        List<String> tags           = GitUtil.getAllTags(getRoot());
+        List<String> tags           = GitUtil.getAllTags(root);
         String       versionPattern = "\\d\\d*[.]\\d\\d*[.]\\d\\d*";
         if (!oldVersion.matches(versionPattern)) {
             throw new GradleException("the current version '" + oldVersion + "' does not match the version pattern '" + versionPattern + "'");

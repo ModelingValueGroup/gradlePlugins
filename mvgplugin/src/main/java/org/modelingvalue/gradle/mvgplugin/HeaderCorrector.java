@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class HeaderCorrector extends CorrectorBase {
+public class HeaderCorrector extends TreeCorrector {
     private final Map<String, String>       extensions;
     private final List<String>              headerLines;
     private final Map<String, List<String>> ext2header = new HashMap<>();
@@ -55,7 +55,7 @@ public class HeaderCorrector extends CorrectorBase {
 
     private void replaceHeader(Path f) {
         if (needsHeader(f)) {
-            String       ext        = getExtension(f).orElseThrow();
+            String       ext        = Util.getExtension(f).orElseThrow();
             List<String> header     = ext2header.computeIfAbsent(ext, e -> border(extensions.get(e)));
             List<String> lines      = Util.readAllLines(f);
             boolean      isHashBang = !lines.isEmpty() && lines.get(0).startsWith("#!");
@@ -71,7 +71,7 @@ public class HeaderCorrector extends CorrectorBase {
     }
 
     private boolean needsHeader(Path f) {
-        Optional<String> ext = getExtension(f);
+        Optional<String> ext = Util.getExtension(f);
         return ext.isPresent() && Util.getFileSize(f) != 0 && extensions.containsKey(ext.get());
     }
 
