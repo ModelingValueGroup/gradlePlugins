@@ -29,6 +29,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
 public interface Info {
+    String                          MVG_GROUP                      = "MVG";
     String                          PLUGIN_PACKAGE_NAME            = MvgPlugin.class.getPackageName();
     String                          PLUGIN_CLASS_NAME              = MvgPlugin.class.getName();
     String                          PLUGIN_NAME                    = MvgPlugin.class.getSimpleName().toLowerCase(Locale.ROOT);
@@ -36,18 +37,13 @@ public interface Info {
     String                          TAG_TASK_NAME                  = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
     String                          MPS_TASK_NAME                  = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
     //
-    String                          MIN_TEST_HEAP_SIZE             = "2g";
-    //
-    String                          PREPARATION_GROUP              = "preparation";
-    String                          WRAP_UP_GROUP                  = "wrap-up";
-    //
-    Logger                          LOGGER                         = Logging.getLogger(PLUGIN_NAME);
     boolean                         CI                             = Boolean.parseBoolean(envOrProp("CI", "false"));
     String                          ALLREP_TOKEN                   = envOrProp("ALLREP_TOKEN", "DRY");
     String                          DEFAULT_BRANCH                 = "refs/heads/develop";
     String                          MASTER_BRANCH                  = "refs/heads/master";
     String                          GIT_HEAD_FILE                  = ".git/HEAD";
     String                          NO_CI_GUARD                    = "!contains(github.event.head_commit.message, '[no-ci]')";
+    String                          MIN_TEST_HEAP_SIZE             = "2g";
     //
     String                          MVG_MAVEN_REPO_URL             = "https://maven.pkg.github.com/ModelingValueGroup/packages";
     String                          MVG_MAVEN_REPO_SNAPSHOTS_URL   = "https://maven.pkg.github.com/ModelingValueGroup/packages-snapshots";
@@ -55,6 +51,8 @@ public interface Info {
     //
     Action<MavenArtifactRepository> MVG_MAVEN_REPO_MAKER           = getRepoMaker("MvgMaven", MVG_MAVEN_REPO_URL);
     Action<MavenArtifactRepository> MVG_MAVEN_SNAPSHOTS_REPO_MAKER = getRepoMaker("MvgMavenSnapshots", MVG_MAVEN_REPO_SNAPSHOTS_URL);
+    //
+    Logger                          LOGGER                         = Logging.getLogger(PLUGIN_NAME);
 
     static Action<MavenArtifactRepository> getRepoMaker(String name, String url) {
         return mar -> {
@@ -66,6 +64,10 @@ public interface Info {
                 c.setPassword(ALLREP_TOKEN);
             });
         };
+    }
+
+    static boolean isMasterBranch(Gradle gradle) {
+        return getGithubRef(gradle).equals(MASTER_BRANCH);
     }
 
     static String getGithubRef(Gradle gradle) {
@@ -80,9 +82,5 @@ public interface Info {
         }
         LOGGER.warn("could not determine git branch (because {} not found), assuming branch '{}'", headFile, DEFAULT_BRANCH);
         return DEFAULT_BRANCH;
-    }
-
-    static boolean isMasterBranch(Gradle gradle) {
-        return getGithubRef(gradle).equals(MASTER_BRANCH);
     }
 }

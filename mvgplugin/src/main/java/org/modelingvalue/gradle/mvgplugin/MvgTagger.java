@@ -18,7 +18,7 @@ package org.modelingvalue.gradle.mvgplugin;
 import static java.util.regex.Pattern.quote;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.TAG_TASK_NAME;
-import static org.modelingvalue.gradle.mvgplugin.Info.WRAP_UP_GROUP;
+import static org.modelingvalue.gradle.mvgplugin.Info.MVG_GROUP;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Task;
@@ -47,7 +47,7 @@ class MvgTagger {
     }
 
     private void setup(Task task) {
-        task.setGroup(WRAP_UP_GROUP);
+        task.setGroup(MVG_GROUP);
         task.setDescription("tag the git repo with the current version");
         task.doLast(s -> execute());
     }
