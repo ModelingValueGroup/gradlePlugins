@@ -30,7 +30,10 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.tasks.TaskCollection;
+import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.Test;
+import org.gradle.external.javadoc.StandardJavadocDocletOptions;
 import org.gradle.internal.extensibility.DefaultConvention;
 import org.jetbrains.annotations.NotNull;
 
@@ -61,8 +64,9 @@ public class MvgPlugin implements Plugin<Project> {
         trace();
 
         tuneTesting();
-        agreeToBuildScan();
         tuneJavaPlugin();
+        tuneJavaDocPlugin();
+        agreeToBuildScan();
         addMVGRepositories();
 
         mvgCorrector = new MvgCorrector(gradle);
@@ -172,17 +176,6 @@ public class MvgPlugin implements Plugin<Project> {
         });
     }
 
-    private void agreeToBuildScan() {
-        gradle.afterProject(p -> {
-            BuildScanExtension buildScan = (BuildScanExtension) p.getExtensions().findByName("buildScan");
-            if (buildScan != null) {
-                LOGGER.info("+ agreeing to buildScan");
-                buildScan.setTermsOfServiceAgree("yes");
-                buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
-            }
-        });
-    }
-
     @SuppressWarnings("UnstableApiUsage")
     private void tuneJavaPlugin() {
         gradle.afterProject(p -> {
@@ -191,6 +184,29 @@ public class MvgPlugin implements Plugin<Project> {
                 LOGGER.info("+ adding tasks for javadoc & source jars");
                 java.withJavadocJar();
                 java.withSourcesJar();
+            }
+        });
+    }
+
+    private void tuneJavaDocPlugin() {
+        gradle.afterProject(p -> {
+            TaskCollection<Javadoc> javadocsTask = p.getTasks().withType(Javadoc.class);
+            javadocsTask.forEach(jd -> jd.options(opt -> {
+                if (opt instanceof StandardJavadocDocletOptions) {
+                    LOGGER.info("+ adding javadoc option to ignore warnings");
+                    ((StandardJavadocDocletOptions)opt).addStringOption("Xdoclint:none", "-quiet");
+                }
+            }));
+        });
+    }
+
+    private void agreeToBuildScan() {
+        gradle.afterProject(p -> {
+            BuildScanExtension buildScan = (BuildScanExtension) p.getExtensions().findByName("buildScan");
+            if (buildScan != null) {
+                LOGGER.info("+ agreeing to buildScan");
+                buildScan.setTermsOfServiceAgree("yes");
+                buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
             }
         });
     }
