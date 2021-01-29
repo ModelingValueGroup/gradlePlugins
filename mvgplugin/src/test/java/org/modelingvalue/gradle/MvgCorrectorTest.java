@@ -139,6 +139,7 @@ public class MvgCorrectorTest {
                 () -> assertEquals(1, numOccurences("+ adding junit5 dependencies", out)),
                 () -> assertEquals(1, numOccurences("+ agreeing to buildScan", out)),
                 () -> assertEquals(1, numOccurences("+ adding tasks for javadoc & source jars", out)),
+                () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
 
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),

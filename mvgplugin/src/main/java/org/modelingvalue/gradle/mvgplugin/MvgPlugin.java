@@ -196,7 +196,7 @@ public class MvgPlugin implements Plugin<Project> {
                         if (!current.isCompatibleWith(requested)) {
                             LOGGER.error("mvgplugin: the requested java version (version.java in gradle.properties = {}) is not compatible with the running java version ({}). continueing with {}", requested, current, current);
                         } else {
-                            LOGGER.info("+ setting java source and target compatibility to {}", requested);
+                            LOGGER.info("+ setting java source&target compatibility from ({}&{}) to {}", java.getSourceCompatibility(), java.getTargetCompatibility(), requested);
                             java.setSourceCompatibility(requested);
                             java.setTargetCompatibility(requested);
                         }
