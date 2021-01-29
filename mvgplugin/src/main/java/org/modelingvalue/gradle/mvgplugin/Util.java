@@ -15,6 +15,8 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -154,5 +157,15 @@ public class Util {
         return Optional.ofNullable(filename)
                 .filter(f -> f.contains("."))
                 .map(f -> f.substring(f.lastIndexOf(".") + 1));
+    }
+
+    public static Properties getGradleProperties(File dir) {
+        try (InputStream s = new FileInputStream(new File(dir, "gradle.properties"))) {
+            Properties props = new Properties();
+            props.load(s);
+            return props;
+        } catch (IOException e) {
+            return null;
+        }
     }
 }

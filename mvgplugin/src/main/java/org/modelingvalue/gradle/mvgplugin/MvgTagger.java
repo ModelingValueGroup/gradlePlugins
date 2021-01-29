@@ -56,7 +56,7 @@ class MvgTagger {
         LOGGER.info("+ execute {} task", TAG_TASK_NAME);
         String tag = "v" + gradle.getRootProject().getVersion();
         if (tag.equals("v") || tag.equals("vnull") || tag.equals("vunspecified")) {
-            LOGGER.error("+ can not tag with the version: version of the rootProject is not set: {}", tag);
+            LOGGER.error("mvgplugin: can not tag git with version: version of the rootProject is not set: {}", tag);
             throw new GradleException("version of the rootProject is not set");
         } else if (Info.isMasterBranch(gradle)) {
             LOGGER.info("+ tagging this version with '{}' because this is the master branch", tag);

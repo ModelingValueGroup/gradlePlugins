@@ -19,10 +19,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.modelingvalue.gradle.mvgplugin.Util.numOccurences;
 
-import java.io.FileInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -41,6 +42,7 @@ import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.mvgplugin.GitUtil;
 import org.modelingvalue.gradle.mvgplugin.Info;
+import org.modelingvalue.gradle.mvgplugin.Util;
 
 public class MvgCorrectorTest {
     private static final Path testWorkspaceDir = Paths.get("build", "testWorkspace").toAbsolutePath();
@@ -55,9 +57,11 @@ public class MvgCorrectorTest {
 
     @Test
     public void checkId() throws IOException {
-        Properties props = getProperties();
+        Properties props = Util.getGradleProperties(new File(".."));
 
         //props.forEach((k, v) -> System.err.println("- [" + k + "]=" + v));
+
+        assertNotNull(props);
 
         assertTrue(props.containsKey("mvgplugin_id"));
         assertEquals(Info.PLUGIN_PACKAGE_NAME, props.get("mvgplugin_id"));
@@ -156,14 +160,6 @@ public class MvgCorrectorTest {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private static Properties getProperties() throws IOException {
-        Properties props = new Properties();
-        try (InputStream s = new FileInputStream("../gradle.properties")) {
-            props.load(s);
-        }
-        return props;
-    }
-
     private static void cp(Function<String, String> postProcess, Path... fs) throws IOException {
         for (Path f : fs) {
             String name = f.getFileName().toString();
