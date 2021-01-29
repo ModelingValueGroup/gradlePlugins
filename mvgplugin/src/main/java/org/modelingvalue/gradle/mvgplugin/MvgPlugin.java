@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.invocation.Gradle;
@@ -85,7 +87,7 @@ public class MvgPlugin implements Plugin<Project> {
         String pluginName = this.getClass().getSimpleName();
         LOGGER.info("+ apply {} on project {}", pluginName, project.getName());
         if (gradle.getRootProject() != project) {
-            LOGGER.error("the plugin {} can only be applied to the root project ({})", pluginName, gradle.getRootProject());
+            LOGGER.error("mvgplugin: the plugin {} can only be applied to the root project ({})", pluginName, gradle.getRootProject());
             throw new GradleException("the plugin " + pluginName + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
         }
     }
@@ -104,7 +106,7 @@ public class MvgPlugin implements Plugin<Project> {
                             try {
                                 Map<?, ?> jobs = (Map<?, ?>) Util.readYaml(f).get("jobs");
                                 if (jobs == null) {
-                                    LOGGER.warn("RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
+                                    LOGGER.warn("mvgplugin: RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
                                 } else {
                                     jobs.keySet().forEach(jobName -> {
                                         Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
@@ -178,12 +180,28 @@ public class MvgPlugin implements Plugin<Project> {
 
     @SuppressWarnings("UnstableApiUsage")
     private void tuneJavaPlugin() {
+        Properties gradleProperties = Util.getGradleProperties(gradle.getRootProject().getRootDir());
         gradle.afterProject(p -> {
             JavaPluginExtension java = (JavaPluginExtension) p.getExtensions().findByName("java");
             if (java != null) {
                 LOGGER.info("+ adding tasks for javadoc & source jars");
                 java.withJavadocJar();
                 java.withSourcesJar();
+
+                if (gradleProperties != null) {
+                    Object requestedVersion = gradleProperties.get("version.java");
+                    if (requestedVersion != null) {
+                        JavaVersion current   = JavaVersion.current();
+                        JavaVersion requested = JavaVersion.toVersion(requestedVersion);
+                        if (!current.isCompatibleWith(requested)) {
+                            LOGGER.error("mvgplugin: the requested java version (version.java in gradle.properties = {}) is not compatible with the running java version ({}). continueing with {}", requested, current, current);
+                        } else {
+                            LOGGER.info("+ setting java source and target compatibility to {}", requested);
+                            java.setSourceCompatibility(requested);
+                            java.setTargetCompatibility(requested);
+                        }
+                    }
+                }
             }
         });
     }
@@ -194,7 +212,7 @@ public class MvgPlugin implements Plugin<Project> {
             javadocsTask.forEach(jd -> jd.options(opt -> {
                 if (opt instanceof StandardJavadocDocletOptions) {
                     LOGGER.info("+ adding javadoc option to ignore warnings");
-                    ((StandardJavadocDocletOptions)opt).addStringOption("Xdoclint:none", "-quiet");
+                    ((StandardJavadocDocletOptions) opt).addStringOption("Xdoclint:none", "-quiet");
                 }
             }));
         });
