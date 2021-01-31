@@ -30,6 +30,7 @@ import org.gradle.api.GradleException;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.TaskCollection;
@@ -158,8 +159,10 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneTesting() {
         gradle.afterProject(p -> {
-            Test test = (Test) p.getTasks().findByName("test");
-            if (test != null) {
+            Task t = p.getTasks().findByName("test");
+            if (t instanceof Test) {
+                Test test = (Test) t;
+
                 LOGGER.info("+ adding test.useJUnitPlatform");
                 test.useJUnitPlatform();
 
@@ -167,13 +170,15 @@ public class MvgPlugin implements Plugin<Project> {
                     LOGGER.info("+ increasing test heap from {} to {}", test.getMaxHeapSize() == null ? "default" : test.getMaxHeapSize(), MIN_TEST_HEAP_SIZE);
                     test.setMaxHeapSize(MIN_TEST_HEAP_SIZE);
                 }
-            }
 
-            Object java = p.getExtensions().findByName("java");
-            if (java != null) {
-                LOGGER.info("+ adding junit5 dependencies");
-                p.getDependencies().add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.6.2");
-                p.getDependencies().add("testRuntimeOnly", "org.junit.jupiter:junit-jupiter-engine:5.7.0");
+                Object java = p.getExtensions().findByName("java");
+                if (java != null) {
+                    LOGGER.info("+ adding junit5 dependencies");
+                    p.getDependencies().add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.6.2");
+                    p.getDependencies().add("testRuntimeOnly", "org.junit.jupiter:junit-jupiter-engine:5.7.0");
+                }
+            } else if (t != null) {
+                LOGGER.info("+ 'test' task is not of type Test (but of type '{}')", t.getClass().getSimpleName());
             }
         });
     }
