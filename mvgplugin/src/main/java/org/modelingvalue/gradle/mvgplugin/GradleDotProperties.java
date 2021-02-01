@@ -74,7 +74,9 @@ public class GradleDotProperties {
 
     public String getProp(String name, String def) {
         Object o = properties.get(name);
-        return o == null ? def : o.toString();
+        String v = o == null ? def : o.toString();
+        LOGGER.info("+ reading property {} from the {}property file {} as {}", name, valid ? "" : "INVALID ", file.getAbsolutePath(), v);
+        return v;
     }
 
 
