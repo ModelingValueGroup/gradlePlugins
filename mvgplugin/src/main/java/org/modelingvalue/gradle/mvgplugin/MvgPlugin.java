@@ -134,7 +134,7 @@ public class MvgPlugin implements Plugin<Project> {
     }
 
     private void checkIfWeAreUsingTheLatestPluginVersion() {
-        String v = Util.getMyPluginVersion();
+        Version v = Util.getMyPluginVersion();
         if (v == null) {
             LOGGER.info("+ can not determine if using the latest version of mvg plugin: can not determine running version");
         } else {

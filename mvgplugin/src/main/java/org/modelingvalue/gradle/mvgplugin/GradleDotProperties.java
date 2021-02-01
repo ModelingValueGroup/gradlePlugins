@@ -19,9 +19,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Properties;
@@ -56,7 +54,7 @@ public class GradleDotProperties {
     private GradleDotProperties(File dir) {
         file = new File(dir, GRADLE_PROPERTIES_FILE);
         valid = file.isFile();
-        properties = valid ? loadProperties(file) : new Properties();
+        properties = valid ? Util.loadProperties(file) : new Properties();
         try {
             lines = Files.readAllLines(file.toPath());
         } catch (IOException e) {
@@ -93,13 +91,4 @@ public class GradleDotProperties {
         }
     }
 
-    private static Properties loadProperties(File file) {
-        try (InputStream s = new FileInputStream(file)) {
-            Properties props = new Properties();
-            props.load(s);
-            return props;
-        } catch (IOException e) {
-            throw new GradleException("can not read properties file at " + file.getAbsolutePath(), e);
-        }
-    }
 }
