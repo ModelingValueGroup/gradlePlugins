@@ -46,10 +46,10 @@ public class GradleDotProperties {
         return instance;
     }
 
-    private final File         file;
-    private final boolean      valid;
-    private final Properties   properties;
-    private final List<String> lines;
+    private final File           file;
+    private final boolean        valid;
+    private final Properties     properties;
+    private final List<String>   lines;
 
     private GradleDotProperties(File dir) {
         file = new File(dir, GRADLE_PROPERTIES_FILE);
@@ -90,5 +90,4 @@ public class GradleDotProperties {
             throw new GradleException("properties file could not be written: " + file.getAbsolutePath(), e);
         }
     }
-
 }

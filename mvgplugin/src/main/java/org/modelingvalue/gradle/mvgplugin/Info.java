@@ -20,6 +20,8 @@ import static org.modelingvalue.gradle.mvgplugin.Util.envOrProp;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 import org.gradle.api.Action;
@@ -47,8 +49,9 @@ public interface Info {
     //
     boolean                         CI                             = Boolean.parseBoolean(envOrProp(PROP_NAME_CI, "false"));
     String                          ALLREP_TOKEN                   = envOrProp(PROP_NAME_ALLREP_TOKEN, "DRY");
-    String                          DEFAULT_BRANCH                 = "refs/heads/develop";
     String                          MASTER_BRANCH                  = "refs/heads/master";
+    String                          DEVELOP_BRANCH                 = "refs/heads/develop";
+    String                          DEFAULT_BRANCH                 = "refs/heads/can-not-determine-branch";
     String                          GIT_HEAD_FILE                  = ".git/HEAD";
     String                          NO_CI_GUARD                    = "!contains(github.event.head_commit.message, '[no-ci]')";
     String                          MIN_TEST_HEAP_SIZE             = "2g";
@@ -61,6 +64,7 @@ public interface Info {
     Action<MavenArtifactRepository> MVG_MAVEN_SNAPSHOTS_REPO_MAKER = getRepoMaker("MvgMavenSnapshots", MVG_MAVEN_REPO_SNAPSHOTS_URL);
     //
     Logger                          LOGGER                         = Logging.getLogger(PLUGIN_NAME);
+    String                          NOW_STAMP                      = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmm"));
 
     static Action<MavenArtifactRepository> getRepoMaker(String name, String url) {
         return mar -> {
@@ -76,6 +80,14 @@ public interface Info {
 
     static boolean isMasterBranch(Gradle gradle) {
         return getGithubRef(gradle).equals(MASTER_BRANCH);
+    }
+
+    static boolean isDevelopBranch(Gradle gradle) {
+        return getGithubRef(gradle).equals(DEVELOP_BRANCH);
+    }
+
+    static <T> T selectMasterDevelopElse(Gradle gradle, T master, T develop, T other) {
+        return isMasterBranch(gradle) ? master : isDevelopBranch(gradle) ? develop : other;
     }
 
     static String getGithubRef(Gradle gradle) {

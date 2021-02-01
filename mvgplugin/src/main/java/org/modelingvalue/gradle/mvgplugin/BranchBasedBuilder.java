@@ -92,7 +92,7 @@ public class BranchBasedBuilder {
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
             if (publishing != null) {
                 if (!publishing.getRepositories().isEmpty()) {
-                    LOGGER.warn("The repository set for project {} is not empty; bbb will not set the proper publish repo (local-maven or github-mvg-packages). Make it empty to activate bbb publishing.",p.getName());
+                    LOGGER.warn("The repository set for project {} is not empty; bbb will not set the proper publish repo (local-maven or github-mvg-packages). Make it empty to activate bbb publishing.", p.getName());
                 }
                 if (!(ci && isMaster)) {
                     makePublicationsBbb(publishing);
@@ -194,28 +194,32 @@ public class BranchBasedBuilder {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private void TOMTOMTOM_report(Gradle gradle) {
-        gradle.allprojects(p -> {
-            PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
-            LOGGER.info("+ bbb ---------------------------[ proj={}", p.getName());
-            if (publishing == null) {
-                LOGGER.info("+      bbb publishing==null");
-            } else {
-                publishing.getPublications().forEach(x -> LOGGER.info("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
-                publishing.getRepositories().forEach(x -> LOGGER.info("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
-            }
-            LOGGER.info("+ bbb ---------------------------] proj={}", p.getName());
-        });
+        if (LOGGER.isTraceEnabled()) {
+            gradle.allprojects(p -> {
+                PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
+                LOGGER.trace("+ bbb ---------------------------[ proj={}", p.getName());
+                if (publishing == null) {
+                    LOGGER.trace("+      bbb publishing==null");
+                } else {
+                    publishing.getPublications().forEach(x -> LOGGER.trace("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+                    publishing.getRepositories().forEach(x -> LOGGER.trace("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+                }
+                LOGGER.trace("+ bbb ---------------------------] proj={}", p.getName());
+            });
+        }
     }
 
     private void TOMTOMTOM_report(PublishingExtension publishing) {
-        LOGGER.info("+ bbb ---------------------------[");
-        if (publishing == null) {
-            LOGGER.info("+      bbb publishing==null");
-        } else {
-            publishing.getPublications().forEach(x -> LOGGER.info("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
-            publishing.getRepositories().forEach(x -> LOGGER.info("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("+ bbb ---------------------------[");
+            if (publishing == null) {
+                LOGGER.trace("+      bbb publishing==null");
+            } else {
+                publishing.getPublications().forEach(x -> LOGGER.trace("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+                publishing.getRepositories().forEach(x -> LOGGER.trace("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+            }
+            LOGGER.trace("+ bbb ---------------------------]");
         }
-        LOGGER.info("+ bbb ---------------------------]");
     }
 
     private String TOMTOMTOM_describe(Publication x) {
