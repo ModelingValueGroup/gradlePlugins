@@ -23,16 +23,19 @@ import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.helpers.DefaultHandler;
 
-class VersionExtractor extends DefaultHandler {
-    private       String        latest;
-    private final Set<String>   versions = new HashSet<>();
-    private       Exception     exception;
+class MavenMetaVersionExtractor extends DefaultHandler {
+    private static final String        LATEST_ELEMENT_NAME  = "latest";
+    private static final String        VERSION_ELEMENT_NAME = "version";
     //
-    private       boolean       inLatest;
-    private       boolean       inVersion;
-    private final StringBuilder b        = new StringBuilder();
+    private              String        latest;
+    private final        Set<String>   versions             = new HashSet<>();
+    private              Exception     exception;
+    //
+    private              boolean       inLatest;
+    private              boolean       inVersion;
+    private final        StringBuilder b                    = new StringBuilder();
 
-    public VersionExtractor(String url) {
+    public MavenMetaVersionExtractor(String url) {
         try {
             SAXParserFactory.newInstance().newSAXParser().parse(url, this);
         } catch (Exception e) {
@@ -41,8 +44,8 @@ class VersionExtractor extends DefaultHandler {
     }
 
     public void startElement(String uri, String localName, String qName, Attributes attributes) {
-        inLatest = qName.equals("latest");
-        inVersion = qName.equals("version");
+        inLatest = qName.equals(LATEST_ELEMENT_NAME);
+        inVersion = qName.equals(VERSION_ELEMENT_NAME);
     }
 
     public void endElement(String uri, String localName, String qName) {

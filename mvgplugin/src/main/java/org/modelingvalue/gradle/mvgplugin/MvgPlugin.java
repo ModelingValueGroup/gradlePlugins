@@ -16,14 +16,15 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.Info.MIN_TEST_HEAP_SIZE;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_JAVA;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.gradle.api.GradleException;
@@ -59,6 +60,7 @@ public class MvgPlugin implements Plugin<Project> {
     public void apply(Project project) {
         LOGGER.info("MvgPlugin.apply to project {}", project.getName());
         gradle = project.getGradle();
+        GradleDotProperties.init(gradle.getRootProject().getRootDir());
 
         checkMustBeRootProject(project);
         checkWorkflowFilesForLoopingDanger();
@@ -136,7 +138,7 @@ public class MvgPlugin implements Plugin<Project> {
         if (v == null) {
             LOGGER.info("+ can not determine if using the latest version of mvg plugin: can not determine running version");
         } else {
-            VersionExtractor extractor = new VersionExtractor(Info.PLUGIN_META_URL);
+            MavenMetaVersionExtractor extractor = new MavenMetaVersionExtractor(Info.PLUGIN_META_URL);
             if (extractor.error()) {
                 LOGGER.warn("+ can not determine if using the latest version of mvg plugin: metainfo of myself not readable ({}, msg={})", Info.PLUGIN_META_URL, extractor.getException().getMessage());
             } else if (!extractor.getLatest().equals(v)) {
@@ -185,7 +187,10 @@ public class MvgPlugin implements Plugin<Project> {
 
     @SuppressWarnings("UnstableApiUsage")
     private void tuneJavaPlugin() {
-        Properties gradleProperties = Util.getGradleProperties(gradle.getRootProject().getRootDir());
+        String javaVersionInProps = getGradleDotProperties().getProp(PROP_NAME_VERSION_JAVA,"11");
+        if (javaVersionInProps == null) {
+            LOGGER.info("java version not adjusted because there is no {} property in {}", PROP_NAME_VERSION_JAVA, getGradleDotProperties().getFile());
+        }
         gradle.afterProject(p -> {
             JavaPluginExtension java = (JavaPluginExtension) p.getExtensions().findByName("java");
             if (java != null) {
@@ -193,18 +198,15 @@ public class MvgPlugin implements Plugin<Project> {
                 java.withJavadocJar();
                 java.withSourcesJar();
 
-                if (gradleProperties != null) {
-                    Object requestedVersion = gradleProperties.get("version.java");
-                    if (requestedVersion != null) {
-                        JavaVersion current   = JavaVersion.current();
-                        JavaVersion requested = JavaVersion.toVersion(requestedVersion);
-                        if (!current.isCompatibleWith(requested)) {
-                            LOGGER.error("mvgplugin: the requested java version (version.java in gradle.properties = {}) is not compatible with the running java version ({}). continueing with {}", requested, current, current);
-                        } else {
-                            LOGGER.info("+ setting java source&target compatibility from ({}&{}) to {}", java.getSourceCompatibility(), java.getTargetCompatibility(), requested);
-                            java.setSourceCompatibility(requested);
-                            java.setTargetCompatibility(requested);
-                        }
+                if (javaVersionInProps != null) {
+                    JavaVersion current   = JavaVersion.current();
+                    JavaVersion requested = JavaVersion.toVersion(javaVersionInProps);
+                    if (!current.isCompatibleWith(requested)) {
+                        LOGGER.error("mvgplugin: the requested java version ({} in gradle.properties = {}) is not compatible with the running java version ({}). continuing with {}", PROP_NAME_VERSION_JAVA, requested, current, current);
+                    } else {
+                        LOGGER.info("+ setting java source&target compatibility from ({}&{}) to {}", java.getSourceCompatibility(), java.getTargetCompatibility(), requested);
+                        java.setSourceCompatibility(requested);
+                        java.setTargetCompatibility(requested);
                     }
                 }
             }

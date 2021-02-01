@@ -37,8 +37,16 @@ public interface Info {
     String                          TAG_TASK_NAME                  = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
     String                          MPS_TASK_NAME                  = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
     //
-    boolean                         CI                             = Boolean.parseBoolean(envOrProp("CI", "false"));
-    String                          ALLREP_TOKEN                   = envOrProp("ALLREP_TOKEN", "DRY");
+    String                          GRADLE_PROPERTIES_FILE         = "gradle.properties";
+    String                          PROP_NAME_VERSION              = "version";
+    String                          PROP_NAME_GROUP                = "group";
+    String                          PROP_NAME_VERSION_JAVA         = "version_java";
+    String                          PROP_NAME_VERSION_MPS          = "version_mps";
+    String                          PROP_NAME_ALLREP_TOKEN         = "ALLREP_TOKEN";
+    String                          PROP_NAME_CI                   = "CI";
+    //
+    boolean                         CI                             = Boolean.parseBoolean(envOrProp(PROP_NAME_CI, "false"));
+    String                          ALLREP_TOKEN                   = envOrProp(PROP_NAME_ALLREP_TOKEN, "DRY");
     String                          DEFAULT_BRANCH                 = "refs/heads/develop";
     String                          MASTER_BRANCH                  = "refs/heads/master";
     String                          GIT_HEAD_FILE                  = ".git/HEAD";

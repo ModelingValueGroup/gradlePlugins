@@ -16,6 +16,9 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_GROUP;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -31,10 +34,6 @@ public class VersionCorrector extends Corrector {
     //
     private final        Path    root;
     private final        Project project;
-    private final        Path    propFile;
-    private final        String  versionName;
-    private final        String  groupName;
-    private final        Path    absPropFile;
     private final        boolean forceVersionAdjustForTesting;
     private final        String  defaultGroup;
 
@@ -42,11 +41,7 @@ public class VersionCorrector extends Corrector {
         super("vers  ");
         root = ext.getRoot();
         project = ext.getProject();
-        propFile = ext.getPropFileWithVersion();
-        versionName = ext.getVersionName();
-        groupName = ext.getGroupName();
-        absPropFile = getAbsPropFile(propFile);
-        defaultGroup = propFile.getParent().getFileName().toString();
+        defaultGroup = getGradleDotProperties().getFile().getParentFile().getName();
 
         forceVersionAdjustForTesting = project.getGradle().getRootProject().getName().equals("testWorkspace");
         if (forceVersionAdjustForTesting) {
@@ -58,21 +53,13 @@ public class VersionCorrector extends Corrector {
         return getChangedFiles(root);
     }
 
-    private Path getAbsPropFile(Path propFile) {
-        Path f = propFile;
-        if (f != null && !f.isAbsolute()) {
-            f = root.resolve(propFile);
-        }
-        return f;
-    }
-
     public VersionCorrector generate() {
-        if (propFile == null) {
-            LOGGER.info("+ can not determine version: no properties file specified");
+        GradleDotProperties props = getGradleDotProperties();
+        if (!props.isValid()) {
+            LOGGER.info("+ can not determine version: no properties file found at {}", props.getFile());
         } else {
-            Props  props      = new Props(propFile);
-            String oldVersion = props.getProp(versionName, DEFAULT_VERSION);
-            String group      = props.getProp(groupName, defaultGroup);
+            String oldVersion = props.getProp(PROP_NAME_VERSION, DEFAULT_VERSION);
+            String group      = props.getProp(PROP_NAME_GROUP, defaultGroup);
             String newVersion = adjustVersion(props, oldVersion);
 
             project.getAllprojects().forEach(p -> {
@@ -86,16 +73,15 @@ public class VersionCorrector extends Corrector {
         return this;
     }
 
-    private String adjustVersion(Props props, String oldVersion) {
+    private String adjustVersion(GradleDotProperties props, String oldVersion) {
         if (!forceVersionAdjustForTesting && !Info.CI) {
             LOGGER.info("+ version not adjusted: not on CI (version stays {})", oldVersion);
             return oldVersion;
         } else {
             String newVersion = findVacantVersion(oldVersion);
             if (!oldVersion.equals(newVersion)) {
-                LOGGER.info("+ overwriting property {} with new version {} (was {}) in property file {}", versionName, newVersion, oldVersion, propFile);
-                props.setProp(versionName, newVersion);
-                overwrite(absPropFile, props.getLines());
+                LOGGER.info("+ overwriting property {} with new version {} (was {}) in property file {}", PROP_NAME_VERSION, newVersion, oldVersion, props.getFile());
+                props.setProp(PROP_NAME_VERSION, newVersion);
             }
             return newVersion;
         }
