@@ -16,8 +16,11 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
+import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
 import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.NOW_STAMP;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_MPS;
+import static org.modelingvalue.gradle.mvgplugin.Info.selectMasterDevelopElse;
 
 import java.io.File;
 
@@ -36,19 +39,21 @@ public class MvgMpsExtension {
     }
 
     private final Gradle gradle;
-    private       String version;
 
     public MvgMpsExtension(Gradle gradle) {
         this.gradle = gradle;
-        version = getGradleDotProperties().getProp(PROP_NAME_VERSION_MPS,"0.0");
     }
 
     public String getVersion() {
-        return version;
+        return getGradleDotProperties().getProp(PROP_NAME_VERSION_MPS, "0.0.1");
     }
 
-    public void setVersion(String version) {
-        this.version = version;
+    public String getVersionExtra() {
+        return selectMasterDevelopElse(gradle, "", "beta", "alpha");
+    }
+
+    public String getVersionStamp() {
+        return selectMasterDevelopElse(gradle, "", NOW_STAMP, NOW_STAMP);
     }
 
     public File getMpsDownloadDir() {
@@ -56,18 +61,19 @@ public class MvgMpsExtension {
     }
 
     public String getMpsDownloadUrl() {
-        return String.format(MPS_DOWNLOAD_URL_TEMPLATE, getMajor(), getVersion());
+        return String.format(MPS_DOWNLOAD_URL_TEMPLATE, getMajorMpsVersion(), getVersion());
     }
 
     public File getMpsInstallDir() {
-        return new File(getMpsDownloadDir(), String.format(MPS_ROOT_DIR_TEMPLATE, getMajor()));
+        return new File(getMpsDownloadDir(), String.format(MPS_ROOT_DIR_TEMPLATE, getMajorMpsVersion()));
     }
 
     @NotNull
-    private String getMajor() {
+    private String getMajorMpsVersion() {
+        String version = getGradleDotProperties().getProp(PROP_NAME_VERSION_MPS, "0.0.1");
         if (version == null) {
-            throw new GradleException("you need to set the MPS version: " + MPS_TASK_NAME + " { version = \"2020.3\" }");
+            throw new GradleException("you need to set the MPS version in " + GRADLE_PROPERTIES_FILE + ": " + PROP_NAME_VERSION_MPS + "=2020.3");
         }
-        return version.replaceAll("([0-9][0-9]*[.][0-9][0-9]*).*", "$1");
+        return version.replaceAll("([0-9]+[.][0-9]+).*", "$1");
     }
 }

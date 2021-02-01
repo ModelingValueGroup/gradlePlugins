@@ -17,8 +17,14 @@ package org.modelingvalue.gradle.mvgplugin;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
+import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
+import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.MIN_TEST_HEAP_SIZE;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_ALLREP_TOKEN;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_JAVA;
+import static org.modelingvalue.gradle.mvgplugin.Info.isDevelopBranch;
+import static org.modelingvalue.gradle.mvgplugin.Info.isMasterBranch;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
 import java.io.IOException;
@@ -58,9 +64,11 @@ public class MvgPlugin implements Plugin<Project> {
     }
 
     public void apply(Project project) {
-        LOGGER.info("MvgPlugin.apply to project {}", project.getName());
         gradle = project.getGradle();
         GradleDotProperties.init(gradle.getRootProject().getRootDir());
+
+        LOGGER.info("MvgPlugin.apply to project {}", project.getName());
+        Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(gradle), "develop", isDevelopBranch(gradle), PROP_NAME_ALLREP_TOKEN, ALLREP_TOKEN);
 
         checkMustBeRootProject(project);
         checkWorkflowFilesForLoopingDanger();
@@ -187,7 +195,7 @@ public class MvgPlugin implements Plugin<Project> {
 
     @SuppressWarnings("UnstableApiUsage")
     private void tuneJavaPlugin() {
-        String javaVersionInProps = getGradleDotProperties().getProp(PROP_NAME_VERSION_JAVA,"11");
+        String javaVersionInProps = getGradleDotProperties().getProp(PROP_NAME_VERSION_JAVA, "11");
         if (javaVersionInProps == null) {
             LOGGER.info("java version not adjusted because there is no {} property in {}", PROP_NAME_VERSION_JAVA, getGradleDotProperties().getFile());
         }
