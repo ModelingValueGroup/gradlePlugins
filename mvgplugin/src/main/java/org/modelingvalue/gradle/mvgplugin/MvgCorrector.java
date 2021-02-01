@@ -17,7 +17,9 @@ package org.modelingvalue.gradle.mvgplugin;
 
 import static java.util.regex.Pattern.quote;
 import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.CI;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_GROUP;
@@ -72,7 +74,7 @@ class MvgCorrector {
             changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
             changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
 
-            LOGGER.info("+ changed {} files (CI={}, master={}, have-token={})", changes.size(), CI, Info.isMasterBranch(gradle), ALLREP_TOKEN != null);
+            LOGGER.info("+ changed {} files ({}={}, master={}, {}={})", changes.size(), PROP_NAME_CI, CI, Info.isMasterBranch(gradle), PROP_NAME_ALLREP_TOKEN, ALLREP_TOKEN != null);
 
             if (!changes.isEmpty() && CI && ALLREP_TOKEN != null) {
                 GitUtil.push(ext.getRoot(), changes, GitUtil.NO_CI_MESSAGE + " updated by mvgplugin");

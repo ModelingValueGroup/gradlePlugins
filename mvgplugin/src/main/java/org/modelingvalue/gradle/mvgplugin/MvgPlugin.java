@@ -44,7 +44,7 @@ import com.gradle.scan.plugin.BuildScanExtension;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class MvgPlugin implements Plugin<Project> {
-    public static MvgPlugin singleton;
+    public static       MvgPlugin singleton;
 
     private Gradle             gradle;
     private MvgCorrector       mvgCorrector;
@@ -136,7 +136,7 @@ public class MvgPlugin implements Plugin<Project> {
         if (v == null) {
             LOGGER.info("+ can not determine if using the latest version of mvg plugin: can not determine running version");
         } else {
-            VersionExtractor extractor = new VersionExtractor(Info.PLUGIN_META_URL);
+            MavenMetaVersionExtractor extractor = new MavenMetaVersionExtractor(Info.PLUGIN_META_URL);
             if (extractor.error()) {
                 LOGGER.warn("+ can not determine if using the latest version of mvg plugin: metainfo of myself not readable ({}, msg={})", Info.PLUGIN_META_URL, extractor.getException().getMessage());
             } else if (!extractor.getLatest().equals(v)) {
@@ -194,12 +194,12 @@ public class MvgPlugin implements Plugin<Project> {
                 java.withSourcesJar();
 
                 if (gradleProperties != null) {
-                    Object requestedVersion = gradleProperties.get("version.java");
+                    Object requestedVersion = gradleProperties.get(Info.PROP_NAME_VERSION_JAVA);
                     if (requestedVersion != null) {
                         JavaVersion current   = JavaVersion.current();
                         JavaVersion requested = JavaVersion.toVersion(requestedVersion);
                         if (!current.isCompatibleWith(requested)) {
-                            LOGGER.error("mvgplugin: the requested java version (version.java in gradle.properties = {}) is not compatible with the running java version ({}). continueing with {}", requested, current, current);
+                            LOGGER.error("mvgplugin: the requested java version ({} in gradle.properties = {}) is not compatible with the running java version ({}). continueing with {}", Info.PROP_NAME_VERSION_JAVA, requested, current, current);
                         } else {
                             LOGGER.info("+ setting java source&target compatibility from ({}&{}) to {}", java.getSourceCompatibility(), java.getTargetCompatibility(), requested);
                             java.setSourceCompatibility(requested);

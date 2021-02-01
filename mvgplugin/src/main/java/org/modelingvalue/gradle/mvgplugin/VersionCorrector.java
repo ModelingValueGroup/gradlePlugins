@@ -16,6 +16,8 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_GROUP;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -32,8 +34,6 @@ public class VersionCorrector extends Corrector {
     private final        Path    root;
     private final        Project project;
     private final        Path    propFile;
-    private final        String  versionName;
-    private final        String  groupName;
     private final        Path    absPropFile;
     private final        boolean forceVersionAdjustForTesting;
     private final        String  defaultGroup;
@@ -43,8 +43,6 @@ public class VersionCorrector extends Corrector {
         root = ext.getRoot();
         project = ext.getProject();
         propFile = ext.getPropFileWithVersion();
-        versionName = ext.getVersionName();
-        groupName = ext.getGroupName();
         absPropFile = getAbsPropFile(propFile);
         defaultGroup = propFile.getParent().getFileName().toString();
 
@@ -71,8 +69,8 @@ public class VersionCorrector extends Corrector {
             LOGGER.info("+ can not determine version: no properties file specified");
         } else {
             Props  props      = new Props(propFile);
-            String oldVersion = props.getProp(versionName, DEFAULT_VERSION);
-            String group      = props.getProp(groupName, defaultGroup);
+            String oldVersion = props.getProp(PROP_NAME_VERSION, DEFAULT_VERSION);
+            String group      = props.getProp(PROP_NAME_GROUP, defaultGroup);
             String newVersion = adjustVersion(props, oldVersion);
 
             project.getAllprojects().forEach(p -> {
@@ -93,8 +91,8 @@ public class VersionCorrector extends Corrector {
         } else {
             String newVersion = findVacantVersion(oldVersion);
             if (!oldVersion.equals(newVersion)) {
-                LOGGER.info("+ overwriting property {} with new version {} (was {}) in property file {}", versionName, newVersion, oldVersion, propFile);
-                props.setProp(versionName, newVersion);
+                LOGGER.info("+ overwriting property {} with new version {} (was {}) in property file {}", PROP_NAME_VERSION, newVersion, oldVersion, propFile);
+                props.setProp(PROP_NAME_VERSION, newVersion);
                 overwrite(absPropFile, props.getLines());
             }
             return newVersion;
