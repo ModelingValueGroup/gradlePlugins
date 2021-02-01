@@ -27,8 +27,8 @@ class MavenMetaVersionExtractor extends DefaultHandler {
     private static final String        LATEST_ELEMENT_NAME  = "latest";
     private static final String        VERSION_ELEMENT_NAME = "version";
     //
-    private              String        latest;
-    private final        Set<String>   versions             = new HashSet<>();
+    private              Version       latest;
+    private final        Set<Version>  versions             = new HashSet<>();
     private              Exception     exception;
     //
     private              boolean       inLatest;
@@ -54,11 +54,11 @@ class MavenMetaVersionExtractor extends DefaultHandler {
             b.setLength(0);
             if (inLatest) {
                 inLatest = false;
-                latest = s;
+                latest = new Version(s);
             }
             if (inVersion) {
                 inVersion = false;
-                versions.add(s);
+                versions.add(new Version(s));
             }
         }
     }
@@ -73,11 +73,11 @@ class MavenMetaVersionExtractor extends DefaultHandler {
         return exception != null;
     }
 
-    public String getLatest() {
+    public Version getLatest() {
         return latest;
     }
 
-    public Set<String> getVersions() {
+    public Set<Version> getVersions() {
         return versions;
     }
 

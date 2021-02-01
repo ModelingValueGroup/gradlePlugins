@@ -1,0 +1,15 @@
+<project name="projectName" default="default-task">
+    <target name="default-task">
+        <echoxml file="xmlfile">
+            <idea-plugin>
+                <idea-version since-build="111.222" until-build="333.444.555"/>
+            </idea-plugin>
+        </echoxml>
+    </target>
+    <target name="other-task">
+        <echoxml file="xmlfile">
+            <ant-project>
+            </ant-project>
+        </echoxml>
+    </target>
+</project>

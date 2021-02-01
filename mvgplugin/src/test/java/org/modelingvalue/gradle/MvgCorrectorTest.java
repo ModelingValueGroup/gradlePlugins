@@ -49,6 +49,7 @@ public class MvgCorrectorTest {
     private static final Path buildFile        = Paths.get("build.gradle.kts");
     private static final Path gradlePropsFile  = Paths.get("gradle.properties");
     private static final Path yamlFile         = Paths.get(".github", "workflows", "xyz.yaml");
+    private static final Path antFile          = Paths.get("try_build.xml");
     private static final Path headFile         = Paths.get(".git", "HEAD");
     private static final Path javaFile         = Paths.get("src", "main", "java", "A.java");
     private static final Path propFile         = Paths.get("src", "main", "java", "testCR.properties");
@@ -68,7 +69,7 @@ public class MvgCorrectorTest {
     @Test
     public void checkFunctionality() throws IOException {
         // Setup the test build
-        cp(null, settingsFile, javaFile, gradlePropsFile, headFile, yamlFile);
+        cp(null, settingsFile, javaFile, gradlePropsFile, headFile, yamlFile, antFile);
         cp(s -> s
                         .replaceAll("~myPackage~", Info.PLUGIN_PACKAGE_NAME)
                         .replaceAll("~myMvgCorrectorExtension~", Info.CORRECTOR_TASK_NAME)
@@ -96,27 +97,32 @@ public class MvgCorrectorTest {
         // Run the build
         StringWriter outWriter = new StringWriter();
         StringWriter errWriter = new StringWriter();
-        //noinspection UnstableApiUsage
-        GradleRunner.create()
-                //.withDebug(true)            // use this     if you need to debug
-                .withEnvironment(env)     // use this not if you need to debug
-                .forwardStdOutput(outWriter)
-                .forwardStdError(errWriter)
-                .withPluginClasspath()
-                .withProjectDir(testWorkspaceDir.toFile())
-                .withArguments("--scan", "--info", "--stacktrace", "check")
-                .build();
-        String out = outWriter.toString();
-        String err = errWriter.toString();
+        String       out;
+        String       err;
+        try {
+            //noinspection UnstableApiUsage
+            GradleRunner.create()
+                    //.withDebug(true)            // use this     if you need to debug
+                    .withEnvironment(env)     // use this not if you need to debug
+                    .forwardStdOutput(outWriter)
+                    .forwardStdError(errWriter)
+                    .withPluginClasspath()
+                    .withProjectDir(testWorkspaceDir.toFile())
+                    .withArguments("--scan", "--info", "--stacktrace", "check")
+                    .build();
+        } finally {
+            out = outWriter.toString();
+            err = errWriter.toString();
 
-        System.out.println("/================================= out ====================================");
-        Arrays.stream(out.split("\n")).forEach(l -> System.out.println("| " + l));
-        System.out.println("+================================= err ====================================");
-        Arrays.stream(err.split("\n")).forEach(l -> System.out.println("| " + l));
-        System.out.println("\\==========================================================================");
+            System.out.println("/================================= out ====================================");
+            Arrays.stream(out.split("\n")).forEach(l -> System.out.println("| " + l));
+            System.out.println("+================================= err ====================================");
+            Arrays.stream(err.split("\n")).forEach(l -> System.out.println("| " + l));
+            System.out.println("\\==========================================================================");
 
-        GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
-        GradleDotProperties.init(testWorkspaceDir.toFile());
+            GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
+            GradleDotProperties.init(testWorkspaceDir.toFile());
+        }
 
         // Verify the result
         assertAll(
@@ -124,7 +130,7 @@ public class MvgCorrectorTest {
                 //
                 () -> assertEquals(5, numOccurences("+ header regenerated : ", out)),
                 () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
-                () -> assertEquals(4, numOccurences("+ eols   untouched   : ", out)),
+                () -> assertEquals(5, numOccurences("+ eols   untouched   : ", out)),
                 () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
                 () -> assertEquals(1, numOccurences("+ project 'testWorkspace': version: 0.0.1 => 0.0.4, group: group => group", out)),
                 () -> assertEquals(3, numOccurences("+ bbb: dependency     replaced: ", out)),
@@ -135,6 +141,8 @@ public class MvgCorrectorTest {
                 () -> assertEquals(1, numOccurences("+ agreeing to buildScan", out)),
                 () -> assertEquals(1, numOccurences("+ adding tasks for javadoc & source jars", out)),
                 () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
+                () -> assertEquals(1, numOccurences("+ the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
+                () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
                 //
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),

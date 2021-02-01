@@ -29,19 +29,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.invocation.Gradle;
+import org.jetbrains.annotations.NotNull;
 
 public class MvgMps {
     private final static int    MAX_REDIRECTS = 10;
-    private final static Object LOCK          = new Object();
+    private final static Object LOAD_LOCK     = new Object();
 
     private final    Gradle            gradle;
     private final    MvgMpsExtension   ext;
+    private          boolean           mpsHasBeenLoaded;
     private volatile Map<String, File> jarIndex;
+    private          Properties        mpsBuildProps;
+    private          Version           mpsBuildNumber;
 
     public MvgMps(Gradle gradle) {
         this.gradle = gradle;
@@ -57,18 +62,86 @@ public class MvgMps {
         return gradle.getRootProject().files(jar);
     }
 
+    public Properties getMpsBuildProps() {
+        loadMps();
+        return mpsBuildProps;
+    }
+
+    public Version getMpsBuildNumber() {
+        loadMps();
+        return mpsBuildNumber;
+    }
+
     private Map<String, File> getJarIndex() {
-        if (jarIndex == null) {
-            synchronized (LOCK) { // we will be careful, you never know if gradle will call us at the same time in multiple Threads
-                if (jarIndex == null) {
-                    jarIndex = downloadUnzipAndIndex(ext);
-                }
-            }
-        }
+        loadMps();
         return jarIndex;
     }
 
-    private static Map<String, File> downloadUnzipAndIndex(MvgMpsExtension ext) {
+    private void loadMps() {
+        synchronized (LOAD_LOCK) { // we will be careful, you never know if gradle will call us at the same time in multiple Threads
+            if (!mpsHasBeenLoaded) {
+                assert jarIndex == null;
+                assert mpsBuildProps == null;
+                assert mpsBuildNumber == null;
+
+                downloadAndUnzip(ext);
+
+                jarIndex = makeJarIndex(ext.getMpsInstallDir());
+                mpsBuildProps = readMpsBuildProps();
+                mpsBuildNumber = getBuildNumber();
+                checkAntFilesAgainstMpsBuildNumber();
+
+                LOGGER.info("+ indexed {} jars in MPS dir {}", jarIndex.size(), ext.getMpsInstallDir());
+                LOGGER.info("+ loaded MPS properties, mps.build.number={}", mpsBuildNumber);
+
+                mpsHasBeenLoaded = true;
+                assert jarIndex != null;
+                assert mpsBuildProps != null;
+            }
+        }
+    }
+
+    private void checkAntFilesAgainstMpsBuildNumber() {
+        Path root = gradle.getRootProject().getRootDir().toPath();
+        try {
+            Files.walk(root)
+                    .filter(p -> p.getFileName().toString().endsWith(".xml"))
+                    .map(AntFileMpsVersionsExtractor::new)
+                    .filter(AntFileMpsVersionsExtractor::isAntFile)
+                    .filter(AntFileMpsVersionsExtractor::hasRange)
+                    .forEach(a -> {
+                        if (a.getSince() != null && mpsBuildNumber.compareTo(a.getSince()) < 0) {
+                            LOGGER.error("the MPS build number {} of MPS {} is below the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
+                            throw new GradleException("MPS build number too low for " + a.getFile());
+                        } else if (a.getUntil() != null && 0 < mpsBuildNumber.compareTo(a.getUntil())) {
+                            LOGGER.error("the MPS build number {} of MPS {} is above the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
+                            throw new GradleException("MPS build number too high for " + a.getFile());
+                        } else {
+                            LOGGER.info("+ the MPS build number {} of MPS {} is in range [{}...{}] of the requested in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
+                        }
+                    });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Properties readMpsBuildProps() {
+        File propFile = new File(ext.getMpsInstallDir(), "build.properties");
+        if (!propFile.isFile()) {
+            LOGGER.warn("could not read the MPS properties file at {}", propFile.getAbsolutePath());
+            return new Properties();
+        } else {
+            return Util.loadProperties(propFile);
+        }
+    }
+
+    @NotNull
+    private Version getBuildNumber() {
+        Object o = mpsBuildProps.get("mps.build.number");
+        return new Version(o == null ? "0.0.0" : o.toString().replaceFirst("MPS-", ""));
+    }
+
+    private static void downloadAndUnzip(MvgMpsExtension ext) {
         File mpsDownloadDir = ext.getMpsDownloadDir();
         File mpsZip         = new File(mpsDownloadDir, "mps.zip");
         File mpsInstallDir  = ext.getMpsInstallDir();
@@ -79,10 +152,6 @@ public class MvgMps {
         if (!mpsInstallDir.isDirectory()) {
             unzip(ext, mpsZip, mpsDownloadDir);
         }
-
-        Map<String, File> jarIndex = makeJarIndex(mpsInstallDir);
-        LOGGER.info("+ indexed {} jars in MPS dir {}", jarIndex.size(), mpsInstallDir);
-        return jarIndex;
     }
 
     private static void downloadMps(MvgMpsExtension ext, File mpsZip) {
@@ -147,7 +216,7 @@ public class MvgMps {
         } catch (IOException e) {
             throw new GradleException("could not unzip MPS zip: " + fileZip, e);
         }
-        LOGGER.info("+ unzipping   MPS {} took {} ms", ext.getVersion(), System.currentTimeMillis() - t0);
+        LOGGER.info("+ unzipping   MPS {} took {} ms: {}", ext.getVersion(), System.currentTimeMillis() - t0, destDir);
     }
 
     private static Map<String, File> makeJarIndex(File rootDir) {
