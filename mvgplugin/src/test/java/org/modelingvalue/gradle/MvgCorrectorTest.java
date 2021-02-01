@@ -19,8 +19,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.Util.numOccurences;
 
 import java.io.File;
@@ -34,15 +34,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.Scanner;
 import java.util.function.Function;
 
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.mvgplugin.GitUtil;
+import org.modelingvalue.gradle.mvgplugin.GradleDotProperties;
 import org.modelingvalue.gradle.mvgplugin.Info;
-import org.modelingvalue.gradle.mvgplugin.Util;
 
 public class MvgCorrectorTest {
     private static final Path testWorkspaceDir = Paths.get("build", "testWorkspace").toAbsolutePath();
@@ -56,21 +55,14 @@ public class MvgCorrectorTest {
     private static final Path pruupFile        = Paths.get("src", "main", "java", "testCRLF.pruuperties");
 
     @Test
-    public void checkId() throws IOException {
-        Properties props = Util.getGradleProperties(new File(".."));
+    public void checkId() {
+        GradleDotProperties.init(new File(".."));
 
-        //props.forEach((k, v) -> System.err.println("- [" + k + "]=" + v));
+        assertTrue(getGradleDotProperties().isValid());
 
-        assertNotNull(props);
-
-        assertTrue(props.containsKey("mvgplugin_id"));
-        assertEquals(Info.PLUGIN_PACKAGE_NAME, props.get("mvgplugin_id"));
-
-        assertTrue(props.containsKey("mvgplugin_class"));
-        assertEquals(Info.PLUGIN_CLASS_NAME, props.get("mvgplugin_class"));
-
-        assertTrue(props.containsKey("mvgplugin_name"));
-        assertEquals(Info.PLUGIN_NAME, props.get("mvgplugin_name"));
+        assertEquals(Info.PLUGIN_PACKAGE_NAME, getGradleDotProperties().getProp("mvgplugin_id", null));
+        assertEquals(Info.PLUGIN_CLASS_NAME, getGradleDotProperties().getProp("mvgplugin_class", null));
+        assertEquals(Info.PLUGIN_NAME, getGradleDotProperties().getProp("mvgplugin_name", null));
     }
 
     @Test
@@ -124,9 +116,12 @@ public class MvgCorrectorTest {
         System.out.println("\\==========================================================================");
 
         GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
+        GradleDotProperties.init(testWorkspaceDir.toFile());
 
         // Verify the result
         assertAll(
+                () -> assertEquals("0.0.4", getGradleDotProperties().getProp(Info.PROP_NAME_VERSION, null)),
+                //
                 () -> assertEquals(5, numOccurences("+ header regenerated : ", out)),
                 () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
                 () -> assertEquals(4, numOccurences("+ eols   untouched   : ", out)),
@@ -140,7 +135,7 @@ public class MvgCorrectorTest {
                 () -> assertEquals(1, numOccurences("+ agreeing to buildScan", out)),
                 () -> assertEquals(1, numOccurences("+ adding tasks for javadoc & source jars", out)),
                 () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
-
+                //
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright")),
@@ -148,7 +143,7 @@ public class MvgCorrectorTest {
                 () -> assertTrue(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright")),
                 () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright")),
                 () -> assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright")),
-
+                //
                 () -> assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r")),
                 () -> assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r")),
                 () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),

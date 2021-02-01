@@ -37,7 +37,6 @@ public class MvgCorrectorExtension {
 
     private final Project             project;
     private       URL                 headerUrl;
-    private       Path                propFileWithVersion;
     private final Set<String>         textFiles;
     private final Set<String>         noTextFiles;
     private final Set<String>         textExt;
@@ -49,7 +48,6 @@ public class MvgCorrectorExtension {
     public MvgCorrectorExtension(Project project) {
         this.project = project;
         headerUrl = Util.getUrl("https://raw.githubusercontent.com/ModelingValueGroup/generic-info/master/header");
-        propFileWithVersion = project.getRootProject().getRootDir().toPath().resolve("gradle.properties");
         textFiles = new HashSet<>(List.of(
                 ".gitignore",
                 ".gitattributes",
@@ -192,13 +190,5 @@ public class MvgCorrectorExtension {
 
     public Set<String> getEolFileExcludes() {
         return eolFileExcludes;
-    }
-
-    public void setPropFileWithVersion(Path propFileWithVersion) {
-        this.propFileWithVersion = propFileWithVersion;
-    }
-
-    public Path getPropFileWithVersion() {
-        return propFileWithVersion;
     }
 }

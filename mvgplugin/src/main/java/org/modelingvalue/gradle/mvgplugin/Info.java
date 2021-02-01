@@ -37,6 +37,7 @@ public interface Info {
     String                          TAG_TASK_NAME                  = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
     String                          MPS_TASK_NAME                  = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
     //
+    String                          GRADLE_PROPERTIES_FILE         = "gradle.properties";
     String                          PROP_NAME_VERSION              = "version";
     String                          PROP_NAME_GROUP                = "group";
     String                          PROP_NAME_VERSION_JAVA         = "version_java";
