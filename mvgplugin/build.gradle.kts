@@ -46,10 +46,6 @@ dependencies {
     implementation("org.apache.httpcomponents:httpmime:4.5.13")
 }
 
-tasks.withType<Javadoc> {
-    options.encoding = "UTF-8"
-}
-
 gradlePlugin {
     plugins.create(mvgplugin_name) {
         id = mvgplugin_id
@@ -68,6 +64,11 @@ pluginBundle {
             tags = listOf("mvg")
         }
     }
+}
+
+// still needed?:
+tasks.withType<Javadoc> {
+    options.encoding = "UTF-8"
 }
 tasks.publishPlugins {
     enabled = "true" == System.getenv("CI")
