@@ -68,7 +68,7 @@ public class MvgPlugin implements Plugin<Project> {
         gradle = project.getGradle();
         GradleDotProperties.init(gradle.getRootProject().getRootDir());
 
-        LOGGER.info("MvgPlugin.apply to project {}", project.getName());
+        LOGGER.info("+ MvgPlugin.apply to project {}", project.getName());
         Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(gradle), "develop", isDevelopBranch(gradle), PROP_NAME_ALLREP_TOKEN, ALLREP_TOKEN);
 
         checkMustBeRootProject(project);
@@ -199,7 +199,7 @@ public class MvgPlugin implements Plugin<Project> {
     private void tuneJavaPlugin() {
         String javaVersionInProps = getGradleDotProperties().getProp(PROP_NAME_VERSION_JAVA, "11");
         if (javaVersionInProps == null) {
-            LOGGER.info("java version not adjusted because there is no {} property in {}", PROP_NAME_VERSION_JAVA, getGradleDotProperties().getFile());
+            LOGGER.info("+ java version not adjusted because there is no {} property in {}", PROP_NAME_VERSION_JAVA, getGradleDotProperties().getFile());
         }
         gradle.afterProject(p -> {
             JavaPluginExtension java = (JavaPluginExtension) p.getExtensions().findByName("java");
