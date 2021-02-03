@@ -99,7 +99,7 @@ public class MvgCorrectorTest {
         assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright"));
 
         Map<String, String> env = new HashMap<>(System.getenv());
-        env.putIfAbsent("ALLREP_TOKEN", "DRY");
+        env.putIfAbsent(Info.PROP_NAME_ALLREP_TOKEN, "DRY");
 
         // Run the build
         StringWriter outWriter = new StringWriter();
