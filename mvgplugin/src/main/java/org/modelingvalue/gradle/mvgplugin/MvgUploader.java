@@ -16,9 +16,11 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.apache.http.entity.ContentType.TEXT_PLAIN;
+import static org.modelingvalue.gradle.mvgplugin.Info.JETBRAINS_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_GROUP;
 import static org.modelingvalue.gradle.mvgplugin.Info.UPLOADER_TASK_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.selectMasterDevelopElse;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,7 +44,6 @@ import org.gradle.api.invocation.Gradle;
 import org.gradle.internal.extensibility.DefaultConvention;
 
 public class MvgUploader {
-    public static final String JETBRAINS_UPLOAD_URL = "https://plugins.jetbrains.com/plugin/uploadPlugin";
 
     private final Extension ext;
 
@@ -65,7 +66,8 @@ public class MvgUploader {
 
         public Extension(Gradle gradle) {
             this.gradle = gradle;
-            channel = Info.selectMasterDevelopElse(gradle, "stable", "beta", null);
+            channel = selectMasterDevelopElse(gradle, "stable", "beta", null);
+            hubToken = JETBRAINS_TOKEN;
             LOGGER.info("+ default channel selected by uploader: {}", channel);
         }
 
@@ -121,8 +123,10 @@ public class MvgUploader {
 
         LOGGER.info("+ uploading plugin {} to channel {} from file {}", pluginId, channel, zipFile);
 
-        if (pluginId.equals("DRY") || hubToken.equals("DRY")) {
+        if ("DRY".equals(pluginId) || "DRY".equals(hubToken)) {
             LOGGER.info("+ DRY run: upload skipped");
+        } else if (channel == null || pluginId == null || hubToken == null) {
+            LOGGER.info("+ no channel/pluginId/hubToken: upload skipped");
         } else {
             uploadToJetBrains(channel, hubToken, pluginId, zipFile);
         }
@@ -130,7 +134,7 @@ public class MvgUploader {
 
     public static void uploadToJetBrains(String channel, String hubtoken, String pluginid, Path file) {
         try {
-            HttpPost request = new HttpPost(JETBRAINS_UPLOAD_URL);
+            HttpPost request = new HttpPost(Info.JETBRAINS_UPLOAD_URL);
             request.setHeader("Authorization", "Bearer " + hubtoken);
             request.setEntity(
                     MultipartEntityBuilder.create()
