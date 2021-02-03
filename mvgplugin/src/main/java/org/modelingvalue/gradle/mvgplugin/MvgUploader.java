@@ -44,11 +44,9 @@ import org.gradle.internal.extensibility.DefaultConvention;
 public class MvgUploader {
     public static final String JETBRAINS_UPLOAD_URL = "https://plugins.jetbrains.com/plugin/uploadPlugin";
 
-    private final Gradle    gradle;
     private final Extension ext;
 
     public MvgUploader(Gradle gradle) {
-        this.gradle = gradle;
         ext = Extension.make(gradle);
         gradle.getRootProject().getTasks().register(UPLOADER_TASK_NAME, this::setup);
     }
@@ -83,7 +81,9 @@ public class MvgUploader {
                 } else {
                     try {
                         List<Path> zipFiles = Files.list(artiDir)
-                                .filter(z -> Files.isRegularFile(z) && z.getFileName().toString().endsWith(".zip"))
+                                .filter(Files::isDirectory)
+                                .map(d -> d.resolve(d.getFileName().toString() + ".zip"))
+                                .filter(Files::isRegularFile)
                                 .collect(Collectors.toList());
                         if (zipFiles.isEmpty()) {
                             LOGGER.info("no zip files found in artifacts dir: {}", artiDir.toAbsolutePath());
