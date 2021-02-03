@@ -121,8 +121,10 @@ public class MvgUploader {
 
         LOGGER.info("+ uploading plugin {} to channel {} from file {}", pluginId, channel, zipFile);
 
-        if (pluginId.equals("DRY") || hubToken.equals("DRY")) {
+        if ("DRY".equals(pluginId) || "DRY".equals(hubToken)) {
             LOGGER.info("+ DRY run: upload skipped");
+        } else if (channel == null || pluginId == null || hubToken == null) {
+            LOGGER.info("+ no channel/pluginId/hubToken: upload skipped");
         } else {
             uploadToJetBrains(channel, hubToken, pluginId, zipFile);
         }
