@@ -50,8 +50,8 @@ public interface Info {
     String                          PROP_NAME_CI                   = "CI";
     //
     boolean                         CI                             = Boolean.parseBoolean(envOrProp(PROP_NAME_CI, "false"));
-    String                          ALLREP_TOKEN                   = envOrProp(PROP_NAME_ALLREP_TOKEN, "DRY");
-    String                          JETBRAINS_TOKEN                = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "DRY");
+    String                          ALLREP_TOKEN                   = envOrProp(PROP_NAME_ALLREP_TOKEN, "notset");
+    String                          JETBRAINS_TOKEN                = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "notset");
     String                          MASTER_BRANCH                  = "refs/heads/master";
     String                          DEVELOP_BRANCH                 = "refs/heads/develop";
     String                          DEFAULT_BRANCH                 = "refs/heads/can-not-determine-branch";
