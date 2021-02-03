@@ -29,6 +29,7 @@ import org.gradle.api.invocation.Gradle;
 import org.gradle.internal.extensibility.DefaultConvention;
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
 public class MvgMpsExtension {
     private final static String MPS_DOWNLOAD_URL_TEMPLATE = "http://download.jetbrains.com/mps/%s/MPS-%s.zip";
     private final static String MPS_ROOT_DIR_TEMPLATE     = "MPS %s"; // this name is dictated by JetBrains in their zip file setup

@@ -29,7 +29,7 @@ import org.gradle.api.publish.Publication;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 
-public class BranchBasedBuilder {
+public class MvgBranchBasedBuilder {
     public static final Logger LOGGER                     = Info.LOGGER;
     public static final String BRANCH_INDICATOR           = "-BRANCHED";
     public static final String SNAPSHOT_VERSION_POST      = "-SNAPSHOT";
@@ -42,13 +42,13 @@ public class BranchBasedBuilder {
     private final boolean ci;
     private final boolean isMaster;
 
-    public BranchBasedBuilder(Gradle gradle) {
+    public MvgBranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
 
         ci = Info.CI;
         isMaster = Info.isMasterBranch(gradle);
 
-        LOGGER.info("+ bbb: creating BranchBasedBuilder (ci={} master={})", ci, isMaster);
+        LOGGER.info("+ bbb: creating MvgBranchBasedBuilder (ci={} master={})", ci, isMaster);
         TOMTOMTOM_report(gradle);
 
         adjustDependencies();

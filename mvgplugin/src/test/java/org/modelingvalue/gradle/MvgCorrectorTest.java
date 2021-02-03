@@ -21,6 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
+import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_CLASS_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_PACKAGE_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.UPLOADER_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Util.numOccurences;
 
 import java.io.File;
@@ -61,9 +67,9 @@ public class MvgCorrectorTest {
 
         assertTrue(getGradleDotProperties().isValid());
 
-        assertEquals(Info.PLUGIN_PACKAGE_NAME, getGradleDotProperties().getProp("mvgplugin_id", null));
-        assertEquals(Info.PLUGIN_CLASS_NAME, getGradleDotProperties().getProp("mvgplugin_class", null));
-        assertEquals(Info.PLUGIN_NAME, getGradleDotProperties().getProp("mvgplugin_name", null));
+        assertEquals(PLUGIN_PACKAGE_NAME, getGradleDotProperties().getProp("mvgplugin_id", null));
+        assertEquals(PLUGIN_CLASS_NAME, getGradleDotProperties().getProp("mvgplugin_class", null));
+        assertEquals(PLUGIN_NAME, getGradleDotProperties().getProp("mvgplugin_name", null));
     }
 
     @Test
@@ -71,9 +77,10 @@ public class MvgCorrectorTest {
         // Setup the test build
         cp(null, settingsFile, javaFile, gradlePropsFile, headFile, yamlFile, antFile);
         cp(s -> s
-                        .replaceAll("~myPackage~", Info.PLUGIN_PACKAGE_NAME)
-                        .replaceAll("~myMvgCorrectorExtension~", Info.CORRECTOR_TASK_NAME)
-                        .replaceAll("~myMvgMpsExtension~", Info.MPS_TASK_NAME)
+                        .replaceAll("~myPackage~", PLUGIN_PACKAGE_NAME)
+                        .replaceAll("~myMvgCorrectorExtension~", CORRECTOR_TASK_NAME)
+                        .replaceAll("~myMvgMpsExtension~", MPS_TASK_NAME)
+                        .replaceAll("~myMvgUploaderExtension~", UPLOADER_TASK_NAME)
                 , buildFile);
         cp(s -> s.replaceAll("\n", "\r"), propFile);
         cp(s -> s.replaceAll("\n", "\n\r"), pruupFile);
