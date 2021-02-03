@@ -111,11 +111,9 @@ public class MvgMps {
                     .filter(AntFileMpsVersionsExtractor::hasRange)
                     .forEach(a -> {
                         if (a.getSince() != null && mpsBuildNumber.compareTo(a.getSince()) < 0) {
-                            LOGGER.error("the MPS build number {} of MPS {} is below the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
-                            throw new GradleException("MPS build number too low for " + a.getFile());
+                            LOGGER.warn("the MPS build number {} of MPS {} is below the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
                         } else if (a.getUntil() != null && 0 < mpsBuildNumber.compareTo(a.getUntil())) {
-                            LOGGER.error("the MPS build number {} of MPS {} is above the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
-                            throw new GradleException("MPS build number too high for " + a.getFile());
+                            LOGGER.warn("the MPS build number {} of MPS {} is above the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
                         } else {
                             LOGGER.info("+ the MPS build number {} of MPS {} is in range [{}...{}] of the requested in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
                         }
