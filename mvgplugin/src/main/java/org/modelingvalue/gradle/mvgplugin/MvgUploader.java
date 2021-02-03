@@ -75,11 +75,11 @@ public class MvgUploader {
             Path path = null;
             if (zipFile != null) {
                 path = Paths.get(zipFile).toAbsolutePath();
-                LOGGER.info("upload file found at {} as indicated by {} ext", path, UPLOADER_TASK_NAME);
+                LOGGER.info("+ upload file found at {} as indicated by {} ext", path, UPLOADER_TASK_NAME);
             } else {
                 Path artiDir = gradle.getRootProject().getBuildDir().toPath().resolve("artifacts");
                 if (!Files.isDirectory(artiDir)) {
-                    LOGGER.info("artifacts dir not found: {}", artiDir.toAbsolutePath());
+                    LOGGER.info("+ artifacts dir not found: {}", artiDir.toAbsolutePath());
                 } else {
                     try {
                         List<Path> zipFiles = Files.list(artiDir)
@@ -88,14 +88,14 @@ public class MvgUploader {
                                 .filter(Files::isRegularFile)
                                 .collect(Collectors.toList());
                         if (zipFiles.isEmpty()) {
-                            LOGGER.info("no zip files found in artifacts dir: {}", artiDir.toAbsolutePath());
+                            LOGGER.info("+ no zip files found in artifacts dir: {}", artiDir.toAbsolutePath());
                         } else if (1 < zipFiles.size()) {
-                            LOGGER.info("to many ({}) zip files found in artifacts dir: {}", zipFiles.size(), artiDir.toAbsolutePath());
+                            LOGGER.info("+ too many ({}) zip files found in artifacts dir: {}", zipFiles.size(), artiDir.toAbsolutePath());
                         } else {
                             path = zipFiles.get(0);
                         }
                     } catch (IOException e) {
-                        LOGGER.info("can not list artifact dir: {} ({})", artiDir.toAbsolutePath(), e.getMessage());
+                        LOGGER.info("+ can not list artifact dir: {} ({})", artiDir.toAbsolutePath(), e.getMessage());
                     }
                 }
             }
@@ -124,9 +124,9 @@ public class MvgUploader {
         LOGGER.info("+ uploading plugin {} to channel {} from file {}", pluginId, channel, zipFile);
 
         if ("DRY".equals(pluginId) || "DRY".equals(hubToken)) {
-            LOGGER.info("+ DRY run: upload skipped");
+            LOGGER.warn("+ DRY run: upload skipped");
         } else if (channel == null || pluginId == null || hubToken == null) {
-            LOGGER.info("+ no channel/pluginId/hubToken: upload skipped");
+            LOGGER.warn("+ no channel/pluginId/hubToken ({}/{}/{}): upload skipped", channel, pluginId, hubToken);
         } else {
             uploadToJetBrains(channel, hubToken, pluginId, zipFile);
         }
