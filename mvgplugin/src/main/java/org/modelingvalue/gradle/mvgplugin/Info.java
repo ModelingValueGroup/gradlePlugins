@@ -36,6 +36,7 @@ public interface Info {
     String                          PLUGIN_CLASS_NAME              = MvgPlugin.class.getName();
     String                          PLUGIN_NAME                    = MvgPlugin.class.getSimpleName().toLowerCase(Locale.ROOT);
     String                          CORRECTOR_TASK_NAME            = MvgCorrector.class.getSimpleName().toLowerCase(Locale.ROOT);
+    String                          UPLOADER_TASK_NAME             = MvgUploader.class.getSimpleName().toLowerCase(Locale.ROOT);
     String                          TAG_TASK_NAME                  = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
     String                          MPS_TASK_NAME                  = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
     //

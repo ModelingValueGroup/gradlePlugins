@@ -13,62 +13,22 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-val mvgplugin_name: String by project
-val mvgplugin_id: String by project
-val mvgplugin_version: String? by project
-val mvgplugin_class: String by project
-val mvgplugin_displayname: String by project
+package org.modelingvalue.gradle;
 
-plugins {
-    `java-gradle-plugin`
-    `kotlin-dsl`
-    id("com.gradle.plugin-publish") version "0.12.0"
-}
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-repositories {
-    jcenter()
-    gradlePluginPortal()
-}
+import java.nio.file.Paths;
 
-tasks.test {
-    useJUnitPlatform()
-    testLogging.showStandardStreams = true
-}
+import org.gradle.api.GradleException;
+import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.MvgUploader;
 
-dependencies {
-    implementation("org.eclipse.jgit:org.eclipse.jgit:5.9.0.202009080501-r")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.1")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.11.1")
-    implementation("com.gradle:gradle-enterprise-gradle-plugin:3.5")
-    implementation("org.apache.httpcomponents:httpmime:4.5.13")
-}
-
-tasks.withType<Javadoc> {
-    options.encoding = "UTF-8"
-}
-
-gradlePlugin {
-    plugins.create(mvgplugin_name) {
-        id = mvgplugin_id
-        implementationClass = mvgplugin_class
-        displayName = mvgplugin_displayname
-        version = mvgplugin_version ?: version
+public class PublishTest {
+    @Test
+    public void publish() {
+        GradleException ex = assertThrows(GradleException.class,
+                () -> MvgUploader.uploadToJetBrains("uploadtest", "SomeBogusToken", "1234567890", Paths.get("build.gradle.kts")));
+        assertEquals("plugin upload failed: Authentication Failed: Invalid token: Token is malformed", ex.getMessage());
     }
-}
-
-pluginBundle {
-    website = "http://www.modelingvalue.org/"
-    vcsUrl = "https://github.com/ModelingValueGroup/gradlePlugins"
-    description = "MVG gradle plugins"
-    (plugins) {
-        mvgplugin_name {
-            tags = listOf("mvg")
-        }
-    }
-}
-tasks.publishPlugins {
-    enabled = "true" == System.getenv("CI")
 }

@@ -53,11 +53,12 @@ import com.gradle.scan.plugin.BuildScanExtension;
 public class MvgPlugin implements Plugin<Project> {
     public static MvgPlugin singleton;
 
-    private Gradle             gradle;
-    private MvgCorrector       mvgCorrector;
-    private MvgTagger          mvgTagger;
-    private BranchBasedBuilder branchBasedBuilder;
-    private MvgMps             mvgMps;
+    private Gradle                gradle;
+    private MvgCorrector          mvgCorrector;
+    private MvgTagger             mvgTagger;
+    private MvgBranchBasedBuilder mvgBranchBasedBuilder;
+    private MvgMps                mvgMps;
+    private MvgUploader           mvgUploader;
 
     public MvgPlugin() {
         singleton = this;
@@ -84,8 +85,9 @@ public class MvgPlugin implements Plugin<Project> {
 
         mvgCorrector = new MvgCorrector(gradle);
         mvgTagger = new MvgTagger(gradle);
-        branchBasedBuilder = new BranchBasedBuilder(gradle);
+        mvgBranchBasedBuilder = new MvgBranchBasedBuilder(gradle);
         mvgMps = new MvgMps(gradle);
+        mvgUploader = new MvgUploader(gradle);
     }
 
     @NotNull
