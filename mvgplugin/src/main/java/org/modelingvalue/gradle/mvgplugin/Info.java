@@ -46,10 +46,12 @@ public interface Info {
     String                          PROP_NAME_VERSION_JAVA         = "version_java";
     String                          PROP_NAME_VERSION_MPS          = "version_mps";
     String                          PROP_NAME_ALLREP_TOKEN         = "ALLREP_TOKEN";
+    String                          PROP_NAME_JETBRAINS_TOKEN      = "JETBRAINS_PUBLISH_TOKEN";
     String                          PROP_NAME_CI                   = "CI";
     //
     boolean                         CI                             = Boolean.parseBoolean(envOrProp(PROP_NAME_CI, "false"));
     String                          ALLREP_TOKEN                   = envOrProp(PROP_NAME_ALLREP_TOKEN, "DRY");
+    String                          JETBRAINS_TOKEN                = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "DRY");
     String                          MASTER_BRANCH                  = "refs/heads/master";
     String                          DEVELOP_BRANCH                 = "refs/heads/develop";
     String                          DEFAULT_BRANCH                 = "refs/heads/can-not-determine-branch";
@@ -57,6 +59,7 @@ public interface Info {
     String                          NO_CI_GUARD                    = "!contains(github.event.head_commit.message, '[no-ci]')";
     String                          MIN_TEST_HEAP_SIZE             = "2g";
     //
+    String                          JETBRAINS_UPLOAD_URL           = "https://plugins.jetbrains.com/plugin/uploadPlugin";
     String                          MVG_MAVEN_REPO_URL             = "https://maven.pkg.github.com/ModelingValueGroup/packages";
     String                          MVG_MAVEN_REPO_SNAPSHOTS_URL   = "https://maven.pkg.github.com/ModelingValueGroup/packages-snapshots";
     String                          PLUGIN_META_URL                = "https://plugins.gradle.org/m2/gradle/plugin/" + MvgPlugin.class.getPackageName().replace('.', '/') + "/maven-metadata.xml";
