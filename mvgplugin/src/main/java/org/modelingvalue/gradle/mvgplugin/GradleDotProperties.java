@@ -21,6 +21,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
@@ -60,10 +61,14 @@ public class GradleDotProperties {
         file = new File(dir, GRADLE_PROPERTIES_FILE);
         valid = file.isFile();
         properties = valid ? Util.loadProperties(file) : new Properties();
-        try {
-            lines = Files.readAllLines(file.toPath());
-        } catch (IOException e) {
-            throw new GradleException("properties file could not be read: " + file.getAbsolutePath(), e);
+        if (valid) {
+            try {
+                lines = Files.readAllLines(file.toPath());
+            } catch (IOException e) {
+                throw new GradleException("properties file could not be read: " + file.getAbsolutePath(), e);
+            }
+        } else {
+            lines = new ArrayList<>();
         }
     }
 
@@ -84,15 +89,17 @@ public class GradleDotProperties {
 
 
     public void setProp(String name, String val) {
-        List<String> newLines = lines.stream()
-                .map(l -> l.matches("^" + Pattern.quote(name) + "=.*") ? name + "=" + val : l)
-                .collect(Collectors.toList());
-        lines.clear();
-        lines.addAll(newLines);
-        try {
-            Files.write(file.toPath(), lines);
-        } catch (IOException e) {
-            throw new GradleException("properties file could not be written: " + file.getAbsolutePath(), e);
+        if (valid) {
+            List<String> newLines = lines.stream()
+                    .map(l -> l.matches("^" + Pattern.quote(name) + "=.*") ? name + "=" + val : l)
+                    .collect(Collectors.toList());
+            lines.clear();
+            lines.addAll(newLines);
+            try {
+                Files.write(file.toPath(), lines);
+            } catch (IOException e) {
+                throw new GradleException("properties file could not be written: " + file.getAbsolutePath(), e);
+            }
         }
     }
 }
