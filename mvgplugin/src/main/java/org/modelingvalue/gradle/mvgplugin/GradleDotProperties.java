@@ -27,11 +27,16 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.invocation.Gradle;
 
 public class GradleDotProperties {
     private static GradleDotProperties instance;
 
-    public static void init(File dir) {
+    public static void init(Gradle gradle) {
+        init(gradle.getRootProject().getRootDir());
+    }
+
+    public static void init(File dir) { // separated out for testing purposes
         if (instance != null && !instance.file.getParentFile().equals(dir)) {
             LOGGER.warn("{} file switched in mid air: from {} to {}", GRADLE_PROPERTIES_FILE, instance.file.getAbsolutePath(), new File(dir, GRADLE_PROPERTIES_FILE).getAbsolutePath());
         }
@@ -46,10 +51,10 @@ public class GradleDotProperties {
         return instance;
     }
 
-    private final File           file;
-    private final boolean        valid;
-    private final Properties     properties;
-    private final List<String>   lines;
+    private final File         file;
+    private final boolean      valid;
+    private final Properties   properties;
+    private final List<String> lines;
 
     private GradleDotProperties(File dir) {
         file = new File(dir, GRADLE_PROPERTIES_FILE);

@@ -182,10 +182,11 @@ public class MvgBranchBasedBuilder {
 
     private String cachedBbbId() {
         if (bbbId == null) {
-            String branch = Info.getGithubRef(gradle).replaceAll("^refs/heads/", "");
-            String part   = branch.replaceAll("\\W", "_");
-            part = part.substring(0, Math.min(part.length(), MAX_BRANCHNAME_PART_LENGTH));
-            bbbId = String.format("%s-%08x%s", part, branch.hashCode(), SNAPSHOT_VERSION_POST);
+            String branch    = Info.getBranch(gradle);
+            int    hash      = branch.hashCode();
+            String sanatized = branch.replaceFirst("@.*", "").replaceAll("\\W", "_");
+            String part      = sanatized.substring(0, Math.min(sanatized.length(), MAX_BRANCHNAME_PART_LENGTH));
+            bbbId = String.format("%s-%08x%s", part, hash, SNAPSHOT_VERSION_POST);
         }
         return bbbId;
     }

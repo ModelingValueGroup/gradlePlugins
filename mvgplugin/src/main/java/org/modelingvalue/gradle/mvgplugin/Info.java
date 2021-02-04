@@ -22,7 +22,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
@@ -52,10 +54,11 @@ public interface Info {
     boolean                         CI                             = Boolean.parseBoolean(envOrProp(PROP_NAME_CI, "false"));
     String                          ALLREP_TOKEN                   = envOrProp(PROP_NAME_ALLREP_TOKEN, "notset");
     String                          JETBRAINS_TOKEN                = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "notset");
-    String                          MASTER_BRANCH                  = "refs/heads/master";
-    String                          DEVELOP_BRANCH                 = "refs/heads/develop";
-    String                          DEFAULT_BRANCH                 = "refs/heads/can-not-determine-branch";
+    String                          MASTER_BRANCH                  = "master";
+    String                          DEVELOP_BRANCH                 = "develop";
+    String                          DEFAULT_BRANCH                 = "can-not-determine-branch";
     String                          GIT_HEAD_FILE                  = ".git/HEAD";
+    String                          GIT_HEAD_FILE_START            = "ref: refs/heads/";
     String                          NO_CI_GUARD                    = "!contains(github.event.head_commit.message, '[no-ci]')";
     String                          MIN_TEST_HEAP_SIZE             = "2g";
     //
@@ -83,23 +86,25 @@ public interface Info {
     }
 
     static boolean isMasterBranch(Gradle gradle) {
-        return getGithubRef(gradle).equals(MASTER_BRANCH);
+        return getBranch(gradle).equals(MASTER_BRANCH);
     }
 
     static boolean isDevelopBranch(Gradle gradle) {
-        return getGithubRef(gradle).equals(DEVELOP_BRANCH);
+        return getBranch(gradle).equals(DEVELOP_BRANCH);
     }
 
     static <T> T selectMasterDevelopElse(Gradle gradle, T master, T develop, T other) {
         return isMasterBranch(gradle) ? master : isDevelopBranch(gradle) ? develop : other;
     }
 
-    static String getGithubRef(Gradle gradle) {
+    static String getBranch(Gradle gradle) {
         Path headFile = gradle.getRootProject().getRootDir().toPath().resolve(GIT_HEAD_FILE).toAbsolutePath();
         if (Files.isRegularFile(headFile)) {
             try {
-                String firstLine = Files.readAllLines(headFile).get(0);
-                return firstLine.replaceAll("^ref: ", "");
+                List<String> lines = Files.readAllLines(headFile);
+                if (!lines.isEmpty() && lines.get(0).startsWith(GIT_HEAD_FILE_START)) {
+                    return lines.get(0).replaceFirst("^" + Pattern.quote(GIT_HEAD_FILE_START), "");
+                }
             } catch (IOException e) {
                 LOGGER.warn("could not read " + headFile + " to determine git-branch", e);
             }

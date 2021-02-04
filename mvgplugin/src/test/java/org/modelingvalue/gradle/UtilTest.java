@@ -16,11 +16,13 @@
 package org.modelingvalue.gradle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
 import org.gradle.api.GradleException;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.BranchParameterNames;
 
 public class UtilTest {
     @Test
@@ -34,10 +36,44 @@ public class UtilTest {
         assertEquals(33L * 1024 * 1024 * 1024, toBytes("33g"));
         assertEquals(44L * 1024 * 1024 * 1024 * 1024, toBytes("44t"));
 
-        Assertions.assertThrows(NullPointerException.class,()-> toBytes(null));
-        Assertions.assertThrows(GradleException.class,()-> toBytes(""));
-        Assertions.assertThrows(GradleException.class,()-> toBytes("k"));
-        Assertions.assertThrows(GradleException.class,()-> toBytes("-10"));
-        Assertions.assertThrows(GradleException.class,()-> toBytes(" "));
+        assertThrows(NullPointerException.class, () -> toBytes(null));
+        assertThrows(GradleException.class, () -> toBytes(""));
+        assertThrows(GradleException.class, () -> toBytes("k"));
+        assertThrows(GradleException.class, () -> toBytes("-10"));
+        assertThrows(GradleException.class, () -> toBytes(" "));
+    }
+
+    @Test
+    public void branchParametersTest() {
+        BranchParameterNames.init("no_parameters");
+        assertNull(BranchParameterNames.get("xyzzy"));
+        assertNull(BranchParameterNames.get("arg"));
+        assertNull(BranchParameterNames.get("zurch"));
+
+        BranchParameterNames.init("no_parameters@");
+        assertNull(BranchParameterNames.get("xyzzy"));
+        assertNull(BranchParameterNames.get("arg"));
+        assertNull(BranchParameterNames.get("zurch"));
+
+        BranchParameterNames.init("zurg@xyzzy=plugh");
+        assertEquals("plugh", BranchParameterNames.get("xyzzy"));
+        assertNull(BranchParameterNames.get("arg"));
+        assertNull(BranchParameterNames.get("zurch"));
+
+        BranchParameterNames.init("zurg@xyzzy=plugh;arg=42");
+        assertEquals("plugh", BranchParameterNames.get("xyzzy"));
+        assertEquals("42", BranchParameterNames.get("arg"));
+        assertNull(BranchParameterNames.get("zurch"));
+
+        BranchParameterNames.init("zurg@xyzzy=plugh;;arg=42;;;");
+        assertEquals("plugh", BranchParameterNames.get("xyzzy"));
+        assertEquals("42", BranchParameterNames.get("arg"));
+        assertNull(BranchParameterNames.get("zurch"));
+
+        BranchParameterNames.init("zurg@xyzzy=plugh;;arg=42;;zurch;");
+        assertEquals("plugh", BranchParameterNames.get("xyzzy"));
+        assertEquals("42", BranchParameterNames.get("arg"));
+        assertEquals("", BranchParameterNames.get("zurch"));
+
     }
 }

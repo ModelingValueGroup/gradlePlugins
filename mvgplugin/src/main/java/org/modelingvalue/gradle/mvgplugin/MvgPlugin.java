@@ -66,7 +66,9 @@ public class MvgPlugin implements Plugin<Project> {
 
     public void apply(Project project) {
         gradle = project.getGradle();
-        GradleDotProperties.init(gradle.getRootProject().getRootDir());
+
+        GradleDotProperties.init(gradle);
+        BranchParameterNames.init(gradle);
 
         LOGGER.info("+ MvgPlugin.apply to project {}", project.getName());
         Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(gradle), "develop", isDevelopBranch(gradle), PROP_NAME_ALLREP_TOKEN, ALLREP_TOKEN);
