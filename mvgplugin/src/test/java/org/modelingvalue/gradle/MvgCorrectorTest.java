@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
@@ -38,10 +39,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Scanner;
 import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
@@ -70,6 +74,22 @@ public class MvgCorrectorTest {
         assertEquals(PLUGIN_PACKAGE_NAME, getGradleDotProperties().getProp("mvgplugin_id", null));
         assertEquals(PLUGIN_CLASS_NAME, getGradleDotProperties().getProp("mvgplugin_class", null));
         assertEquals(PLUGIN_NAME, getGradleDotProperties().getProp("mvgplugin_name", null));
+    }
+
+    @Test
+    public void checkJunitVersion() throws IOException {
+        Pattern      pat1  = Pattern.compile("^\\s*test[a-zA-Z]*\\s*\\(\\s*\"" + Pattern.quote(Info.JUNIT_GROUP_ID) + ":[-a-zA-Z]*:[0-9.]*\"\\s*\\)\\s*$");
+        Pattern      pat2  = Pattern.compile("^\\s*test[a-zA-Z]*\\s*\\(\\s*\"" + Pattern.quote(Info.JUNIT_GROUP_ID) + ":[-a-zA-Z]*:" + Pattern.quote(Info.JUNIT_VERSION) + "\"\\s*\\)\\s*$");
+        List<String> lines = Files.readAllLines(buildFile);
+        List<String> wrongLines = lines.stream()
+                .filter(l -> pat1.matcher(l).find())
+                .filter(l -> !pat2.matcher(l).matches())
+                .collect(Collectors.toList());
+        if (!wrongLines.isEmpty()) {
+            System.err.println("JUNIT_VERSION in Info.java=" + Info.JUNIT_VERSION + ", but there are different versions in my build file (" + buildFile + "):");
+            wrongLines.forEach(l -> System.err.println(" - OFFENDING LINE: " + l));
+            fail("junit version difference between compiled code and my gradle file");
+        }
     }
 
     @Test
@@ -141,7 +161,7 @@ public class MvgCorrectorTest {
                 () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
                 () -> assertEquals(1, numOccurences("+ project 'testWorkspace': version: 0.0.1 => 0.0.4, group: group => group", out)),
                 () -> assertEquals(3, numOccurences("+ bbb: dependency     replaced: ", out)),
-                () -> assertEquals(38, numOccurences("+ bbb: dependency NOT replaced: ", out)),
+                () -> assertEquals(36, numOccurences("+ bbb: dependency NOT replaced: ", out)),
                 () -> assertEquals(1, numOccurences("+ adding test.useJUnitPlatform", out)),
                 () -> assertEquals(1, numOccurences("+ increasing test heap from default to 2g", out)),
                 () -> assertEquals(1, numOccurences("+ adding junit5 dependencies", out)),

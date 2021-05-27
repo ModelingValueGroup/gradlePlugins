@@ -33,9 +33,6 @@
     <JetCodeStyleSettings>
       <option name="CODE_STYLE_DEFAULTS" value="KOTLIN_OFFICIAL" />
     </JetCodeStyleSettings>
-    <XML>
-      <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
-    </XML>
     <codeStyleSettings language="CSS">
       <option name="KEEP_BLANK_LINES_IN_CODE" value="0" />
       <indentOptions>
