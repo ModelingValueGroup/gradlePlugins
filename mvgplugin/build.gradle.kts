@@ -26,7 +26,7 @@ plugins {
 }
 
 repositories {
-    jcenter()
+    mavenCentral()
     gradlePluginPortal()
 }
 
