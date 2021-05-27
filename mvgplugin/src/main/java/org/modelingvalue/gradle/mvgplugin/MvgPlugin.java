@@ -186,8 +186,8 @@ public class MvgPlugin implements Plugin<Project> {
                 Object java = p.getExtensions().findByName("java");
                 if (java != null) {
                     LOGGER.info("+ adding junit5 dependencies");
-                    p.getDependencies().add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.7.1");
-                    p.getDependencies().add("testRuntimeOnly", "org.junit.jupiter:junit-jupiter-engine:5.7.1");
+                    Info.JUNIT_IMPLEMENTATION_DEPS.forEach(dep -> p.getDependencies().add("testImplementation", dep));
+                    Info.JUNIT_RUNTIMEONLY_DEPS.forEach(dep -> p.getDependencies().add("testRuntimeOnly", dep));
                 }
             } else if (t != null) {
                 LOGGER.info("+ 'test' task is not of type Test (but of type '{}')", t.getClass().getSimpleName());
