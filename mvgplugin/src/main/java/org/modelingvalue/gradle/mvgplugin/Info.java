@@ -63,8 +63,13 @@ public interface Info {
     String                          MIN_TEST_HEAP_SIZE             = "2g";
     String                          JUNIT_VERSION                  = "5.7.2";
     String                          JUNIT_GROUP_ID                 = "org.junit.jupiter";
-    List<String>                    JUNIT_IMPLEMENTATION_DEPS      = List.of(JUNIT_GROUP_ID + ":junit-jupiter-api:" + Info.JUNIT_VERSION);
-    List<String>                    JUNIT_RUNTIMEONLY_DEPS         = List.of(JUNIT_GROUP_ID + ":junit-jupiter-engine:" + Info.JUNIT_VERSION);
+    List<String>                    JUNIT_IMPLEMENTATION_DEPS      = List.of(
+            JUNIT_GROUP_ID + ":junit-jupiter-api:" + Info.JUNIT_VERSION,
+            JUNIT_GROUP_ID + ":junit-jupiter-params:" + Info.JUNIT_VERSION
+    );
+    List<String>                    JUNIT_RUNTIMEONLY_DEPS         = List.of(
+            JUNIT_GROUP_ID + ":junit-jupiter-engine:" + Info.JUNIT_VERSION
+    );
     //
     String                          JETBRAINS_UPLOAD_URL           = "https://plugins.jetbrains.com/plugin/uploadPlugin";
     String                          MVG_MAVEN_REPO_URL             = "https://maven.pkg.github.com/ModelingValueGroup/packages";
