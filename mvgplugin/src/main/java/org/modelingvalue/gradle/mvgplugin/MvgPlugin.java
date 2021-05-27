@@ -250,7 +250,7 @@ public class MvgPlugin implements Plugin<Project> {
         gradle.allprojects(p -> {
             LOGGER.info("+ adding MVG repositories to project {}", p.getName());
 
-            p.getRepositories().jcenter();
+            p.getRepositories().mavenCentral();
             p.getRepositories().mavenLocal();
             p.getRepositories().maven(Info.MVG_MAVEN_REPO_MAKER);
             p.getRepositories().maven(Info.MVG_MAVEN_SNAPSHOTS_REPO_MAKER);
