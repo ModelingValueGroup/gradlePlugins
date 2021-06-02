@@ -38,13 +38,15 @@ public class HeaderCorrector extends TreeCorrector {
         extensions = ext.getHeaderFileExtensions();
         URL          headerUrl = ext.getHeaderUrl();
         List<String> raw       = Util.download(headerUrl);
-        headerLines = raw == null ? null : Util.replaceVars(getVarMapping(), raw);
+        if (raw==null) {
+            LOGGER.warn("headers are not updated because {} could not be read", headerUrl);
+            headerLines = null;
+        } else {
+            headerLines = Util.replaceVars(getVarMapping(), raw);
+        }
         if (LOGGER.isDebugEnabled()) {
             extensions.forEach((e, p) -> LOGGER.debug("++ # header extensions      : " + e + " (" + p + ")"));
             LOGGER.debug("++ # header                 : {}", headerUrl);
-        }
-        if (headerLines == null) {
-            LOGGER.warn("headers are not updated because {} could not be read", headerUrl);
         }
     }
 
