@@ -22,3 +22,25 @@ mvgcorrector {
     addHeaderFileExclude("mvgplugin/src/test/resources/.*")
     addEolFileExclude("mvgplugin/src/test/resources/.*")
 }
+
+// for gradle debugging:
+tasks.register("task-tree") {
+    doLast {
+        getAllTasks(true).forEach {
+            System.err.println("  > " + it.key)
+            it.value.forEach {
+                System.err.println("       = " + it)
+
+                it.dependsOn.forEach {
+                    if (it is TaskDependency) {
+                        it.getDependencies(tasks.named("task-tree").get()).forEach {
+                            System.err.println("                                - " + it)
+                        }
+                    } else {
+                        System.err.println("                                - " + it)
+                    }
+                }
+            }
+        }
+    }
+}

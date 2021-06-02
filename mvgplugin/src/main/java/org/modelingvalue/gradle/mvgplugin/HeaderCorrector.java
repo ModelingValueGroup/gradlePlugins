@@ -36,8 +36,14 @@ public class HeaderCorrector extends TreeCorrector {
     public HeaderCorrector(MvgCorrectorExtension ext) {
         super("header", ext.getRoot(), ext.getHeaderFileExcludes());
         extensions = ext.getHeaderFileExtensions();
-        URL headerUrl = ext.getHeaderUrl();
-        headerLines = Util.replaceVars(getVarMapping(), Util.download(headerUrl));
+        URL          headerUrl = ext.getHeaderUrl();
+        List<String> raw       = Util.download(headerUrl);
+        if (raw==null) {
+            LOGGER.warn("headers are not updated because {} could not be read", headerUrl);
+            headerLines = null;
+        } else {
+            headerLines = Util.replaceVars(getVarMapping(), raw);
+        }
         if (LOGGER.isDebugEnabled()) {
             extensions.forEach((e, p) -> LOGGER.debug("++ # header extensions      : " + e + " (" + p + ")"));
             LOGGER.debug("++ # header                 : {}", headerUrl);
@@ -49,7 +55,9 @@ public class HeaderCorrector extends TreeCorrector {
     }
 
     public HeaderCorrector generate() throws IOException {
-        allFiles().forEach(this::replaceHeader);
+        if (headerLines != null) {
+            allFiles().forEach(this::replaceHeader);
+        }
         return this;
     }
 
