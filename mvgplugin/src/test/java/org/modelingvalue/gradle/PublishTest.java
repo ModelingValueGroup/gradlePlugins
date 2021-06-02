@@ -27,8 +27,10 @@ import org.modelingvalue.gradle.mvgplugin.MvgUploader;
 public class PublishTest {
     @Test
     public void publish() {
+        System.out.println("start publishing test...");
         GradleException ex = assertThrows(GradleException.class,
                 () -> MvgUploader.uploadToJetBrains("uploadtest", "SomeBogusToken", "1234567890", Paths.get("build.gradle.kts")));
-        assertEquals("plugin upload failed: Authentication Failed: Invalid token: Token is malformed", ex.getMessage());
+        assertEquals("plugin upload returned no json object: Authentication Failed: Invalid token: Token is malformed", ex.getMessage());
+        System.out.println("end publishing test...");
     }
 }

@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
@@ -149,13 +150,14 @@ public class MvgUploader {
                             .build()
             );
 
-            HttpClient httpClient = HttpClientBuilder.create().setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build()).build();
-            String     answer     = EntityUtils.toString(httpClient.execute(request).getEntity());
+            HttpClient   httpClient = HttpClientBuilder.create().setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build()).build();
+            HttpResponse response   = httpClient.execute(request);
+            String       answer     = EntityUtils.toString(response.getEntity());
 
             LOGGER.info("+ upload plugin to JetBrains returned: {}", answer);
 
-            if (!answer.contains("plugin has been successfully uploaded")) {
-                throw new GradleException("plugin upload failed: " + answer);
+            if (!answer.startsWith("{") || !answer.endsWith("}")) {
+                throw new GradleException("plugin upload returned no json object: " + answer);
             }
         } catch (IOException e) {
             throw new GradleException("plugin upload failed", e);
