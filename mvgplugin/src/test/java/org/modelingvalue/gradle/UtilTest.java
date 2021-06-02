@@ -23,6 +23,7 @@ import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 import org.gradle.api.GradleException;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.mvgplugin.BranchParameterNames;
+import org.modelingvalue.gradle.mvgplugin.Util;
 
 public class UtilTest {
     @Test
@@ -74,6 +75,21 @@ public class UtilTest {
         assertEquals("plugh", BranchParameterNames.get("xyzzy"));
         assertEquals("42", BranchParameterNames.get("arg"));
         assertEquals("", BranchParameterNames.get("zurch"));
+    }
 
+    @Test
+    public void secretTest() {
+        assertNull(Util.hide(null));
+        assertEquals("DRY",Util.hide("DRY"));
+        assertEquals("*",Util.hide("a"));
+        assertEquals("**",Util.hide("aa"));
+        assertEquals("***",Util.hide("aap"));
+        assertEquals("****",Util.hide("noot"));
+        assertEquals("*****",Util.hide("nootx"));
+        assertEquals("******",Util.hide("nootxy"));
+        assertEquals("aap****",Util.hide("aapnoot"));
+        assertEquals("aap*****",Util.hide("aapnootx"));
+        assertEquals("aap******",Util.hide("aapnootxy"));
+        assertEquals("zw$**********",Util.hide("zw$zzqpzwerty"));
     }
 }

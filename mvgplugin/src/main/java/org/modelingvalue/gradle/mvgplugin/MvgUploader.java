@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -130,7 +131,7 @@ public class MvgUploader {
         if ("DRY".equals(pluginId) || "DRY".equals(hubToken)) {
             LOGGER.warn("+ DRY run: upload skipped");
         } else if (channel == null || pluginId == null || hubToken == null) {
-            LOGGER.warn("+ no channel/pluginId/hubToken ({}/{}/{}): upload skipped", channel, pluginId, hubToken);
+            LOGGER.warn("+ no channel/pluginId/hubToken ({}/{}/{}): upload skipped", channel, pluginId, Util.hide(hubToken));
         } else {
             uploadToJetBrains(channel, hubToken, pluginId, zipFile);
         }
@@ -148,7 +149,7 @@ public class MvgUploader {
                             .build()
             );
 
-            HttpClient httpClient = HttpClientBuilder.create().setDefaultRequestConfig(RequestConfig.DEFAULT).build();
+            HttpClient httpClient = HttpClientBuilder.create().setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build()).build();
             String     answer     = EntityUtils.toString(httpClient.execute(request).getEntity());
 
             LOGGER.info("+ upload plugin to JetBrains returned: {}", answer);

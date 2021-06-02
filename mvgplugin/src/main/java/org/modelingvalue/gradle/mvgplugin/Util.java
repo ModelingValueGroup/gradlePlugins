@@ -170,4 +170,15 @@ public class Util {
             throw new GradleException("can not read properties file at " + file.getAbsolutePath(), e);
         }
     }
+
+    @SuppressWarnings("SuspiciousRegexArgument")
+    public static String hide(String secret) {
+        if (secret == null || secret.equals("DRY")) {
+            return secret;
+        } else if (secret.length() < 7) {
+            return secret.replaceAll(".", "*");
+        } else {
+            return secret.substring(0, 3) + secret.substring(3).replaceAll(".", "*");
+        }
+    }
 }
