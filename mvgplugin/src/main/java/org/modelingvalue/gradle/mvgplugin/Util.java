@@ -15,6 +15,8 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -69,7 +71,8 @@ public class Util {
         try (InputStream in = url.openStream()) {
             return Arrays.asList(new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n"));
         } catch (IOException e) {
-            throw new GradleException("can not get lines from " + url, e);
+            LOGGER.info("+ failure getting file from: {} ({})", url, e.getMessage());
+            return null;
         }
     }
 
