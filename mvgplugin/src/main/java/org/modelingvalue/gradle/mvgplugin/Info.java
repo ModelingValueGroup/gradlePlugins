@@ -51,6 +51,9 @@ public interface Info {
     String                          PROP_NAME_JETBRAINS_TOKEN      = "JETBRAINS_PUBLISH_TOKEN";
     String                          PROP_NAME_CI                   = "CI";
     //
+    Logger                          LOGGER                         = Logging.getLogger(PLUGIN_NAME);
+    String                          NOW_STAMP                      = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmm"));
+    //
     boolean                         CI                             = Boolean.parseBoolean(envOrProp(PROP_NAME_CI, "false"));
     String                          ALLREP_TOKEN                   = envOrProp(PROP_NAME_ALLREP_TOKEN, "notset");
     String                          JETBRAINS_TOKEN                = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "notset");
@@ -78,13 +81,10 @@ public interface Info {
     //
     Action<MavenArtifactRepository> MVG_MAVEN_REPO_MAKER           = getRepoMaker("MvgMaven", MVG_MAVEN_REPO_URL);
     Action<MavenArtifactRepository> MVG_MAVEN_SNAPSHOTS_REPO_MAKER = getRepoMaker("MvgMavenSnapshots", MVG_MAVEN_REPO_SNAPSHOTS_URL);
-    //
-    Logger                          LOGGER                         = Logging.getLogger(PLUGIN_NAME);
-    String                          NOW_STAMP                      = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmm"));
 
     static Action<MavenArtifactRepository> getRepoMaker(String name, String url) {
         return mar -> {
-            LOGGER.info("+ REPOMAKER: name={} url={} pw={}", name, url, ALLREP_TOKEN);
+            LOGGER.info("+ REPOMAKER: name={} url={} pw={}", name, url, Util.hide(ALLREP_TOKEN));
             mar.setUrl(url);
             mar.setName(name);
             mar.credentials(c -> {

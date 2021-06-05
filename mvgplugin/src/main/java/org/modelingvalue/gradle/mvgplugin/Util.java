@@ -88,7 +88,24 @@ public class Util {
     }
 
     public static String envOrProp(String name, String def) {
-        return elvis(System.getProperty(name), () -> elvis(System.getenv(name), () -> def));
+        String value = elvis(GradleDotProperties.getGradleDotProperties().getProp(name),
+                () -> elvis(getSystemProperty(name),
+                        () -> elvis(getSystemEnv(name),
+                                () -> def)));
+        LOGGER.info("+~ envOrProp        : {} => {}", name, Util.hide(value));
+        return value;
+    }
+
+    public static String getSystemProperty(String name) {
+        String value = System.getProperty(name);
+        LOGGER.info("+~ getSystemProperty: {} => {}", name, Util.hide(value));
+        return value;
+    }
+
+    public static String getSystemEnv(String name) {
+        String value = System.getenv(name);
+        LOGGER.info("+~ getSystemEnv     : {} => {}", name, Util.hide(value));
+        return value;
     }
 
     public static <T> T elvis(T o, Supplier<T> f) {
@@ -173,12 +190,10 @@ public class Util {
 
     @SuppressWarnings("SuspiciousRegexArgument")
     public static String hide(String secret) {
-        if (secret == null || secret.equals("DRY")) {
+        if (secret == null || secret.length() < 8) { // secrets are always of length 8+
             return secret;
-        } else if (secret.length() < 7) {
-            return secret.replaceAll(".", "*");
         } else {
-            return secret.substring(0, 3) + secret.substring(3).replaceAll(".", "*");
+            return secret.substring(0, 4) + secret.substring(4).replaceAll(".", "*");
         }
     }
 }

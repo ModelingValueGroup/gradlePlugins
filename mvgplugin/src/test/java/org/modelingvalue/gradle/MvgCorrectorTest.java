@@ -21,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
 import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_CLASS_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_NAME;
@@ -49,8 +49,8 @@ import java.util.stream.Collectors;
 
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.DotProperties;
 import org.modelingvalue.gradle.mvgplugin.GitUtil;
-import org.modelingvalue.gradle.mvgplugin.GradleDotProperties;
 import org.modelingvalue.gradle.mvgplugin.Info;
 
 public class MvgCorrectorTest {
@@ -67,13 +67,13 @@ public class MvgCorrectorTest {
 
     @Test
     public void checkId() {
-        GradleDotProperties.init(new File(".."));
+        DotProperties props = new DotProperties(new File(new File(".."), GRADLE_PROPERTIES_FILE));
 
-        assertTrue(getGradleDotProperties().isValid());
+        assertTrue(props.isValid());
 
-        assertEquals(PLUGIN_PACKAGE_NAME, getGradleDotProperties().getProp("mvgplugin_id", null));
-        assertEquals(PLUGIN_CLASS_NAME, getGradleDotProperties().getProp("mvgplugin_class", null));
-        assertEquals(PLUGIN_NAME, getGradleDotProperties().getProp("mvgplugin_name", null));
+        assertEquals(PLUGIN_PACKAGE_NAME, props.getProp("mvgplugin_id"));
+        assertEquals(PLUGIN_CLASS_NAME, props.getProp("mvgplugin_class"));
+        assertEquals(PLUGIN_NAME, props.getProp("mvgplugin_name"));
     }
 
     @Test
@@ -148,44 +148,45 @@ public class MvgCorrectorTest {
             System.out.println("\\==========================================================================");
 
             GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
-            GradleDotProperties.init(testWorkspaceDir.toFile());
-        }
 
-        // Verify the result
-        assertAll(
-                () -> assertEquals("0.0.4", getGradleDotProperties().getProp(Info.PROP_NAME_VERSION, null)),
-                //
-                () -> assertEquals(5, numOccurences("+ header regenerated : ", out)),
-                () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
-                () -> assertEquals(5, numOccurences("+ eols   untouched   : ", out)),
-                () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
-                () -> assertEquals(1, numOccurences("+ project 'testWorkspace': version: 0.0.1 => 0.0.4, group: group => group", out)),
-                () -> assertEquals(3, numOccurences("+ bbb: dependency     replaced: ", out)),
-                () -> assertEquals(36, numOccurences("+ bbb: dependency NOT replaced: ", out)),
-                () -> assertEquals(1, numOccurences("+ adding test.useJUnitPlatform", out)),
-                () -> assertEquals(1, numOccurences("+ increasing test heap from default to 2g", out)),
-                () -> assertEquals(1, numOccurences("+ adding junit5 dependencies", out)),
-                () -> assertEquals(1, numOccurences("+ agreeing to buildScan", out)),
-                () -> assertEquals(1, numOccurences("+ adding tasks for javadoc & source jars", out)),
-                () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
-                () -> assertEquals(1, numOccurences("+ the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
-                () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
-                //
-                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
-                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
-                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright")),
-                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright")),
-                () -> assertTrue(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright")),
-                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright")),
-                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright")),
-                //
-                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r")),
-                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r")),
-                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
-                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
-                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("\r")),
-                () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("\r"))
-        );
+            DotProperties instance = new DotProperties(new File(testWorkspaceDir.toFile(), GRADLE_PROPERTIES_FILE));
+
+            // Verify the result
+            assertAll(
+                    () -> assertEquals("0.0.4", instance.getProp(Info.PROP_NAME_VERSION)),
+                    //
+                    () -> assertEquals(5, numOccurences("+ header regenerated : ", out)),
+                    () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
+                    () -> assertEquals(5, numOccurences("+ eols   untouched   : ", out)),
+                    () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
+                    () -> assertEquals(1, numOccurences("+ project 'testWorkspace': version: 0.0.1 => 0.0.4, group: group => group", out)),
+                    () -> assertEquals(3, numOccurences("+ bbb: dependency     replaced: ", out)),
+                    () -> assertEquals(36, numOccurences("+ bbb: dependency NOT replaced: ", out)),
+                    () -> assertEquals(1, numOccurences("+ adding test.useJUnitPlatform", out)),
+                    () -> assertEquals(1, numOccurences("+ increasing test heap from default to 2g", out)),
+                    () -> assertEquals(1, numOccurences("+ adding junit5 dependencies", out)),
+                    () -> assertEquals(1, numOccurences("+ agreeing to buildScan", out)),
+                    () -> assertEquals(1, numOccurences("+ adding tasks for javadoc & source jars", out)),
+                    () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
+                    () -> assertEquals(1, numOccurences("+ the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
+                    () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
+                    //
+                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
+                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
+                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright")),
+                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright")),
+                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright")),
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright")),
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright")),
+                    //
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r")),
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r")),
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("\r")),
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("\r"))
+            );
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

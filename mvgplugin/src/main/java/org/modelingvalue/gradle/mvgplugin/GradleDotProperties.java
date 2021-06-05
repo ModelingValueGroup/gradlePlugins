@@ -16,90 +16,22 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
-import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
-import org.gradle.api.GradleException;
 import org.gradle.api.invocation.Gradle;
 
 public class GradleDotProperties {
-    private static GradleDotProperties instance;
+    private static final File          USER_PROP_FILE = new File(new File(System.getProperty("user.home"), ".gradle"), GRADLE_PROPERTIES_FILE);
+    private static final DotProperties userHomeProps  = new DotProperties(USER_PROP_FILE);
+    private static       DotProperties instance       = userHomeProps;
 
-    public static void init(Gradle gradle) {
-        init(gradle.getRootProject().getRootDir());
+    public static void setGradleDotProperties(Gradle gradle) {
+        File dir = gradle.getRootProject().getRootDir();
+        instance = new DotProperties(userHomeProps, new File(dir, GRADLE_PROPERTIES_FILE));
     }
 
-    public static void init(File dir) { // separated out for testing purposes
-        if (instance != null && !instance.file.getParentFile().equals(dir)) {
-            LOGGER.warn("{} file switched in mid air: from {} to {}", GRADLE_PROPERTIES_FILE, instance.file.getAbsolutePath(), new File(dir, GRADLE_PROPERTIES_FILE).getAbsolutePath());
-        }
-        instance = new GradleDotProperties(dir);
-    }
-
-    public static GradleDotProperties getGradleDotProperties() {
-        if (instance == null) {
-            LOGGER.error("GradleDotProperties not yet initialized");
-            throw new GradleException("GradleDotProperties not yet initialized");
-        }
+    public static DotProperties getGradleDotProperties() {
         return instance;
-    }
-
-    private final File         file;
-    private final boolean      valid;
-    private final Properties   properties;
-    private final List<String> lines;
-
-    private GradleDotProperties(File dir) {
-        file = new File(dir, GRADLE_PROPERTIES_FILE);
-        valid = file.isFile();
-        properties = valid ? Util.loadProperties(file) : new Properties();
-        if (valid) {
-            try {
-                lines = Files.readAllLines(file.toPath());
-            } catch (IOException e) {
-                throw new GradleException("properties file could not be read: " + file.getAbsolutePath(), e);
-            }
-        } else {
-            lines = new ArrayList<>();
-        }
-    }
-
-    public File getFile() {
-        return file;
-    }
-
-    public boolean isValid() {
-        return valid;
-    }
-
-    public String getProp(String name, String def) {
-        Object o = properties.get(name);
-        String v = o == null ? def : o.toString();
-        LOGGER.info("+ reading property {} from the {}property file {} as {}", name, valid ? "" : "INVALID ", file.getAbsolutePath(), v);
-        return v;
-    }
-
-
-    public void setProp(String name, String val) {
-        if (valid) {
-            List<String> newLines = lines.stream()
-                    .map(l -> l.matches("^" + Pattern.quote(name) + "=.*") ? name + "=" + val : l)
-                    .collect(Collectors.toList());
-            lines.clear();
-            lines.addAll(newLines);
-            try {
-                Files.write(file.toPath(), lines);
-            } catch (IOException e) {
-                throw new GradleException("properties file could not be written: " + file.getAbsolutePath(), e);
-            }
-        }
     }
 }

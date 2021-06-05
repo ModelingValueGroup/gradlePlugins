@@ -26,11 +26,7 @@ jobs:
       ################################################################################
       - name: "build gradle plugin"
         run: |
-          ls -l
-          pwd
-          ./gradlew \
-              --scan \
-              test
+          ./gradlew --scan test
 
       - name: "if master: publish gradle plugin"
         if: github.ref == 'refs/heads/master'

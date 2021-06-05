@@ -54,7 +54,7 @@ public class VersionCorrector extends Corrector {
     }
 
     public VersionCorrector generate() {
-        GradleDotProperties props = getGradleDotProperties();
+        DotProperties props = getGradleDotProperties();
         if (!props.isValid()) {
             LOGGER.info("+ can not determine version: no properties file found at {}", props.getFile());
         } else {
@@ -73,7 +73,7 @@ public class VersionCorrector extends Corrector {
         return this;
     }
 
-    private String adjustVersion(GradleDotProperties props, String oldVersion) {
+    private String adjustVersion(DotProperties props, String oldVersion) {
         if (!forceVersionAdjustForTesting && !Info.CI) {
             LOGGER.info("+ version not adjusted: not on CI (version stays {})", oldVersion);
             return oldVersion;
