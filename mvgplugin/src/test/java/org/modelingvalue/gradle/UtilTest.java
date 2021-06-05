@@ -80,16 +80,17 @@ public class UtilTest {
     @Test
     public void secretTest() {
         assertNull(Util.hide(null));
-        assertEquals("DRY",Util.hide("DRY"));
-        assertEquals("*",Util.hide("a"));
-        assertEquals("**",Util.hide("aa"));
-        assertEquals("***",Util.hide("aap"));
-        assertEquals("****",Util.hide("noot"));
-        assertEquals("*****",Util.hide("nootx"));
-        assertEquals("******",Util.hide("nootxy"));
-        assertEquals("aap****",Util.hide("aapnoot"));
-        assertEquals("aap*****",Util.hide("aapnootx"));
-        assertEquals("aap******",Util.hide("aapnootxy"));
-        assertEquals("zw$**********",Util.hide("zw$zzqpzwerty"));
+        assertEquals("",Util.hide(""));
+        assertEquals("1",Util.hide("1"));
+        assertEquals("12",Util.hide("12"));
+        assertEquals("123",Util.hide("123"));
+        assertEquals("1234",Util.hide("1234"));
+        assertEquals("12345",Util.hide("12345"));
+        assertEquals("123456",Util.hide("123456"));
+        assertEquals("1234567",Util.hide("1234567"));
+        assertEquals("1234****",Util.hide("12345678"));
+        assertEquals("1234*****",Util.hide("123456789"));
+        assertEquals("1234******",Util.hide("1234567890"));
+        assertEquals("!@#$*************************",Util.hide("!@#$%^&*!@#$%^&*({}+|\":<>?/.,"));
     }
 }
