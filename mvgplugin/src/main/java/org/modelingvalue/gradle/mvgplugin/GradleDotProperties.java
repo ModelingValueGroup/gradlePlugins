@@ -22,7 +22,7 @@ import java.io.File;
 import org.gradle.api.invocation.Gradle;
 
 public class GradleDotProperties {
-    private static final File          USER_PROP_FILE = new File(new File(System.getProperty("user.home"), ".gradle"), GRADLE_PROPERTIES_FILE);
+    private static final File          USER_PROP_FILE = new File(new File(Util.getSystemProperty("user.home"), ".gradle"), GRADLE_PROPERTIES_FILE);
     private static final DotProperties userHomeProps  = new DotProperties(USER_PROP_FILE);
     private static       DotProperties instance       = userHomeProps;
 

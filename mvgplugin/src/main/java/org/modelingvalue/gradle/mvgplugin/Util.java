@@ -89,10 +89,22 @@ public class Util {
 
     public static String envOrProp(String name, String def) {
         String value = elvis(GradleDotProperties.getGradleDotProperties().getProp(name),
-                () -> elvis(System.getProperty(name),
-                        () -> elvis(System.getenv(name),
+                () -> elvis(getSystemProperty(name),
+                        () -> elvis(getSystemEnv(name),
                                 () -> def)));
-        LOGGER.info("envOrProp: {} => {}", name, Util.hide(value));
+        LOGGER.info("+~ envOrProp        : {} => {}", name, Util.hide(value));
+        return value;
+    }
+
+    public static String getSystemProperty(String name) {
+        String value = System.getProperty(name);
+        LOGGER.info("+~ getSystemProperty: {} => {}", name, Util.hide(value));
+        return value;
+    }
+
+    public static String getSystemEnv(String name) {
+        String value = System.getenv(name);
+        LOGGER.info("+~ getSystemEnv     : {} => {}", name, Util.hide(value));
         return value;
     }
 
