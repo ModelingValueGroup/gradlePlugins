@@ -92,7 +92,7 @@ public class Util {
                 () -> elvis(System.getProperty(name),
                         () -> elvis(System.getenv(name),
                                 () -> def)));
-        LOGGER.trace("envOrProp: {} => {}", name, Util.hide(value));
+        LOGGER.info("envOrProp: {} => {}", name, Util.hide(value));
         return value;
     }
 
