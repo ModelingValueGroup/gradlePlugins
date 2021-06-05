@@ -63,10 +63,14 @@ public class DotProperties {
         return valid;
     }
 
+    public String getProp(String name) {
+        return getProp(name, null);
+    }
+
     public String getProp(String name, String def) {
         Object o = properties.get(name);
         String v = o != null ? o.toString() : parent != null ? parent.getProp(name, def) : def;
-        LOGGER.info("+ reading property {} from the {}property file {} as {}", name, valid ? "" : "INVALID ", file.getAbsolutePath(), v);
+        LOGGER.info("+ reading property {} from the {}property file {} as {}", name, valid ? "" : "INVALID ", file.getAbsolutePath(), Util.hide(v));
         return v;
     }
 

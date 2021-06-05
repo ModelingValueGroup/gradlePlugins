@@ -88,7 +88,7 @@ public class Util {
     }
 
     public static String envOrProp(String name, String def) {
-        String value = elvis(GradleDotProperties.getGradleDotProperties().getProp(name, null),
+        String value = elvis(GradleDotProperties.getGradleDotProperties().getProp(name),
                 () -> elvis(System.getProperty(name),
                         () -> elvis(System.getenv(name),
                                 () -> def)));
@@ -178,12 +178,10 @@ public class Util {
 
     @SuppressWarnings("SuspiciousRegexArgument")
     public static String hide(String secret) {
-        if (secret == null || secret.equals("DRY")) {
+        if (secret == null || secret.length() < 8) { // secrets are always of length 8+
             return secret;
-        } else if (secret.length() < 7) {
-            return secret.replaceAll(".", "*");
         } else {
-            return secret.substring(0, 3) + secret.substring(3).replaceAll(".", "*");
+            return secret.substring(0, 4) + secret.substring(4).replaceAll(".", "*");
         }
     }
 }

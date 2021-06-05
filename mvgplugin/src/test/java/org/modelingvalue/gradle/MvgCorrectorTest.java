@@ -71,9 +71,9 @@ public class MvgCorrectorTest {
 
         assertTrue(props.isValid());
 
-        assertEquals(PLUGIN_PACKAGE_NAME, props.getProp("mvgplugin_id", null));
-        assertEquals(PLUGIN_CLASS_NAME, props.getProp("mvgplugin_class", null));
-        assertEquals(PLUGIN_NAME, props.getProp("mvgplugin_name", null));
+        assertEquals(PLUGIN_PACKAGE_NAME, props.getProp("mvgplugin_id"));
+        assertEquals(PLUGIN_CLASS_NAME, props.getProp("mvgplugin_class"));
+        assertEquals(PLUGIN_NAME, props.getProp("mvgplugin_name"));
     }
 
     @Test
@@ -153,7 +153,7 @@ public class MvgCorrectorTest {
 
             // Verify the result
             assertAll(
-                    () -> assertEquals("0.0.4", instance.getProp(Info.PROP_NAME_VERSION, null)),
+                    () -> assertEquals("0.0.4", instance.getProp(Info.PROP_NAME_VERSION)),
                     //
                     () -> assertEquals(5, numOccurences("+ header regenerated : ", out)),
                     () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
