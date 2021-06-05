@@ -53,6 +53,7 @@ import com.gradle.scan.plugin.BuildScanExtension;
 public class MvgPlugin implements Plugin<Project> {
     public static MvgPlugin singleton;
 
+    private boolean               inactiveBecauseNotRootProject;
     private Gradle                gradle;
     private MvgCorrector          mvgCorrector;
     private MvgTagger             mvgTagger;
@@ -65,31 +66,37 @@ public class MvgPlugin implements Plugin<Project> {
     }
 
     public void apply(Project project) {
+        LOGGER.info("+ apply {} on project {}", getClass().getSimpleName(), project.getName());
         gradle = project.getGradle();
+        inactiveBecauseNotRootProject = gradle.getRootProject() != project;
+        if (inactiveBecauseNotRootProject) {
+            LOGGER.error("mvgplugin: the plugin {} can only be applied to the root project ({})", getClass().getSimpleName(), gradle.getRootProject());
+            //throw new GradleException("the plugin " + getClass().getSimpleName() + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
+        } else {
 
-        GradleDotProperties.init(gradle);
-        BranchParameterNames.init(gradle);
+            GradleDotProperties.setGradleDotProperties(gradle);
+            BranchParameterNames.init(gradle);
 
-        LOGGER.info("+ MvgPlugin.apply to project {}", project.getName());
-        Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(gradle), "develop", isDevelopBranch(gradle), PROP_NAME_ALLREP_TOKEN, ALLREP_TOKEN);
+            LOGGER.info("+ MvgPlugin.apply to project {}", project.getName());
+            Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(gradle), "develop", isDevelopBranch(gradle), Util.hide(PROP_NAME_ALLREP_TOKEN), ALLREP_TOKEN);
 
-        checkMustBeRootProject(project);
-        checkWorkflowFilesForLoopingDanger();
-        checkIfWeAreUsingTheLatestPluginVersion();
+            checkWorkflowFilesForLoopingDanger();
+            checkIfWeAreUsingTheLatestPluginVersion();
 
-        trace();
+            trace();
 
-        tuneTesting();
-        tuneJavaPlugin();
-        tuneJavaDocPlugin();
-        agreeToBuildScan();
-        addMVGRepositories();
+            tuneTesting();
+            tuneJavaPlugin();
+            tuneJavaDocPlugin();
+            agreeToBuildScan();
+            addMVGRepositories();
 
-        mvgCorrector = new MvgCorrector(gradle);
-        mvgTagger = new MvgTagger(gradle);
-        mvgBranchBasedBuilder = new MvgBranchBasedBuilder(gradle);
-        mvgMps = new MvgMps(gradle);
-        mvgUploader = new MvgUploader(gradle);
+            mvgCorrector = new MvgCorrector(gradle);
+            mvgTagger = new MvgTagger(gradle);
+            mvgBranchBasedBuilder = new MvgBranchBasedBuilder(gradle);
+            mvgMps = new MvgMps(gradle);
+            mvgUploader = new MvgUploader(gradle);
+        }
     }
 
     @NotNull
@@ -97,15 +104,6 @@ public class MvgPlugin implements Plugin<Project> {
         return mvgMps.resolveMpsDependency(dep);
     }
 
-
-    private void checkMustBeRootProject(Project project) {
-        String pluginName = this.getClass().getSimpleName();
-        LOGGER.info("+ apply {} on project {}", pluginName, project.getName());
-        if (gradle.getRootProject() != project) {
-            LOGGER.error("mvgplugin: the plugin {} can only be applied to the root project ({})", pluginName, gradle.getRootProject());
-            throw new GradleException("the plugin " + pluginName + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
-        }
-    }
 
     private void checkWorkflowFilesForLoopingDanger() {
         Path root         = gradle.getRootProject().getRootDir().toPath();

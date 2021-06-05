@@ -88,7 +88,12 @@ public class Util {
     }
 
     public static String envOrProp(String name, String def) {
-        return elvis(System.getProperty(name), () -> elvis(System.getenv(name), () -> def));
+        String value = elvis(GradleDotProperties.getGradleDotProperties().getProp(name, null),
+                () -> elvis(System.getProperty(name),
+                        () -> elvis(System.getenv(name),
+                                () -> def)));
+        LOGGER.trace("envOrProp: {} => {}", name, Util.hide(value));
+        return value;
     }
 
     public static <T> T elvis(T o, Supplier<T> f) {

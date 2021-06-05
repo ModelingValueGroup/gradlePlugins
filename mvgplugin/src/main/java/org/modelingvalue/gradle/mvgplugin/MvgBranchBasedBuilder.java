@@ -152,9 +152,9 @@ public class MvgBranchBasedBuilder {
                     url = makeBbbRepo(url);
                 }
                 mar.setUrl(url);
-                mar.credentials(cr -> {
-                    cr.setPassword(Info.ALLREP_TOKEN);
-                    cr.setUsername("");
+                mar.credentials(c -> {
+                    c.setUsername("");
+                    c.setPassword(Info.ALLREP_TOKEN);
                 });
             });
             TOMTOMTOM_report(publishing);
