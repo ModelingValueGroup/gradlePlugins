@@ -78,7 +78,7 @@ public class MvgPlugin implements Plugin<Project> {
             BranchParameterNames.init(gradle);
 
             LOGGER.info("+ MvgPlugin.apply to project {}", project.getName());
-            Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(gradle), "develop", isDevelopBranch(gradle), Util.hide(PROP_NAME_ALLREP_TOKEN), ALLREP_TOKEN);
+            Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(gradle), "develop", isDevelopBranch(gradle), PROP_NAME_ALLREP_TOKEN, Util.hide(ALLREP_TOKEN));
 
             checkWorkflowFilesForLoopingDanger();
             checkIfWeAreUsingTheLatestPluginVersion();
