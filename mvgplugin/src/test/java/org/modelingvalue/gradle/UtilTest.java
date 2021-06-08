@@ -88,9 +88,9 @@ public class UtilTest {
         assertEquals("12345",Util.hide("12345"));
         assertEquals("123456",Util.hide("123456"));
         assertEquals("1234567",Util.hide("1234567"));
-        assertEquals("1234****",Util.hide("12345678"));
-        assertEquals("1234*****",Util.hide("123456789"));
-        assertEquals("1234******",Util.hide("1234567890"));
-        assertEquals("!@#$*************************",Util.hide("!@#$%^&*!@#$%^&*({}+|\":<>?/.,"));
+        assertEquals("1234************",Util.hide("12345678"));
+        assertEquals("1234************",Util.hide("123456789"));
+        assertEquals("1234************",Util.hide("1234567890"));
+        assertEquals("!@#$************",Util.hide("!@#$%^&*!@#$%^&*({}+|\":<>?/.,"));
     }
 }
