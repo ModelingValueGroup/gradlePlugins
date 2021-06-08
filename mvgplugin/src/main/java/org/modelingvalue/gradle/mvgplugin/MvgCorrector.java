@@ -21,13 +21,14 @@ import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_GROUP;
-import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_ALLREP_TOKEN;
-import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
@@ -36,24 +37,48 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 class MvgCorrector {
-    private final Gradle                gradle;
+    private static final List<Pattern> NOT_BEFORE_TASKS = List.of(
+            ".*jar",
+            ".*kotlin.*",
+            "buildEnvironment",
+            "buildScanPublishPrevious",
+            "components",
+            "dependen.*",
+            "help",
+            "init",
+            "model",
+            "mvg.*",
+            "outgoingVariants",
+            "prepareKotlinBuildScriptModel",
+            "process.*",
+            "projects",
+            "properties",
+            "provisionGradleEnterpriseAccessKey",
+            "publish.*",
+            "tasks",
+            "test",
+            "wrapper",
+            quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*"
+    ).stream().map(s -> Pattern.compile("^(?i)" + s + "$")).collect(Collectors.toList());
+
     private final MvgCorrectorExtension ext;
 
     public MvgCorrector(Gradle gradle) {
-        this.gradle = gradle;
         ext = MvgCorrectorExtension.make(gradle);
         TaskProvider<Task> tp = gradle.getRootProject().getTasks().register(CORRECTOR_TASK_NAME, this::setup);
 
         // let all tasks depend on me...
         gradle.allprojects(p -> p.getTasks().all(t -> {
-            LOGGER.debug("+ checking if task '{}' should be before '{}'", tp.getName(), t.getName());
-            if (!t.getName().equals(tp.getName())                                                               // ... not myself (duh)
-                    && !t.getName().matches("(?i)" + quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*")   // ... not the cleaning tasks
-                    && !("" + t.getGroup()).matches("(?i)" + quote(HelpTasksPlugin.HELP_GROUP))           // ... not the help group tasks
-                    && !("" + t.getGroup()).matches("(?i)build setup")                                    // ... not the build setup group tasks
-                    && !("" + t.getGroup()).matches("(?i)gradle enterprise")                              // ... not the gradle enterprise group tasks
+            String name  = t.getName();
+            String group = "" + t.getGroup(); // may return null
+            LOGGER.debug("+ checking if task '{}' should be before '{}' (group '{}'", tp.getName(), name, group);
+            if (!name.equals(tp.getName())                                                                // ... not myself (duh)
+                    && NOT_BEFORE_TASKS.stream().noneMatch(pat -> pat.matcher(name).matches())            // ... not the cleaning tasks
+                    && !group.matches("(?i)" + quote(HelpTasksPlugin.HELP_GROUP))                   // ... not the help group tasks
+                    && !group.matches("(?i)build setup")                                            // ... not the build setup group tasks
+                    && !group.matches("(?i)gradle enterprise")                                      // ... not the gradle enterprise group tasks
             ) {
-                LOGGER.info("+ adding task dependency: {} before {}", tp.getName(), t.getName());
+                LOGGER.info("+ adding task dependency: {} before {} (group {})", tp.getName(), name, t.getGroup());
                 t.dependsOn(tp);
             }
         }));

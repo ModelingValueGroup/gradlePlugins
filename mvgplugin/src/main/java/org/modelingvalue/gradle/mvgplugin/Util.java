@@ -188,12 +188,11 @@ public class Util {
         }
     }
 
-    @SuppressWarnings("SuspiciousRegexArgument")
     public static String hide(String secret) {
-        if (secret == null || secret.length() < 8) { // secrets are always of length 8+
+        if (secret == null || secret.length() < 8) { // real secrets are always of length 8+ so we can show if below
             return secret;
         } else {
-            return secret.substring(0, 4) + secret.substring(4).replaceAll(".", "*");
+            return secret.substring(0, 4) + "*".repeat(12);
         }
     }
 }
