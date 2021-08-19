@@ -74,7 +74,7 @@ public class MvgUploader {
         }
 
         public String getDefaultChannel(Gradle gradle) {
-            return selectMasterDevelopElse(gradle, "stable", "beta", BranchParameterNames.get("channel"));
+            return selectMasterDevelopElse(gradle, "stable", "EAP", BranchParameterNames.get("channel", "DEV"));
         }
 
         public Path getZipFile() {

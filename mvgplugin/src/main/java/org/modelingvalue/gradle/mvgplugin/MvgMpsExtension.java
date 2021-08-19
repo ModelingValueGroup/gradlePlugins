@@ -50,7 +50,7 @@ public class MvgMpsExtension {
     }
 
     public String getVersionExtra() {
-        return selectMasterDevelopElse(gradle, "", "beta", "alpha");
+        return selectMasterDevelopElse(gradle, "", "EAP", "DEV");
     }
 
     public String getVersionStamp() {
