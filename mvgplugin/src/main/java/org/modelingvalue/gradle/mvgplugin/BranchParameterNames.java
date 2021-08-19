@@ -36,11 +36,11 @@ public class BranchParameterNames {
         instance = new BranchParameterNames(branchName);
     }
 
-    public static String get(String name) {
+    public static String get(String name, String def) {
         if (instance == null) {
             throw new GradleException("BranchParameterNames not yet inited while trying to get '" + name + "'");
         }
-        return instance.get_(name);
+        return instance.get_(name, def);
     }
 
     private final Map<String, String> mapping = new HashMap<>();
@@ -55,7 +55,8 @@ public class BranchParameterNames {
         }
     }
 
-    private String get_(String name) {
-        return mapping.get(name);
+    private String get_(String name, String def) {
+        String s = mapping.get(name);
+        return s == null ? def : s;
     }
 }

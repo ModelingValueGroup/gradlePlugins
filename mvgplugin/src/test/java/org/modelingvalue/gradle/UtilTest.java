@@ -47,50 +47,50 @@ public class UtilTest {
     @Test
     public void branchParametersTest() {
         BranchParameterNames.init("no_parameters");
-        assertNull(BranchParameterNames.get("xyzzy"));
-        assertNull(BranchParameterNames.get("arg"));
-        assertNull(BranchParameterNames.get("zurch"));
+        assertEquals("default", BranchParameterNames.get("xyzzy", "default"));
+        assertEquals("default", BranchParameterNames.get("arg", "default"));
+        assertEquals("default", BranchParameterNames.get("zurch", "default"));
 
         BranchParameterNames.init("no_parameters@");
-        assertNull(BranchParameterNames.get("xyzzy"));
-        assertNull(BranchParameterNames.get("arg"));
-        assertNull(BranchParameterNames.get("zurch"));
+        assertEquals("default", BranchParameterNames.get("xyzzy", "default"));
+        assertEquals("default", BranchParameterNames.get("arg", "default"));
+        assertEquals("default", BranchParameterNames.get("zurch", "default"));
 
         BranchParameterNames.init("zurg@xyzzy=plugh");
-        assertEquals("plugh", BranchParameterNames.get("xyzzy"));
-        assertNull(BranchParameterNames.get("arg"));
-        assertNull(BranchParameterNames.get("zurch"));
+        assertEquals("plugh", BranchParameterNames.get("xyzzy", "default"));
+        assertEquals("default", BranchParameterNames.get("arg", "default"));
+        assertEquals("default", BranchParameterNames.get("zurch", "default"));
 
         BranchParameterNames.init("zurg@xyzzy=plugh;arg=42");
-        assertEquals("plugh", BranchParameterNames.get("xyzzy"));
-        assertEquals("42", BranchParameterNames.get("arg"));
-        assertNull(BranchParameterNames.get("zurch"));
+        assertEquals("plugh", BranchParameterNames.get("xyzzy", "default"));
+        assertEquals("42", BranchParameterNames.get("arg", "default"));
+        assertEquals("default", BranchParameterNames.get("zurch", "default"));
 
         BranchParameterNames.init("zurg@xyzzy=plugh;;arg=42;;;");
-        assertEquals("plugh", BranchParameterNames.get("xyzzy"));
-        assertEquals("42", BranchParameterNames.get("arg"));
-        assertNull(BranchParameterNames.get("zurch"));
+        assertEquals("plugh", BranchParameterNames.get("xyzzy", "default"));
+        assertEquals("42", BranchParameterNames.get("arg", "default"));
+        assertEquals("default", BranchParameterNames.get("zurch", "default"));
 
         BranchParameterNames.init("zurg@xyzzy=plugh;;arg=42;;zurch;");
-        assertEquals("plugh", BranchParameterNames.get("xyzzy"));
-        assertEquals("42", BranchParameterNames.get("arg"));
-        assertEquals("", BranchParameterNames.get("zurch"));
+        assertEquals("plugh", BranchParameterNames.get("xyzzy", "default"));
+        assertEquals("42", BranchParameterNames.get("arg", "default"));
+        assertEquals("", BranchParameterNames.get("zurch", "default"));
     }
 
     @Test
     public void secretTest() {
         assertNull(Util.hide(null));
-        assertEquals("",Util.hide(""));
-        assertEquals("1",Util.hide("1"));
-        assertEquals("12",Util.hide("12"));
-        assertEquals("123",Util.hide("123"));
-        assertEquals("1234",Util.hide("1234"));
-        assertEquals("12345",Util.hide("12345"));
-        assertEquals("123456",Util.hide("123456"));
-        assertEquals("1234567",Util.hide("1234567"));
-        assertEquals("1234************",Util.hide("12345678"));
-        assertEquals("1234************",Util.hide("123456789"));
-        assertEquals("1234************",Util.hide("1234567890"));
-        assertEquals("!@#$************",Util.hide("!@#$%^&*!@#$%^&*({}+|\":<>?/.,"));
+        assertEquals("", Util.hide(""));
+        assertEquals("1", Util.hide("1"));
+        assertEquals("12", Util.hide("12"));
+        assertEquals("123", Util.hide("123"));
+        assertEquals("1234", Util.hide("1234"));
+        assertEquals("12345", Util.hide("12345"));
+        assertEquals("123456", Util.hide("123456"));
+        assertEquals("1234567", Util.hide("1234567"));
+        assertEquals("1234************", Util.hide("12345678"));
+        assertEquals("1234************", Util.hide("123456789"));
+        assertEquals("1234************", Util.hide("1234567890"));
+        assertEquals("!@#$************", Util.hide("!@#$%^&*!@#$%^&*({}+|\":<>?/.,"));
     }
 }
