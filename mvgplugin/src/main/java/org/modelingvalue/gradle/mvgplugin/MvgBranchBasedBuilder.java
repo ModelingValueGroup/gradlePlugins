@@ -15,6 +15,8 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static org.modelingvalue.gradle.mvgplugin.Info.MVG_MAVEN_REPO_URL;
+
 import java.net.URI;
 import java.util.regex.Pattern;
 
@@ -49,7 +51,7 @@ public class MvgBranchBasedBuilder {
         isMaster = Info.isMasterBranch(gradle);
 
         LOGGER.info("+ bbb: creating MvgBranchBasedBuilder (ci={} master={})", ci, isMaster);
-        TOMTOMTOM_report(gradle);
+        debug_report(gradle);
 
         adjustDependencies();
         adjustPublications(gradle);
@@ -129,7 +131,7 @@ public class MvgBranchBasedBuilder {
                     mpub.setGroupId(newGroup);
                     mpub.setArtifactId(newArtifact);
                     mpub.setVersion(newVersion);
-                    TOMTOMTOM_report(publishing);
+                    debug_report(publishing);
                 }
             }
         });
@@ -139,7 +141,7 @@ public class MvgBranchBasedBuilder {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
             LOGGER.info("+ bbb: adding mavenLocal publishing repo...");
             publishing.getRepositories().mavenLocal();
-            TOMTOMTOM_report(publishing);
+            debug_report(publishing);
         }
     }
 
@@ -147,7 +149,7 @@ public class MvgBranchBasedBuilder {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
             LOGGER.info("+ bbb: adding {}-MVG-github publishing repo...", master ? "master" : "snapshot");
             publishing.getRepositories().maven(mar -> {
-                URI url = URI.create("https://maven.pkg.github.com/ModelingValueGroup/packages");
+                URI url = URI.create(MVG_MAVEN_REPO_URL);
                 if (!master) {
                     url = makeBbbRepo(url);
                 }
@@ -157,7 +159,7 @@ public class MvgBranchBasedBuilder {
                     c.setPassword(Info.ALLREP_TOKEN);
                 });
             });
-            TOMTOMTOM_report(publishing);
+            debug_report(publishing);
         }
     }
 
@@ -194,36 +196,36 @@ public class MvgBranchBasedBuilder {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private void TOMTOMTOM_report(Gradle gradle) {
-        if (LOGGER.isTraceEnabled()) {
+    private void debug_report(Gradle gradle) {
+        if (LOGGER.isDebugEnabled()) {
             gradle.allprojects(p -> {
                 PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
-                LOGGER.trace("+ bbb ---------------------------[ proj={}", p.getName());
+                LOGGER.debug("+ bbb ---------------------------[ proj={}", p.getName());
                 if (publishing == null) {
-                    LOGGER.trace("+      bbb publishing==null");
+                    LOGGER.debug("+      bbb publishing==null");
                 } else {
-                    publishing.getPublications().forEach(x -> LOGGER.trace("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
-                    publishing.getRepositories().forEach(x -> LOGGER.trace("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+                    publishing.getPublications().forEach(x -> LOGGER.debug("+      bbb PUBL {}: {}", x.getName(), debug_describe(x)));
+                    publishing.getRepositories().forEach(x -> LOGGER.debug("+      bbb REPO {}: {}", x.getName(), debug_describe(x)));
                 }
-                LOGGER.trace("+ bbb ---------------------------] proj={}", p.getName());
+                LOGGER.debug("+ bbb ---------------------------] proj={}", p.getName());
             });
         }
     }
 
-    private void TOMTOMTOM_report(PublishingExtension publishing) {
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("+ bbb ---------------------------[");
+    private void debug_report(PublishingExtension publishing) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("+ bbb ---------------------------[");
             if (publishing == null) {
-                LOGGER.trace("+      bbb publishing==null");
+                LOGGER.debug("+      bbb publishing==null");
             } else {
-                publishing.getPublications().forEach(x -> LOGGER.trace("+      bbb PUBL {}: {}", x.getName(), TOMTOMTOM_describe(x)));
-                publishing.getRepositories().forEach(x -> LOGGER.trace("+      bbb REPO {}: {}", x.getName(), TOMTOMTOM_describe(x)));
+                publishing.getPublications().forEach(x -> LOGGER.debug("+      bbb PUBL {}: {}", x.getName(), debug_describe(x)));
+                publishing.getRepositories().forEach(x -> LOGGER.debug("+      bbb REPO {}: {}", x.getName(), debug_describe(x)));
             }
-            LOGGER.trace("+ bbb ---------------------------]");
+            LOGGER.debug("+ bbb ---------------------------]");
         }
     }
 
-    private String TOMTOMTOM_describe(Publication x) {
+    private String debug_describe(Publication x) {
         if (x instanceof MavenPublication) {
             MavenPublication xx = (MavenPublication) x;
             return xx.getGroupId() + ":" + xx.getArtifactId() + ":" + xx.getVersion();
@@ -232,7 +234,7 @@ public class MvgBranchBasedBuilder {
         }
     }
 
-    private String TOMTOMTOM_describe(ArtifactRepository x) {
+    private String debug_describe(ArtifactRepository x) {
         if (x instanceof MavenArtifactRepository) {
             MavenArtifactRepository xx = (MavenArtifactRepository) x;
             return "url=" + xx.getUrl();
