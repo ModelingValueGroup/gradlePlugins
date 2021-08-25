@@ -15,18 +15,14 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-import static org.modelingvalue.gradle.mvgplugin.Info.MVG_MAVEN_REPO_URL;
-import static org.modelingvalue.gradle.mvgplugin.Util.envOrProp;
-
-import java.net.URI;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.gradle.api.Action;
 import org.gradle.api.artifacts.DependencySubstitution;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
-import org.gradle.api.artifacts.repositories.AuthenticationContainer;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.artifacts.repositories.PasswordCredentials;
 import org.gradle.api.credentials.Credentials;
@@ -37,6 +33,7 @@ import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.authentication.Authentication;
 import org.gradle.internal.authentication.AuthenticationInternal;
+import org.jetbrains.annotations.NotNull;
 
 public class MvgBranchBasedBuilder {
     public static final Logger LOGGER                     = Info.LOGGER;
@@ -154,22 +151,9 @@ public class MvgBranchBasedBuilder {
 
     private void publishToGitHub(PublishingExtension publishing, boolean master) {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
-            LOGGER.info("+ bbb: adding {}-MVG-github publishing repo...", master ? "master" : "snapshot");
-            publishing.getRepositories().maven(mar -> {
-                URI url = URI.create(MVG_MAVEN_REPO_URL);
-                if (!master) {
-                    if (envOrProp("TOMTOMTOM", null) != null) {
-                        LOGGER.info("TOMTOMTOM skipping makeBbbRepo({})", url);
-                    } else {
-                        url = makeBbbRepo(url);
-                    }
-                }
-                mar.setUrl(url);
-                mar.credentials(c -> {
-                    c.setUsername("");
-                    c.setPassword(Info.ALLREP_TOKEN);
-                });
-            });
+            LOGGER.info("+ bbb: adding github publishing repo: {}", master ? "master" : "snapshots");
+            Action<MavenArtifactRepository> maker = Info.getGithubMavenRepoMaker(gradle, Info.isMasterBranch(gradle));
+            publishing.getRepositories().maven(maker);
             debug_report(publishing);
         }
     }
@@ -184,11 +168,6 @@ public class MvgBranchBasedBuilder {
 
     private String makeBbbVersion(String v) {
         return (ci && isMaster) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
-    }
-
-    private URI makeBbbRepo(URI u) {
-        String s = u.toString().replaceAll("/$", "");
-        return s.length() == 0 || s.endsWith(SNAPSHOTS_REPO_POST) ? u : Util.makeURL(s + SNAPSHOTS_REPO_POST);
     }
 
     private String bbbId;
@@ -236,6 +215,12 @@ public class MvgBranchBasedBuilder {
         }
     }
 
+    private void debug_report(MavenArtifactRepository mar) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("+      bbb github MavenArtifactRepository={}", debug_describe(mar));
+        }
+    }
+
     private String debug_describe(Publication x) {
         if (x instanceof MavenPublication) {
             MavenPublication xx = (MavenPublication) x;
@@ -248,28 +233,38 @@ public class MvgBranchBasedBuilder {
     private String debug_describe(ArtifactRepository x) {
         if (x instanceof MavenArtifactRepository) {
             MavenArtifactRepository xx = (MavenArtifactRepository) x;
-            return "repo url=" + xx.getUrl() + " - " + debug_describe(xx.getAuthentication());
+            return debug_describe(xx);
         } else {
             return debug_otherClass("artifactRepo", x);
         }
     }
 
-    private String debug_describe(AuthenticationContainer container) {
-        return container.getAsMap().entrySet().stream().map(e -> {
-            Authentication au = e.getValue();
-            if (au instanceof AuthenticationInternal) {
-                AuthenticationInternal aui         = (AuthenticationInternal) au;
-                Credentials            credentials = aui.getCredentials();
-                if (credentials instanceof PasswordCredentials) {
-                    PasswordCredentials pwcr = (PasswordCredentials) credentials;
-                    return e.getKey() + ":" + aui.getName() + ":" + pwcr.getUsername() + ":" + Util.hide(pwcr.getPassword());
+    private String debug_describe(MavenArtifactRepository mar) {
+        if (mar == null) {
+            return "<null>";
+        } else {
+            String credeantials = debug_describe(mar.getCredentials());
+            String authentications = mar.getAuthentication().getAsMap().entrySet().stream().map(e -> {
+                Authentication au = e.getValue();
+                if (!(au instanceof AuthenticationInternal)) {
+                    return e.getKey() + ":" + debug_otherClass("authentication", au);
                 } else {
-                    return e.getKey() + ":" + aui.getName() + ":" + debug_otherClass("credentials", credentials);
+                    AuthenticationInternal aui         = (AuthenticationInternal) au;
+                    Credentials            credentials = aui.getCredentials();
+                    if (!(credentials instanceof PasswordCredentials)) {
+                        return e.getKey() + ":" + aui.getName() + ":" + debug_otherClass("credentials", credentials);
+                    } else {
+                        return e.getKey() + ":" + aui.getName() + ":" + debug_describe((PasswordCredentials) credentials);
+                    }
                 }
-            } else {
-                return e.getKey() + ":" + debug_otherClass("authentication", au);
-            }
-        }).collect(Collectors.joining(", ", "Authentications[", "]"));
+            }).collect(Collectors.joining(", ", "Authentications[", "]"));
+            return "repo url=" + mar.getUrl() + " - " + credeantials + " - " + authentications;
+        }
+    }
+
+    @NotNull
+    private String debug_describe(PasswordCredentials pwcr) {
+        return pwcr.getUsername() + ":" + Util.hide(pwcr.getPassword());
     }
 
     private String debug_otherClass(String name, Object o) {
