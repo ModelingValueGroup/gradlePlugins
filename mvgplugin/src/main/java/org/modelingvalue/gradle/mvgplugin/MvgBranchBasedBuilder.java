@@ -16,20 +16,27 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_MAVEN_REPO_URL;
+import static org.modelingvalue.gradle.mvgplugin.Util.envOrProp;
 
 import java.net.URI;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.gradle.api.artifacts.DependencySubstitution;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
+import org.gradle.api.artifacts.repositories.AuthenticationContainer;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
+import org.gradle.api.artifacts.repositories.PasswordCredentials;
+import org.gradle.api.credentials.Credentials;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.publish.Publication;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.authentication.Authentication;
+import org.gradle.internal.authentication.AuthenticationInternal;
 
 public class MvgBranchBasedBuilder {
     public static final Logger LOGGER                     = Info.LOGGER;
@@ -151,7 +158,11 @@ public class MvgBranchBasedBuilder {
             publishing.getRepositories().maven(mar -> {
                 URI url = URI.create(MVG_MAVEN_REPO_URL);
                 if (!master) {
-                    url = makeBbbRepo(url);
+                    if (envOrProp("TOMTOMTOM", null) != null) {
+                        LOGGER.info("TOMTOMTOM skipping makeBbbRepo({})", url);
+                    } else {
+                        url = makeBbbRepo(url);
+                    }
                 }
                 mar.setUrl(url);
                 mar.credentials(c -> {
@@ -230,17 +241,39 @@ public class MvgBranchBasedBuilder {
             MavenPublication xx = (MavenPublication) x;
             return xx.getGroupId() + ":" + xx.getArtifactId() + ":" + xx.getVersion();
         } else {
-            return "IS " + x.getClass();
+            return debug_otherClass("publication", x);
         }
     }
 
     private String debug_describe(ArtifactRepository x) {
         if (x instanceof MavenArtifactRepository) {
             MavenArtifactRepository xx = (MavenArtifactRepository) x;
-            return "url=" + xx.getUrl();
+            return "repo url=" + xx.getUrl() + " - " + debug_describe(xx.getAuthentication());
         } else {
-            return "IS " + x.getClass();
+            return debug_otherClass("artifactRepo", x);
         }
+    }
+
+    private String debug_describe(AuthenticationContainer container) {
+        return container.getAsMap().entrySet().stream().map(e -> {
+            Authentication au = e.getValue();
+            if (au instanceof AuthenticationInternal) {
+                AuthenticationInternal aui         = (AuthenticationInternal) au;
+                Credentials            credentials = aui.getCredentials();
+                if (credentials instanceof PasswordCredentials) {
+                    PasswordCredentials pwcr = (PasswordCredentials) credentials;
+                    return e.getKey() + ":" + aui.getName() + ":" + pwcr.getUsername() + ":" + Util.hide(pwcr.getPassword());
+                } else {
+                    return e.getKey() + ":" + aui.getName() + ":" + debug_otherClass("credentials", credentials);
+                }
+            } else {
+                return e.getKey() + ":" + debug_otherClass("authentication", au);
+            }
+        }).collect(Collectors.joining(", ", "Authentications[", "]"));
+    }
+
+    private String debug_otherClass(String name, Object o) {
+        return name + "???" + (o == null ? "<null>" : o.getClass());
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
