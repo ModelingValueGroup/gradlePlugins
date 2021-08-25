@@ -106,8 +106,7 @@ public class MvgPlugin implements Plugin<Project> {
 
 
     private void checkWorkflowFilesForLoopingDanger() {
-        Path root         = gradle.getRootProject().getRootDir().toPath();
-        Path workflowsDir = root.resolve(".github").resolve("workflows");
+        Path workflowsDir = Info.getProjectDir(gradle).resolve(".github").resolve("workflows");
         if (Files.isDirectory(workflowsDir)) {
             try {
                 AtomicBoolean errorsDetected = new AtomicBoolean();
@@ -250,8 +249,8 @@ public class MvgPlugin implements Plugin<Project> {
 
             p.getRepositories().mavenCentral();
             p.getRepositories().mavenLocal();
-            p.getRepositories().maven(Info.MVG_MAVEN_REPO_MAKER);
-            p.getRepositories().maven(Info.MVG_MAVEN_SNAPSHOTS_REPO_MAKER);
+            p.getRepositories().maven(Info.getGithubMavenRepoMaker(gradle, true));
+            p.getRepositories().maven(Info.getGithubMavenRepoMaker(gradle, false));
 
             p.getRepositories().forEach(r -> LOGGER.info("+   - {}", r.getName()));
         });
