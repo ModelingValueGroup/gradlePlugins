@@ -54,7 +54,7 @@ public class EolCorrector extends TreeCorrector {
         try {
             overwrite(f, Files.readAllLines(f));
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.info("IOException '{}' detected (and ignored) on file {}", e.getMessage(), f.toAbsolutePath());
         }
     }
 
