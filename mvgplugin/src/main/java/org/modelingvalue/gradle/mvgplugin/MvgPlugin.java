@@ -28,6 +28,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.isMasterBranch;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -41,8 +42,11 @@ import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.TaskCollection;
+import org.gradle.api.tasks.compile.CompileOptions;
+import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.Test;
+import org.gradle.external.javadoc.MinimalJavadocOptions;
 import org.gradle.external.javadoc.StandardJavadocDocletOptions;
 import org.gradle.internal.extensibility.DefaultConvention;
 import org.jetbrains.annotations.NotNull;
@@ -88,6 +92,7 @@ public class MvgPlugin implements Plugin<Project> {
             tuneTesting();
             tuneJavaPlugin();
             tuneJavaDocPlugin();
+            tuneJavaEncoding();
             agreeToBuildScan();
             addMVGRepositories();
 
@@ -222,13 +227,35 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneJavaDocPlugin() {
         gradle.afterProject(p -> {
-            TaskCollection<Javadoc> javadocsTask = p.getTasks().withType(Javadoc.class);
-            javadocsTask.forEach(jd -> jd.options(opt -> {
+            TaskCollection<Javadoc> javadocTasks = p.getTasks().withType(Javadoc.class);
+            javadocTasks.forEach(jd -> jd.options(opt -> {
                 if (opt instanceof StandardJavadocDocletOptions) {
                     LOGGER.info("+ adding javadoc option to ignore warnings");
                     ((StandardJavadocDocletOptions) opt).addStringOption("Xdoclint:none", "-quiet");
                 }
             }));
+        });
+    }
+
+    private void tuneJavaEncoding() {
+        String utf8 = StandardCharsets.UTF_8.name();
+        gradle.afterProject(p -> {
+            TaskCollection<JavaCompile> javacomileTasks = p.getTasks().withType(JavaCompile.class);
+            javacomileTasks.forEach(t -> {
+                CompileOptions options = t.getOptions();
+                if (!utf8.equals(options.getEncoding())) {
+                    LOGGER.info("+ setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
+                    options.setEncoding(utf8);
+                }
+            });
+            TaskCollection<Javadoc> javadocTasks = p.getTasks().withType(Javadoc.class);
+            javadocTasks.forEach(t -> {
+                MinimalJavadocOptions options = t.getOptions();
+                if (!utf8.equals(options.getEncoding())) {
+                    LOGGER.info("+ setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
+                    options.setEncoding(utf8);
+                }
+            });
         });
     }
 
