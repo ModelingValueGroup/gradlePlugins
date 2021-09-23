@@ -109,28 +109,3 @@ abstract class CustomTask @javax.inject.Inject constructor(private val message: 
 }
 tasks.register<CustomTask>("myTask", "hello")
 ```
-```kotlin
-```
-```kotlin
-```
-```kotlin
-```
-```kotlin
-```
-```kotlin
-```
-```kotlin
-```
-
-@channel mbt betalen voor slack:
-ik heb antwoorden:
-we kunnen een 30 dagen gratis uitprobeer periode krijgen we moeten voor iedereen in deze workspace betalen, dus ook voor
-evt los-vast meewerkers en klanten die we aanhaken :arrow_right: dat maakt het op den duur erg duur als community tool.
-maar…. wel mogelijk: deze workspace als ons intern kanaal houden en een tweede (free-tier) workspace maken als we
-los-vast meewerkers en/of klanten krijgen die w aan willen haken, je kunt in veel workspaces tegelijk actief zijn dus
-dat werkt net zo goed. we kunnen dan wel in onze interne workspace video-vergaderen maar niet in de publieke workspace (
-nadeel is te overzien lijkt mij)
-Mijn voorstel:
-we gaan voor 7 pers betalen (=43,75 per maand) met de eerste maand gratis uitproberen. we omarmen deze slack workspace
-als ons vaste communicatie kanaal voor text- en video-contacten tzt maken we een “CDM” workspace of een “Walnoot-MUMC”
-workspace of wat dan ook, die gratis is. Wat denken jullie ervan?

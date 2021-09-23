@@ -43,8 +43,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 public class Util {
+    public static final int    NUM_CHARS_TO_SHOW_OF_SECRETS = 6;
 
-    public static final int SHOW_OF_PW = 6;
+    public static String getTestMarker(String m) {
+        return "™" + m + "™";
+    }
 
     public static URL getUrl(String url) {
         try {
@@ -195,7 +198,7 @@ public class Util {
         if (secret == null || secret.length() < 8) { // real secrets are always of length 8+ so we can show if below
             return secret;
         } else {
-            return secret.substring(0, SHOW_OF_PW) + "*".repeat(secret.length() - SHOW_OF_PW);
+            return secret.substring(0, NUM_CHARS_TO_SHOW_OF_SECRETS) + "*".repeat(secret.length() - NUM_CHARS_TO_SHOW_OF_SECRETS);
         }
     }
 }
