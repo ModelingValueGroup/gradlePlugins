@@ -19,6 +19,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
@@ -28,6 +29,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_CLASS_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_PACKAGE_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.UPLOADER_TASK_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
 import static org.modelingvalue.gradle.mvgplugin.Util.numOccurences;
 
 import java.io.File;
@@ -54,16 +56,17 @@ import org.modelingvalue.gradle.mvgplugin.GitUtil;
 import org.modelingvalue.gradle.mvgplugin.Info;
 
 public class MvgCorrectorTest {
-    private static final Path testWorkspaceDir = Paths.get("build", "testWorkspace").toAbsolutePath();
-    private static final Path settingsFile     = Paths.get("settings.gradle");
-    private static final Path buildFile        = Paths.get("build.gradle.kts");
-    private static final Path gradlePropsFile  = Paths.get("gradle.properties");
-    private static final Path yamlFile         = Paths.get(".github", "workflows", "xyz.yaml");
-    private static final Path antFile          = Paths.get("try_build.xml");
-    private static final Path headFile         = Paths.get(".git", "HEAD");
-    private static final Path javaFile         = Paths.get("src", "main", "java", "A.java");
-    private static final Path propFile         = Paths.get("src", "main", "java", "testCR.properties");
-    private static final Path pruupFile        = Paths.get("src", "main", "java", "testCRLF.pruuperties");
+    private static final boolean I_NEED_TO_DEBUG_THIS_TEST = true;
+    private static final Path    testWorkspaceDir          = Paths.get("build", "testWorkspace").toAbsolutePath();
+    private static final Path    settingsFile              = Paths.get("settings.gradle");
+    private static final Path    buildFile                 = Paths.get("build.gradle.kts");
+    private static final Path    gradlePropsFile           = Paths.get("gradle.properties");
+    private static final Path    yamlFile                  = Paths.get(".github", "workflows", "xyz.yaml");
+    private static final Path    antFile                   = Paths.get("try_build.xml");
+    private static final Path    headFile                  = Paths.get(".git", "HEAD");
+    private static final Path    javaFile                  = Paths.get("src", "main", "java", "A.java");
+    private static final Path    propFile                  = Paths.get("src", "main", "java", "testCR.properties");
+    private static final Path    pruupFile                 = Paths.get("src", "main", "java", "testCRLF.pruuperties");
 
     @Test
     public void checkId() {
@@ -94,6 +97,8 @@ public class MvgCorrectorTest {
 
     @Test
     public void checkFunctionality() throws IOException {
+        assertNotEquals("notset", Info.ALLREP_TOKEN, "this test needs the ALLREP_TOKEN to succesfully terminate");
+
         // Setup the test build
         cp(null, settingsFile, javaFile, gradlePropsFile, headFile, yamlFile, antFile);
         cp(s -> s
@@ -103,7 +108,7 @@ public class MvgCorrectorTest {
                         .replaceAll("~myMvgUploaderExtension~", UPLOADER_TASK_NAME)
                 , buildFile);
         cp(s -> s.replaceAll("\n", "\r"), propFile);
-        cp(s -> s.replaceAll("\n", "\n\r"), pruupFile);
+        cp(s -> s.replaceAll("\n", "\r\n"), pruupFile);
 
         // prepare git tags:
         GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
@@ -120,6 +125,7 @@ public class MvgCorrectorTest {
 
         Map<String, String> env = new HashMap<>(System.getenv());
         env.putIfAbsent(Info.PROP_NAME_ALLREP_TOKEN, "DRY");
+        env.putIfAbsent("TESTING", "true");
 
         // Run the build
         StringWriter outWriter = new StringWriter();
@@ -127,10 +133,13 @@ public class MvgCorrectorTest {
         String       out;
         String       err;
         try {
-            //noinspection UnstableApiUsage
-            GradleRunner.create()
-                    //.withDebug(true)            // use this     if you need to debug
-                    .withEnvironment(env)     // use this not if you need to debug
+            GradleRunner gradleRunner = GradleRunner.create();
+            if (I_NEED_TO_DEBUG_THIS_TEST) {
+                gradleRunner = gradleRunner.withDebug(true);
+            } else {
+                gradleRunner = gradleRunner.withEnvironment(env);
+            }
+            gradleRunner
                     .forwardStdOutput(outWriter)
                     .forwardStdError(errWriter)
                     .withPluginClasspath()
@@ -160,8 +169,8 @@ public class MvgCorrectorTest {
                     () -> assertEquals(5, numOccurences("+ eols   untouched   : ", out)),
                     () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
                     () -> assertEquals(1, numOccurences("+ project 'testWorkspace': version: 0.0.1 => 0.0.4, group: group => group", out)),
-                    () -> assertEquals(3, numOccurences("+ bbb: dependency     replaced: ", out)),
-                    () -> assertEquals(36, numOccurences("+ bbb: dependency NOT replaced: ", out)),
+                    () -> assertEquals(3, numOccurences(getTestMarker("r+"), out)),
+                    () -> assertEquals(41, numOccurences(getTestMarker("r-"), out)),
                     () -> assertEquals(1, numOccurences("+ adding test.useJUnitPlatform", out)),
                     () -> assertEquals(1, numOccurences("+ increasing test heap from default to 2g", out)),
                     () -> assertEquals(1, numOccurences("+ adding junit5 dependencies", out)),
@@ -183,8 +192,14 @@ public class MvgCorrectorTest {
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
-                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("\r")),
-                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("\r"))
+                    //
+                    () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\r]", "").length()),
+                    () -> assertEquals(17, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\n]", "").length()),
+                    () -> assertEquals(17, Files.readAllLines(testWorkspaceDir.resolve(propFile)).size()),
+                    //
+                    () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(pruupFile)).replaceAll("[^\r]", "").length()),
+                    () -> assertEquals(1, Files.readString(testWorkspaceDir.resolve(pruupFile)).replaceAll("[^\n]", "").length()),
+                    () -> assertEquals(2, Files.readAllLines(testWorkspaceDir.resolve(pruupFile)).size())
             );
         }
     }

@@ -15,6 +15,8 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
+
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -44,21 +46,25 @@ public class MvgBranchBasedBuilder {
     public static final String BRANCH_REASON              = "using Branch Based Building";
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
-    private final Gradle  gradle;
-    private final boolean ci;
-    private final boolean isMaster;
+    private final    Gradle                gradle;
+    private final    boolean               isCI;
+    private final    boolean               isMaster;
+    private volatile String                bbbIdCache;
+    private final    DependencyRepoManager dependencyRepoManager;
 
     public MvgBranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
 
-        ci = Info.CI;
+        isCI = Info.CI;
         isMaster = Info.isMasterBranch(gradle);
+        dependencyRepoManager = new DependencyRepoManager(gradle);
 
-        LOGGER.info("+ bbb: creating MvgBranchBasedBuilder (ci={} master={})", ci, isMaster);
-        debug_report(gradle);
+        LOGGER.info("+ bbb: creating MvgBranchBasedBuilder (ci={} master={})", isCI, isMaster);
+        TRACE.report(gradle);
 
         adjustDependencies();
-        adjustPublications(gradle);
+        adjustPublications();
+        //dependencyRepoManager.replaceDependencies("probeer.a.b.c", List.of("z.x.c", "z.x.d"));//TODO only for testing
     }
 
     private void adjustDependencies() {
@@ -84,15 +90,18 @@ public class MvgBranchBasedBuilder {
     private void checkReplacement(DependencySubstitution depSub, ModuleComponentSelector component) {
         String version = component.getVersion();
         if (version.endsWith(BRANCH_INDICATOR)) {
-            String replacement = makeBbbGroup(component.getGroup()) + ":" + makeBbbArtifact(component.getModule()) + ":" + makeBbbVersion(version.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
-            LOGGER.info("+ bbb: dependency     replaced: " + component + " => " + replacement);
+            String replacement =
+                    makeBbbGroup(component.getGroup()) + ":"
+                            + makeBbbArtifact(component.getModule()) + ":"
+                            + makeBbbVersion(version.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
+            LOGGER.info("+ bbb: {} BRANCH dependency, replaced: {} => {}", getTestMarker("r+"), component, replacement);
             depSub.useTarget(replacement, BRANCH_REASON);
         } else {
-            LOGGER.info("+ bbb: dependency NOT replaced: " + component);
+            LOGGER.info("+ bbb: {} no BRANCH dependency, kept : {}", getTestMarker("r-"), component);
         }
     }
 
-    private void adjustPublications(Gradle gradle) {
+    private void adjustPublications() {
         gradle.afterProject(p -> {
             LOGGER.info("+ bbb: running adjustPublications on project {}", p.getName());
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
@@ -100,10 +109,10 @@ public class MvgBranchBasedBuilder {
                 if (!publishing.getRepositories().isEmpty()) {
                     LOGGER.warn("The repository set for project {} is not empty; bbb will not set the proper publish repo (local-maven or github-mvg-packages). Make it empty to activate bbb publishing.", p.getName());
                 }
-                if (!(ci && isMaster)) {
+                if (!(isCI && isMaster)) {
                     makePublicationsBbb(publishing);
                 }
-                if (ci) {
+                if (isCI) {
                     publishToGitHub(publishing, isMaster);
                 } else {
                     publishToMavenLocal(publishing);
@@ -135,7 +144,7 @@ public class MvgBranchBasedBuilder {
                     mpub.setGroupId(newGroup);
                     mpub.setArtifactId(newArtifact);
                     mpub.setVersion(newVersion);
-                    debug_report(publishing);
+                    TRACE.report(publishing);
                 }
             }
         });
@@ -145,7 +154,7 @@ public class MvgBranchBasedBuilder {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
             LOGGER.info("+ bbb: adding mavenLocal publishing repo...");
             publishing.getRepositories().mavenLocal();
-            debug_report(publishing);
+            TRACE.report(publishing);
         }
     }
 
@@ -154,12 +163,12 @@ public class MvgBranchBasedBuilder {
             LOGGER.info("+ bbb: adding github publishing repo: {}", master ? "master" : "snapshots");
             Action<MavenArtifactRepository> maker = Info.getGithubMavenRepoMaker(gradle, Info.isMasterBranch(gradle));
             publishing.getRepositories().maven(maker);
-            debug_report(publishing);
+            TRACE.report(publishing);
         }
     }
 
     private String makeBbbGroup(String g) {
-        return (ci && isMaster) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
+        return (isCI && isMaster) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
     }
 
     private String makeBbbArtifact(String a) {
@@ -167,108 +176,105 @@ public class MvgBranchBasedBuilder {
     }
 
     private String makeBbbVersion(String v) {
-        return (ci && isMaster) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
+        return (isCI && isMaster) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
     }
-
-    private String bbbId;
 
     private String cachedBbbId() {
-        if (bbbId == null) {
-            String branch    = Info.getBranch(gradle);
-            int    hash      = branch.hashCode();
-            String sanatized = branch.replaceFirst("@.*", "").replaceAll("\\W", "_");
-            String part      = sanatized.substring(0, Math.min(sanatized.length(), MAX_BRANCHNAME_PART_LENGTH));
-            bbbId = String.format("%s-%08x%s", part, hash, SNAPSHOT_VERSION_POST);
+        if (bbbIdCache == null) {
+            synchronized (gradle) {
+                if (bbbIdCache == null) {
+                    String branch    = Info.getBranch(gradle);
+                    int    hash      = branch.hashCode();
+                    String sanatized = branch.replaceFirst("@.*", "").replaceAll("\\W", "_");
+                    String part      = sanatized.substring(0, Math.min(sanatized.length(), MAX_BRANCHNAME_PART_LENGTH));
+                    bbbIdCache = String.format("%s-%08x%s", part, hash, SNAPSHOT_VERSION_POST);
+                }
+            }
         }
-        return bbbId;
+        return bbbIdCache;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private void debug_report(Gradle gradle) {
-        if (LOGGER.isDebugEnabled()) {
-            gradle.allprojects(p -> {
-                PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
-                LOGGER.debug("+ bbb ---------------------------[ proj={}", p.getName());
+    private static class TRACE {
+        private static void report(Gradle gradle) {
+            if (LOGGER.isDebugEnabled()) {
+                gradle.allprojects(p -> {
+                    PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
+                    LOGGER.debug("+ bbb ---------------------------[ proj={}", p.getName());
+                    if (publishing == null) {
+                        LOGGER.debug("+      bbb publishing==null");
+                    } else {
+                        publishing.getPublications().forEach(x -> LOGGER.debug("+      bbb PUBL {}: {}", x.getName(), describe(x)));
+                        publishing.getRepositories().forEach(x -> LOGGER.debug("+      bbb REPO {}: {}", x.getName(), describe(x)));
+                    }
+                    LOGGER.debug("+ bbb ---------------------------] proj={}", p.getName());
+                });
+            }
+        }
+
+        private static void report(PublishingExtension publishing) {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("+ bbb ---------------------------[");
                 if (publishing == null) {
                     LOGGER.debug("+      bbb publishing==null");
                 } else {
-                    publishing.getPublications().forEach(x -> LOGGER.debug("+      bbb PUBL {}: {}", x.getName(), debug_describe(x)));
-                    publishing.getRepositories().forEach(x -> LOGGER.debug("+      bbb REPO {}: {}", x.getName(), debug_describe(x)));
+                    publishing.getPublications().forEach(x -> LOGGER.debug("+      bbb PUBL {}: {}", x.getName(), describe(x)));
+                    publishing.getRepositories().forEach(x -> LOGGER.debug("+      bbb REPO {}: {}", x.getName(), describe(x)));
                 }
-                LOGGER.debug("+ bbb ---------------------------] proj={}", p.getName());
-            });
-        }
-    }
-
-    private void debug_report(PublishingExtension publishing) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("+ bbb ---------------------------[");
-            if (publishing == null) {
-                LOGGER.debug("+      bbb publishing==null");
-            } else {
-                publishing.getPublications().forEach(x -> LOGGER.debug("+      bbb PUBL {}: {}", x.getName(), debug_describe(x)));
-                publishing.getRepositories().forEach(x -> LOGGER.debug("+      bbb REPO {}: {}", x.getName(), debug_describe(x)));
+                LOGGER.debug("+ bbb ---------------------------]");
             }
-            LOGGER.debug("+ bbb ---------------------------]");
         }
-    }
 
-    private void debug_report(MavenArtifactRepository mar) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("+      bbb github MavenArtifactRepository={}", debug_describe(mar));
+        private static String describe(Publication x) {
+            if (x instanceof MavenPublication) {
+                MavenPublication xx = (MavenPublication) x;
+                return xx.getGroupId() + ":" + xx.getArtifactId() + ":" + xx.getVersion();
+            } else {
+                return otherClass("publication", x);
+            }
         }
-    }
 
-    private String debug_describe(Publication x) {
-        if (x instanceof MavenPublication) {
-            MavenPublication xx = (MavenPublication) x;
-            return xx.getGroupId() + ":" + xx.getArtifactId() + ":" + xx.getVersion();
-        } else {
-            return debug_otherClass("publication", x);
+        private static String describe(ArtifactRepository x) {
+            if (x instanceof MavenArtifactRepository) {
+                return describe((MavenArtifactRepository) x);
+            } else {
+                return otherClass("artifactRepo", x);
+            }
         }
-    }
 
-    private String debug_describe(ArtifactRepository x) {
-        if (x instanceof MavenArtifactRepository) {
-            MavenArtifactRepository xx = (MavenArtifactRepository) x;
-            return debug_describe(xx);
-        } else {
-            return debug_otherClass("artifactRepo", x);
-        }
-    }
-
-    private String debug_describe(MavenArtifactRepository mar) {
-        if (mar == null) {
-            return "<null>";
-        } else {
-            String credeantials = debug_describe(mar.getCredentials());
-            String authentications = mar.getAuthentication().getAsMap().entrySet().stream().map(e -> {
-                Authentication au = e.getValue();
-                if (!(au instanceof AuthenticationInternal)) {
-                    return e.getKey() + ":" + debug_otherClass("authentication", au);
-                } else {
-                    AuthenticationInternal aui         = (AuthenticationInternal) au;
-                    Credentials            credentials = aui.getCredentials();
-                    if (!(credentials instanceof PasswordCredentials)) {
-                        return e.getKey() + ":" + aui.getName() + ":" + debug_otherClass("credentials", credentials);
+        private static String describe(MavenArtifactRepository mar) {
+            if (mar == null) {
+                return "<null>";
+            } else {
+                String credeantials = describe(mar.getCredentials());
+                String authentications = mar.getAuthentication().getAsMap().entrySet().stream().map(e -> {
+                    Authentication au = e.getValue();
+                    if (!(au instanceof AuthenticationInternal)) {
+                        return e.getKey() + ":" + otherClass("authentication", au);
                     } else {
-                        return e.getKey() + ":" + aui.getName() + ":" + debug_describe((PasswordCredentials) credentials);
+                        AuthenticationInternal aui         = (AuthenticationInternal) au;
+                        Credentials            credentials = aui.getCredentials();
+                        if (!(credentials instanceof PasswordCredentials)) {
+                            return e.getKey() + ":" + aui.getName() + ":" + otherClass("credentials", credentials);
+                        } else {
+                            return e.getKey() + ":" + aui.getName() + ":" + describe((PasswordCredentials) credentials);
+                        }
                     }
-                }
-            }).collect(Collectors.joining(", ", "Authentications[", "]"));
-            return "repo url=" + mar.getUrl() + " - " + credeantials + " - " + authentications;
+                }).collect(Collectors.joining(", ", "Authentications[", "]"));
+                return "repo url=" + mar.getUrl() + " - " + credeantials + " - " + authentications;
+            }
         }
-    }
 
-    @NotNull
-    private String debug_describe(PasswordCredentials pwcr) {
-        return pwcr.getUsername() + ":" + Util.hide(pwcr.getPassword());
-    }
+        @NotNull
+        private static String describe(PasswordCredentials pwcr) {
+            return pwcr.getUsername() + ":" + Util.hide(pwcr.getPassword());
+        }
 
-    private String debug_otherClass(String name, Object o) {
-        return name + "???" + (o == null ? "<null>" : o.getClass());
+        private static String otherClass(String name, Object o) {
+            return name + "???" + (o == null ? "<null>" : o.getClass());
+        }
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

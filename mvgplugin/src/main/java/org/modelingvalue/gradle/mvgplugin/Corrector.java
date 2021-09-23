@@ -42,13 +42,13 @@ public abstract class Corrector {
             } else {
                 String was = Files.readString(file);
                 String req = String.join("\n", lines);
-                if (0 < was.length() && was.endsWith("\n")) {
+                if (was.endsWith("\n") || was.endsWith("\r")) {
                     req += "\n";
                 }
                 if (!req.equals(was)) {
                     LOGGER.info("+ {} regenerated : {}", name, file);
                     LOGGER.debug("++ ====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
-                    Files.write(file, lines);
+                    Files.write(file, req.getBytes());
                     changedFiles.add(file);
                 } else {
                     LOGGER.info("+ {} untouched   : {}", name, file);
