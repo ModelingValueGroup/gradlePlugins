@@ -23,8 +23,8 @@ import static org.modelingvalue.gradle.mvgplugin.Info.MIN_TEST_HEAP_SIZE;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_JAVA;
-import static org.modelingvalue.gradle.mvgplugin.Info.isDevelopBranch;
-import static org.modelingvalue.gradle.mvgplugin.Info.isMasterBranch;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isDevelopBranch;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
 import java.io.IOException;
@@ -111,7 +111,7 @@ public class MvgPlugin implements Plugin<Project> {
 
 
     private void checkWorkflowFilesForLoopingDanger() {
-        Path workflowsDir = Info.getProjectDir(gradle).resolve(".github").resolve("workflows");
+        Path workflowsDir = InfoGradle.getProjectDir(gradle).resolve(".github").resolve("workflows");
         if (Files.isDirectory(workflowsDir)) {
             try {
                 AtomicBoolean errorsDetected = new AtomicBoolean();
@@ -276,8 +276,8 @@ public class MvgPlugin implements Plugin<Project> {
 
             p.getRepositories().mavenCentral();
             p.getRepositories().mavenLocal();
-            p.getRepositories().maven(Info.getGithubMavenRepoMaker(gradle, true));
-            p.getRepositories().maven(Info.getGithubMavenRepoMaker(gradle, false));
+            p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(gradle, true));
+            p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(gradle, false));
 
             p.getRepositories().forEach(r -> LOGGER.info("+   - {}", r.getName()));
         });

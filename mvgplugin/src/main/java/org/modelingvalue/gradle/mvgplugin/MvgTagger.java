@@ -18,7 +18,7 @@ package org.modelingvalue.gradle.mvgplugin;
 import static java.util.regex.Pattern.quote;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.TAG_TASK_NAME;
-import static org.modelingvalue.gradle.mvgplugin.Info.MVG_GROUP;
+import static org.modelingvalue.gradle.mvgplugin.Info.MODELING_VALUE_GROUP;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Task;
@@ -47,7 +47,7 @@ class MvgTagger {
     }
 
     private void setup(Task task) {
-        task.setGroup(MVG_GROUP);
+        task.setGroup(MODELING_VALUE_GROUP);
         task.setDescription("tag the git repo with the current version");
         task.doLast(s -> execute());
     }
@@ -58,9 +58,9 @@ class MvgTagger {
         if (tag.equals("v") || tag.equals("vnull") || tag.equals("vunspecified")) {
             LOGGER.error("mvgplugin: can not tag git with version: version of the rootProject is not set: {}", tag);
             throw new GradleException("version of the rootProject is not set");
-        } else if (Info.isMasterBranch(gradle)) {
+        } else if (InfoGradle.isMasterBranch(gradle)) {
             LOGGER.info("+ tagging this version with '{}' because this is the master branch", tag);
-            GitUtil.tag(Info.getProjectDir(gradle), tag);
+            GitUtil.tag(InfoGradle.getProjectDir(gradle), tag);
         } else {
             LOGGER.info("+ not tagging this version with '{}' because this is not the master branch", tag);
         }

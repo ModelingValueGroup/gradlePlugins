@@ -34,7 +34,6 @@ public class VersionCorrector extends Corrector {
     //
     private final        Path    root;
     private final        Project project;
-    private final        boolean forceVersionAdjustForTesting;
     private final        String  defaultGroup;
 
     public VersionCorrector(MvgCorrectorExtension ext) {
@@ -42,11 +41,6 @@ public class VersionCorrector extends Corrector {
         root = ext.getRoot();
         project = ext.getProject();
         defaultGroup = getGradleDotProperties().getFile().getParentFile().getName();
-
-        forceVersionAdjustForTesting = project.getGradle().getRootProject().getName().equals("testWorkspace");
-        if (forceVersionAdjustForTesting) {
-            LOGGER.info("+ TESTING: forceVersionAdjustForTesting is on");
-        }
     }
 
     public Set<Path> getChangedFiles() {
@@ -74,16 +68,16 @@ public class VersionCorrector extends Corrector {
     }
 
     private String adjustVersion(DotProperties props, String oldVersion) {
-        if (!forceVersionAdjustForTesting && !Info.CI) {
-            LOGGER.info("+ version not adjusted: not on CI (version stays {})", oldVersion);
-            return oldVersion;
-        } else {
+        if (Info.TESTING || Info.CI) {
             String newVersion = findVacantVersion(oldVersion);
             if (!oldVersion.equals(newVersion)) {
                 LOGGER.info("+ overwriting property {} with new version {} (was {}) in property file {}", PROP_NAME_VERSION, newVersion, oldVersion, props.getFile());
                 props.setProp(PROP_NAME_VERSION, newVersion);
             }
             return newVersion;
+        } else {
+            LOGGER.info("+ not on CI (and not TESTING): version not adjusted, version stays {}", oldVersion);
+            return oldVersion;
         }
     }
 

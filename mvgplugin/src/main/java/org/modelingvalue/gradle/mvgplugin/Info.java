@@ -16,115 +16,79 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.modelingvalue.gradle.mvgplugin.Util.envOrProp;
+import static org.modelingvalue.gradle.mvgplugin.Util.envOrPropBoolean;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
-import org.gradle.api.Action;
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 
 public interface Info {
-    String       MVG_GROUP                  = "MVG";
-    String       PLUGIN_PACKAGE_NAME        = MvgPlugin.class.getPackageName();
-    String       PLUGIN_CLASS_NAME          = MvgPlugin.class.getName();
-    String       PLUGIN_NAME                = MvgPlugin.class.getSimpleName().toLowerCase(Locale.ROOT);
-    String       CORRECTOR_TASK_NAME        = MvgCorrector.class.getSimpleName().toLowerCase(Locale.ROOT);
-    String       UPLOADER_TASK_NAME         = MvgUploader.class.getSimpleName().toLowerCase(Locale.ROOT);
-    String       TAG_TASK_NAME              = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
-    String       MPS_TASK_NAME              = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
+    String       MODELING_VALUE_GROUP         = "ModelingValueGroup";
+    String       PLUGIN_PACKAGE_NAME          = MvgPlugin.class.getPackageName();
+    String       PLUGIN_CLASS_NAME            = MvgPlugin.class.getName();
+    String       PLUGIN_NAME                  = MvgPlugin.class.getSimpleName().toLowerCase(Locale.ROOT);
+    String       CORRECTOR_TASK_NAME          = MvgCorrector.class.getSimpleName().toLowerCase(Locale.ROOT);
+    String       UPLOADER_TASK_NAME           = MvgUploader.class.getSimpleName().toLowerCase(Locale.ROOT);
+    String       TAG_TASK_NAME                = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
+    String       MPS_TASK_NAME                = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
     //
-    String       GRADLE_PROPERTIES_FILE     = "gradle.properties";
-    String       PROP_NAME_VERSION          = "version";
-    String       PROP_NAME_GROUP            = "group";
-    String       PROP_NAME_VERSION_JAVA     = "version_java";
-    String       PROP_NAME_VERSION_MPS      = "version_mps";
-    String       PROP_NAME_ALLREP_TOKEN     = "ALLREP_TOKEN";
-    String       PROP_NAME_JETBRAINS_TOKEN  = "JETBRAINS_PUBLISH_TOKEN";
-    String       PROP_NAME_CI               = "CI";
+    Logger       LOGGER                       = Logging.getLogger(PLUGIN_NAME);
+    String       GRADLE_PROPERTIES_FILE       = "gradle.properties";
+    String       PROP_NAME_VERSION            = "version";
+    String       PROP_NAME_GROUP              = "group";
+    String       PROP_NAME_VERSION_JAVA       = "version_java";
+    String       PROP_NAME_VERSION_MPS        = "version_mps";
+    String       PROP_NAME_ALLREP_TOKEN       = "ALLREP_TOKEN";
+    String       PROP_NAME_JETBRAINS_TOKEN    = "JETBRAINS_PUBLISH_TOKEN";
+    String       PROP_NAME_CI                 = "CI";
+    String       PROP_NAME_TESTING            = "TESTING";
     //
-    Logger       LOGGER                     = Logging.getLogger(PLUGIN_NAME);
-    String       NOW_STAMP                  = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmm"));
+    String       NOW_STAMP                    = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmm"));
     //
-    boolean      CI                         = Boolean.parseBoolean(envOrProp(PROP_NAME_CI, "false"));
-    String       ALLREP_TOKEN               = envOrProp(PROP_NAME_ALLREP_TOKEN, "notset");
-    String       JETBRAINS_TOKEN            = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "notset");
-    String       MASTER_BRANCH              = "master";
-    String       DEVELOP_BRANCH             = "develop";
-    String       DEFAULT_BRANCH             = "can-not-determine-branch";
-    String       GIT_HEAD_FILE              = ".git/HEAD";
-    String       GIT_HEAD_FILE_START        = "ref: refs/heads/";
-    String       NO_CI_GUARD                = "!contains(github.event.head_commit.message, '[no-ci]')";
-    String       MIN_TEST_HEAP_SIZE         = "2g";
-    String       JUNIT_VERSION              = "5.8.0";
-    String       JUNIT_GROUP_ID             = "org.junit.jupiter";
-    List<String> JUNIT_IMPLEMENTATION_DEPS  = List.of(
+    boolean      CI                           = envOrPropBoolean(PROP_NAME_CI);
+    boolean      TESTING                      = envOrPropBoolean(PROP_NAME_TESTING);
+    String       ALLREP_TOKEN                 = envOrProp(PROP_NAME_ALLREP_TOKEN, "notset");
+    String       JETBRAINS_TOKEN              = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "notset");
+    String       MASTER_BRANCH                = "master";
+    String       DEVELOP_BRANCH               = "develop";
+    String       DEFAULT_BRANCH               = "can-not-determine-branch";
+    String       GIT_CONFIG_FILE              = ".git/config";
+    String       GIT_HEAD_FILE                = ".git/HEAD";
+    String       GIT_HEAD_FILE_START          = "ref: refs/heads/";
+    String       NO_CI_GUARD                  = "!contains(github.event.head_commit.message, '[no-ci]')";
+    String       MIN_TEST_HEAP_SIZE           = "2g";
+    String       JUNIT_VERSION                = "5.8.0";
+    String       JUNIT_GROUP_ID               = "org.junit.jupiter";
+    List<String> JUNIT_IMPLEMENTATION_DEPS    = List.of(
             JUNIT_GROUP_ID + ":junit-jupiter-api:" + JUNIT_VERSION,
             JUNIT_GROUP_ID + ":junit-jupiter-params:" + JUNIT_VERSION
     );
-    List<String> JUNIT_RUNTIMEONLY_DEPS     = List.of(
+    List<String> JUNIT_RUNTIMEONLY_DEPS       = List.of(
             JUNIT_GROUP_ID + ":junit-jupiter-engine:" + JUNIT_VERSION
     );
     //
-    String       PLUGIN_META_URL            = "https://plugins.gradle.org/m2/gradle/plugin/" + MvgPlugin.class.getPackageName().replace('.', '/') + "/maven-metadata.xml";
-    String       JETBRAINS_UPLOAD_URL       = "https://plugins.jetbrains.com/plugin/uploadPlugin";
-    String       MVG_MAVEN_REPO_BASE_URL    = "https://maven.pkg.github.com/ModelingValueGroup/";
-    String       MVG_REPO_BASE_URL          = "https://github.com/ModelingValueGroup/";
-    String       PACKAGES_SNAPSHOTS         = "packages-snapshots";
-    String       MVG_DEPENDENCIES_REPO_NAME = "dependencies";
-    String       MVG_DEPENDENCIES_REPO      = MVG_REPO_BASE_URL + MVG_DEPENDENCIES_REPO_NAME + ".git";
+    String       PLUGIN_META_URL              = "https://plugins.gradle.org/m2/gradle/plugin/" + MvgPlugin.class.getPackageName().replace('.', '/') + "/maven-metadata.xml";
+    String       JETBRAINS_UPLOAD_URL         = "https://plugins.jetbrains.com/plugin/uploadPlugin";
+    String       MVG_MAVEN_REPO_BASE_URL      = "https://maven.pkg.github.com/" + MODELING_VALUE_GROUP + "/";
+    String       MVG_REPO_BASE_URL            = "https://github.com/" + MODELING_VALUE_GROUP + "/";
+    String       PACKAGES_SNAPSHOTS_REPO_NAME = "packages-snapshots";
+    String       MVG_DEPENDENCIES_REPO_NAME   = "dependencies";
+    String       PACKAGES_SNAPSHOTS_REPO      = MVG_REPO_BASE_URL + PACKAGES_SNAPSHOTS_REPO_NAME + ".git";
+    String       MVG_DEPENDENCIES_REPO        = MVG_REPO_BASE_URL + MVG_DEPENDENCIES_REPO_NAME + ".git";
+    String       HOSTNAME                     = getHostname();
 
-    static Action<MavenArtifactRepository> getGithubMavenRepoMaker(Gradle gradle, boolean isMaster) {
-        String name = isMaster ? getProjectDir(gradle).getFileName().toString() : PACKAGES_SNAPSHOTS;
-        String url  = MVG_MAVEN_REPO_BASE_URL + name;
-        return mar -> {
-            mar.setUrl(url);
-            mar.setName(name);
-            mar.credentials(c -> {
-                c.setUsername("");
-                c.setPassword(ALLREP_TOKEN);
-            });
-            LOGGER.info("+ REPOMAKER created maven repo: name={} url={} pw={}", name, url, Util.hide(ALLREP_TOKEN));
-        };
-    }
-
-    static boolean isMasterBranch(Gradle gradle) {
-        return getBranch(gradle).equals(MASTER_BRANCH);
-    }
-
-    static boolean isDevelopBranch(Gradle gradle) {
-        return getBranch(gradle).equals(DEVELOP_BRANCH);
-    }
-
-    static <T> T selectMasterDevelopElse(Gradle gradle, T master, T develop, T other) {
-        return isMasterBranch(gradle) ? master : isDevelopBranch(gradle) ? develop : other;
-    }
-
-    static String getBranch(Gradle gradle) {
-        Path headFile = getProjectDir(gradle).resolve(GIT_HEAD_FILE).toAbsolutePath();
-        if (Files.isRegularFile(headFile)) {
-            try {
-                List<String> lines = Files.readAllLines(headFile);
-                if (!lines.isEmpty() && lines.get(0).startsWith(GIT_HEAD_FILE_START)) {
-                    return lines.get(0).replaceFirst("^" + Pattern.quote(GIT_HEAD_FILE_START), "");
-                }
-            } catch (IOException e) {
-                LOGGER.warn("could not read " + headFile + " to determine git-branch", e);
-            }
+    static private String getHostname() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            return "UNKNOWN_HOSTNAME";
         }
-        LOGGER.warn("could not determine git branch (because {} not found), assuming branch '{}'", headFile, DEFAULT_BRANCH);
-        return DEFAULT_BRANCH;
-    }
-
-    static Path getProjectDir(Gradle gradle) {
-        return gradle.getRootProject().getRootDir().toPath().toAbsolutePath();
     }
 }
+

@@ -29,7 +29,7 @@ public class BranchParameterNames {
     private static BranchParameterNames instance;
 
     public static void init(Gradle gradle) {
-        init(Info.getBranch(gradle));
+        init(InfoGradle.getBranch(gradle));
     }
 
     public static void init(String branchName) { // separated out for testing purposes
