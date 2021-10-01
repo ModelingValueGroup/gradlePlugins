@@ -23,20 +23,17 @@ import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand.ListMode;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.util.FileUtils;
 import org.gradle.api.invocation.Gradle;
@@ -50,20 +47,20 @@ import org.jetbrains.annotations.NotNull;
  * if the following dependencies exist:
  * <pre>
  *  <B>gh-app</B> produces <B>some-application</B>
- *  <B>gh-lib</B> produces <B>test.a.b.c.lib</B>
+ *  <B>gh-lib</B> produces <B>test.ab.c.lib</B>
  *  <B>gh-bas</B> produces <B>test.base.lib</B>
  *
- *  <B>gh-app</B> uses <B>test.a.b.c.lib</B>
- *  <B>gh-app</B> uses <B>test.q.w.e.lib</B>
+ *  <B>gh-app</B> uses <B>test.ab.c.lib</B>
+ *  <B>gh-app</B> uses <B>test.qw.e.lib</B>
  *  <B>gh-lib</B> uses <B>test.base.lib</B>
- *  <B>gh-lib</B> uses <B>test.q.w.e.lib</B>
+ *  <B>gh-lib</B> uses <B>test.qw.e.lib</B>
  * </pre>
  * then the following files are created in the <B>dependencies</B> repo on the same branch as the underlaying project:
  * <pre>
- * <B>test/a/b/c/lib/gh-app.trigger</B>
+ * <B>test/ab/c/lib/gh-app.trigger</B>
  * <B>test/base/lib/gh-lib.trigger</B>
- * <B>test/q/w/e/lib/gh-app.trigger</B>
- * <B>test/q/w/e/lib/gh-lib.trigger</B>
+ * <B>test/qw/e/lib/gh-app.trigger</B>
+ * <B>test/qw/e/lib/gh-lib.trigger</B>
  * </pre>
  * All files are empty files.
  */
@@ -87,10 +84,9 @@ public class DependenciesRepoManager {
         saveDependencies(repoName, packages);
     }
 
-    public void trigger() {
+    public void trigger(Set<String> publications) {
         try {
-            List<String> triggers = getTriggers(repoName);
-            triggers.forEach(repo -> {
+            getTriggers(publications).forEach(repo -> {
                 LOGGER.info("TRIGGER repo '{}' on branch '{}'", repo, branch);
                 //TODO find out how to trigger
             });
@@ -208,19 +204,27 @@ public class DependenciesRepoManager {
     }
 
     private void pushDependenciesRepo() throws GitAPIException, IOException {
-        GitUtil.push(git, Set.of(Paths.get(".")), "dependencies determined by build at " + Info.NOW_STAMP + " on " + Info.HOSTNAME);
+        GitUtil.addCommitPush(git, "dependencies determined by build at " + Info.NOW_STAMP + " on " + Info.HOSTNAME);
     }
 
-    private List<String> getTriggers(String pack) throws IOException {
+    private Stream<String> getTriggers(Set<String> publications) throws IOException {
+        return publications.stream().flatMap(this::getTriggers).distinct();
+    }
+
+    private Stream<String> getTriggers(String pack) {
         Path path = getTriggerDirFor(pack);
-        return !Files.isDirectory(path)
-                ? new ArrayList<>()
-                : Files.list(path)
-                .filter(Files::isRegularFile)
-                .map(p -> p.getFileName().toString())
-                .filter(n -> n.endsWith(TRIGGER_EXT))
-                .map(n -> n.replaceFirst(Pattern.quote(TRIGGER_EXT) + "$", ""))
-                .collect(Collectors.toList());
+        try {
+            return !Files.isDirectory(path)
+                    ? Stream.empty()
+                    : Files.list(path)
+                    .filter(Files::isRegularFile)
+                    .map(p -> p.getFileName().toString())
+                    .filter(n -> n.endsWith(TRIGGER_EXT))
+                    .map(n -> n.replaceFirst(Pattern.quote(TRIGGER_EXT) + "$", ""))
+                    .distinct();
+        } catch (IOException e) {
+            throw new Error("could not list directory " + path, e);
+        }
     }
 
     private Path getTriggerDirFor(String pack) {
@@ -239,18 +243,14 @@ public class DependenciesRepoManager {
     public void test() {
         if (active) {
             try {
-                List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
-                branches.forEach(r -> LOGGER.info("TOMTOMTOM branch {} ({})", r.getName(), r.getStorage()));
+                saveDependencies("gh-app", Set.of("test.ab.c.lib", "test.qw.e.lib"));
+                saveDependencies("gh-lib", Set.of("test.base.lib", "test.qw.e.lib"));
 
-                saveDependencies("gh-app", Set.of("test.a.b.c.lib", "test.q.w.e.lib"));
-                saveDependencies("gh-lib", Set.of("test.base.lib", "test.q.w.e.lib"));
-
-                for (String pack : List.of("test.a.b.c.lib", "test.q.w.e.lib", "test.base.lib")) {
-                    List<String> triggers = getTriggers(pack);
-                    triggers.forEach(s -> LOGGER.info("TOMTOMTOM {} --trig--> {}", pack, s));
+                for (String pack : List.of("test.ab.c.lib", "test.qw.e.lib", "test.base.lib")) {
+                    getTriggers(pack).forEach(s -> LOGGER.info("TESTING: {} --trig--> {}", pack, s));
                 }
             } catch (Exception e) {
-                throw new Error("TOMTOMTOM unable to test DependenciesManager", e);
+                throw new Error("TESTING: unable to test DependenciesManager", e);
             }
         }
     }

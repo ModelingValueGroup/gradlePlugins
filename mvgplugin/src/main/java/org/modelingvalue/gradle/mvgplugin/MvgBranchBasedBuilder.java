@@ -25,20 +25,17 @@ import java.util.stream.Collectors;
 import org.gradle.BuildAdapter;
 import org.gradle.BuildResult;
 import org.gradle.api.Action;
-import org.gradle.api.Task;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.artifacts.repositories.PasswordCredentials;
 import org.gradle.api.credentials.Credentials;
-import org.gradle.api.execution.TaskExecutionListener;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.publish.Publication;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
-import org.gradle.api.tasks.TaskState;
 import org.gradle.authentication.Authentication;
 import org.gradle.internal.authentication.AuthenticationInternal;
 import org.jetbrains.annotations.NotNull;
@@ -57,6 +54,7 @@ public class MvgBranchBasedBuilder {
     private final    boolean     isMaster;
     private volatile String      bbbIdCache;
     private final    Set<String> dependencies = new HashSet<>();
+    private final    Set<String> publications = new HashSet<>();
 
     public MvgBranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
@@ -75,26 +73,15 @@ public class MvgBranchBasedBuilder {
             public void buildFinished(BuildResult result) {
                 if (result.getFailure() == null) {
                     DependenciesRepoManager dependencyRepoManager = new DependenciesRepoManager(gradle);
-                    dependencyRepoManager.test();
                     dependencyRepoManager.saveDependencies(dependencies);
-                    dependencyRepoManager.trigger();
+                    dependencyRepoManager.trigger(publications);
+                    if (Info.TESTING) {
+                        dependencyRepoManager.test();
+                    }
+
                 }
             }
         });
-
-        if (Info.TESTING) {
-            gradle.addListener(new TaskExecutionListener() {
-                @Override
-                public void beforeExecute(Task task) {
-                    LOGGER.info("~#~#~#~#~#~#~ >>>>> " + task.getName());
-                }
-
-                @Override
-                public void afterExecute(Task task, TaskState state) {
-                    LOGGER.info("~#~#~#~#~#~#~ <<<<< {} => didWork={}", task.getName(), state.getDidWork());
-                }
-            });
-        }
     }
 
     private void adjustDependencies() {
@@ -177,6 +164,8 @@ public class MvgBranchBasedBuilder {
                     mpub.setArtifactId(newArtifact);
                     mpub.setVersion(newVersion);
                     TRACE.report(publishing);
+
+                    publications.add(oldGroup + "." + oldArtifact);
                 }
             }
         });

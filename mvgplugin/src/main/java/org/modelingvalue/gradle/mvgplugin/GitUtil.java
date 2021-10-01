@@ -26,10 +26,10 @@ import java.util.stream.Collectors;
 
 import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.TransportException;
-import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
@@ -67,9 +67,9 @@ public class GitUtil {
         return calcWithGit(root, git -> git.getRepository().getBranch());
     }
 
-    public static void push(Path root, Set<Path> changes, String message) {
+    public static void addCommitPush(Path root, String message) {
         calcWithGit(root, git -> {
-            push(git, changes, message);
+            addCommitPush(git, message);
             return null;
         });
     }
@@ -88,20 +88,28 @@ public class GitUtil {
         });
     }
 
-    public static void push(Git git, Set<Path> changes, String message) throws GitAPIException, IOException {
-        doAdd(git, changes);
-        Status status = git.status().call();
-        status.getAdded().forEach(e -> LOGGER.info(/*             */" ## added      {}", e));
-        status.getChanged().forEach(e -> LOGGER.info(/*           */" ## changed    {}", e));
-        status.getModified().forEach(e -> LOGGER.info(/*          */" ## modified   {}", e));
-        status.getRemoved().forEach(e -> LOGGER.info(/*           */" ## removed    {}", e));
-        status.getMissing().forEach(e -> LOGGER.info(/*           */" ## missing    {}", e));
-        status.getUncommittedChanges().forEach(e -> LOGGER.info(/**/" ##                        uncommited {}", e));
-        LOGGER.info("+ need to push {} changes to dependencies repo", status.getUncommittedChanges().size());
-        if (!status.getUncommittedChanges().isEmpty()) {
+    public static void addCommitPush(Git git, String message) throws GitAPIException, IOException {
+        doAdd(git);
+        if (!statusVerbose(git, "after add, before push").getUncommittedChanges().isEmpty()) {
             doCommit(git, message);
             doPush(git);
         }
+    }
+
+    public static Status statusVerbose(Git git, String traceMessage) throws GitAPIException {
+        Status status = git.status().call();
+
+        LOGGER.info(" ##### git status @{}", traceMessage);
+        traceStatusClass(status.getAdded(), "added");
+        traceStatusClass(status.getChanged(), "changed");
+        traceStatusClass(status.getModified(), "modified");
+        traceStatusClass(status.getRemoved(), "removed");
+        traceStatusClass(status.getMissing(), "missing");
+        traceStatusClass(status.getUncommittedChanges(), "uncommited");
+        traceStatusClass(status.getUntracked(), "untracked");
+        traceStatusClass(status.getUntrackedFolders(), "untrackedFolders");
+
+        return status;
     }
 
     public static void tag(Git git, String tag) throws GitAPIException {
@@ -141,19 +149,30 @@ public class GitUtil {
         }
     }
 
-    private static void doAdd(Git git, Set<Path> changes) throws GitAPIException, IOException {
+    private static void doAdd(Git git) throws GitAPIException, IOException {
         Path   root   = git.getRepository().getDirectory().toPath().toAbsolutePath();
         String branch = git.getRepository().getBranch();
-        LOGGER.info("+ add {} files under {} to branch '{}'", changes.size(), root, branch);
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("++ added files:");
-            changes.forEach(x -> LOGGER.debug("++  - {}", x));
+        Status status = statusVerbose(git, "for add");
+
+        LOGGER.info("++ git staging changes: dir={} branch={}", root, branch);
+
+        if (!status.getModified().isEmpty() || !status.getUntracked().isEmpty()) {
+            AddCommand addCommand = git.add();
+            for (String s : status.getModified()) {
+                addCommand.addFilepattern(s);
+            }
+            for (String s : status.getUntracked()) {
+                addCommand.addFilepattern(s);
+            }
+            addCommand.call();
         }
-        AddCommand add = git.add();
-        for (Path f : changes) {
-            add.addFilepattern(f.toString());
+        if (!status.getMissing().isEmpty()) {
+            RmCommand  remCommand = git.rm();
+            for (String s : status.getMissing()) {
+                remCommand.addFilepattern(s);
+            }
+            remCommand.call();
         }
-        DirCache call = add.call();
     }
 
     private static void doCommit(Git git, String message) throws GitAPIException {
@@ -214,6 +233,15 @@ public class GitUtil {
                 pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ remote update     - {}", x));
                 pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ tracking update   - {}", x));
             });
+        }
+    }
+
+    private static void traceStatusClass(Set<String> set, String name) {
+        String name_ = String.format("%16s", name);
+        if (set.isEmpty()) {
+            LOGGER.info(" ## {}: NONE", name_);
+        } else {
+            set.stream().sorted().forEach(e -> LOGGER.info(" ## {}: {}", name_, e));
         }
     }
 }
