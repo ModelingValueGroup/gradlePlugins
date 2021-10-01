@@ -93,6 +93,10 @@ public class Util {
         return line;
     }
 
+    public static boolean envOrPropBoolean(String name) {
+        return Boolean.parseBoolean(envOrProp(name,"false"));
+    }
+
     public static String envOrProp(String name, String def) {
         String value = elvis(GradleDotProperties.getGradleDotProperties().getProp(name),
                 () -> elvis(getSystemProperty(name),

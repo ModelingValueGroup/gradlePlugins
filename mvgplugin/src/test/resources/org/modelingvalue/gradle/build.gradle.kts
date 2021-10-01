@@ -5,6 +5,7 @@ plugins {
 }
 dependencies {
     implementation("demo-lib:lib:3.0.52-BRANCHED")
+    implementation("org.modelingvalue:sync-proxy:0.0.0-BRANCHED")
 
     implementation(mpsJar("mps-core"))
     implementation(mpsJar("closures.runtime.jar"))
@@ -16,4 +17,12 @@ dependencies {
 `~myMvgUploaderExtension~` {
     pluginId = "DRY"
     hubToken = "DRY"
+}
+publishing {
+    publications {
+        create<MavenPublication>("test-publication") {
+            from(components["java"])
+
+        }
+    }
 }

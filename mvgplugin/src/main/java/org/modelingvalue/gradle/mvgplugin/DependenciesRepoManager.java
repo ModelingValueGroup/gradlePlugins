@@ -1,0 +1,257 @@
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+//                                                                                                                     ~
+// Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
+// compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
+// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on ~
+// an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the  ~
+// specific language governing permissions and limitations under the License.                                          ~
+//                                                                                                                     ~
+// Maintainers:                                                                                                        ~
+//     Wim Bast, Tom Brus, Ronald Krijgsheld                                                                           ~
+// Contributors:                                                                                                       ~
+//     Arjan Kok, Carel Bast                                                                                           ~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+package org.modelingvalue.gradle.mvgplugin;
+
+import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO;
+import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO_NAME;
+
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand.ListMode;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.util.FileUtils;
+import org.gradle.api.invocation.Gradle;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * keeps a repo with dependencies.
+ * <p>
+ * repo contents:
+ * <p>
+ * if the following dependencies exist:
+ * <pre>
+ *  <B>gh-app</B> produces <B>some-application</B>
+ *  <B>gh-lib</B> produces <B>test.a.b.c.lib</B>
+ *  <B>gh-bas</B> produces <B>test.base.lib</B>
+ *
+ *  <B>gh-app</B> uses <B>test.a.b.c.lib</B>
+ *  <B>gh-app</B> uses <B>test.q.w.e.lib</B>
+ *  <B>gh-lib</B> uses <B>test.base.lib</B>
+ *  <B>gh-lib</B> uses <B>test.q.w.e.lib</B>
+ * </pre>
+ * then the following files are created in the <B>dependencies</B> repo on the same branch as the underlaying project:
+ * <pre>
+ * <B>test/a/b/c/lib/gh-app.trigger</B>
+ * <B>test/base/lib/gh-lib.trigger</B>
+ * <B>test/q/w/e/lib/gh-app.trigger</B>
+ * <B>test/q/w/e/lib/gh-lib.trigger</B>
+ * </pre>
+ * All files are empty files.
+ */
+public class DependenciesRepoManager {
+    private static final String  TRIGGER_EXT = ".trigger";
+    private final        String  repoName;
+    private final        String  branch;
+    private final        boolean active;
+    private final        Path    dependenciesRepoDir;
+    private final        Git     git;
+
+    public DependenciesRepoManager(Gradle gradle) {
+        repoName = InfoGradle.getRepoName(gradle);
+        branch = InfoGradle.getBranch(gradle);
+        active = InfoGradle.isMvgRepo(gradle) && (Info.CI || Info.TESTING);
+        dependenciesRepoDir = gradle.getRootProject().getBuildDir().toPath().resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath();
+        git = active ? cloneDependenciesRepo(dependenciesRepoDir, InfoGradle.getBranch(gradle)) : null;
+    }
+
+    public void saveDependencies(Set<String> packages) {
+        saveDependencies(repoName, packages);
+    }
+
+    public void trigger() {
+        try {
+            List<String> triggers = getTriggers(repoName);
+            triggers.forEach(repo -> {
+                LOGGER.info("TRIGGER repo '{}' on branch '{}'", repo, branch);
+                //TODO find out how to trigger
+            });
+        } catch (IOException e) {
+            LOGGER.warn("triggers could not be retrieved", e);
+        }
+    }
+
+    /**
+     * <H3>Clone the dependencies repo</H3>
+     * <p>
+     * It is not very efficient to clone the dep-repo every time, but since this is only done in CI and the CI only does a one-shot it does not hurt.
+     * If the dir already exists (can only be during testing) it is first completely removed.
+     * </p>
+     * <p>
+     * The repo is returned in the same branch as the repo gradle is called from.
+     * </p>
+     *
+     * @param dependenciesRepoDir the dir to clone the repo in
+     * @param branch              the branch to clone the repo in
+     * @return the Git object to manipulate the git repo
+     */
+    private static Git cloneDependenciesRepo(Path dependenciesRepoDir, String branch) {
+        long t0 = System.currentTimeMillis();
+        try {
+            if (Files.isDirectory(dependenciesRepoDir)) {
+                // will normally not happen in CI, but can happen in testing
+                LOGGER.info("+ bbb: deleting old dependencies repo at {}", dependenciesRepoDir);
+                FileUtils.delete(dependenciesRepoDir.toFile(), FileUtils.RECURSIVE);
+            }
+            LOGGER.info("+ bbb: cloning dependencies repo {} branch {} in {}", MVG_DEPENDENCIES_REPO_NAME, branch, dependenciesRepoDir);
+            Git git = Git.cloneRepository()
+                    .setURI(MVG_DEPENDENCIES_REPO)
+                    .setDirectory(dependenciesRepoDir.toFile())
+                    .call();
+            if (git.branchList().setListMode(ListMode.REMOTE).call().stream().anyMatch(ref -> ref.getName().endsWith("/" + branch))) {
+                git.checkout()
+                        .setName(branch)
+                        .setCreateBranch(true)
+                        .setUpstreamMode(SetupUpstreamMode.TRACK)
+                        .setStartPoint("origin/" + branch)
+                        .call();
+            } else {
+                git.branchCreate()
+                        .setName(branch)
+                        .call();
+                git.push()
+                        .setCredentialsProvider(GitUtil.getCredentialProvider())
+                        .setRemote("origin")
+                        .setRefSpecs(new RefSpec(branch + ":" + branch))
+                        .call();
+                git.branchCreate()
+                        .setName(branch)
+                        .setUpstreamMode(SetupUpstreamMode.SET_UPSTREAM)
+                        .setStartPoint("origin/" + branch)
+                        .setForce(true)
+                        .call();
+                git.checkout()
+                        .setName(branch)
+                        .setUpstreamMode(SetupUpstreamMode.TRACK)
+                        .setStartPoint("origin/" + branch)
+                        .call();
+            }
+            return git;
+        } catch (GitAPIException | IOException e) {
+            LOGGER.error("+ bbb: problem with dependencies repo", e);
+            return null;
+        } finally {
+            LOGGER.info("+ bbb: dependencies repo done ({} ms)", System.currentTimeMillis() - t0);
+        }
+    }
+
+    void saveDependencies(String repo, Set<String> usedPackages) {
+        if (active) {
+            try {
+                clearExistingDependencies(repo);
+                writeDependencies(repo, usedPackages);
+                pushDependenciesRepo();
+            } catch (IOException | GitAPIException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void clearExistingDependencies(String repo) throws IOException {
+        if (Files.isDirectory(dependenciesRepoDir)) {
+            Files.walkFileTree(dependenciesRepoDir, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                    if (dir.getFileName().toString().equals(".git")) {
+                        return FileVisitResult.SKIP_SUBTREE;
+                    }
+                    Path file = getTriggerFile(dir, repo);
+                    if (Files.isRegularFile(file)) {
+                        LOGGER.info("+ bbb: deleting obsolete trigger file: {}", file);
+                        Files.delete(file);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+    }
+
+    private void writeDependencies(String repo, Set<String> usedPackages) {
+        usedPackages.forEach(usedPackage -> {
+            try {
+                Path triggerFile = getTriggerFile(repo, usedPackage);
+                LOGGER.info("+ bbb: creating          trigger file: " + triggerFile);
+                Files.createDirectories(triggerFile.getParent());
+                Files.createFile(triggerFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void pushDependenciesRepo() throws GitAPIException, IOException {
+        GitUtil.push(git, Set.of(Paths.get(".")), "dependencies determined by build at " + Info.NOW_STAMP + " on " + Info.HOSTNAME);
+    }
+
+    private List<String> getTriggers(String pack) throws IOException {
+        Path path = getTriggerDirFor(pack);
+        return !Files.isDirectory(path)
+                ? new ArrayList<>()
+                : Files.list(path)
+                .filter(Files::isRegularFile)
+                .map(p -> p.getFileName().toString())
+                .filter(n -> n.endsWith(TRIGGER_EXT))
+                .map(n -> n.replaceFirst(Pattern.quote(TRIGGER_EXT) + "$", ""))
+                .collect(Collectors.toList());
+    }
+
+    private Path getTriggerDirFor(String pack) {
+        return dependenciesRepoDir.resolve(pack.replace('.', '/'));
+    }
+
+    private Path getTriggerFile(String repo, String pack) {
+        return getTriggerFile(getTriggerDirFor(pack), repo);
+    }
+
+    @NotNull
+    private Path getTriggerFile(Path d, String repo) {
+        return d.resolve(repo + TRIGGER_EXT);
+    }
+
+    public void test() {
+        if (active) {
+            try {
+                List<Ref> branches = git.branchList().setListMode(ListMode.ALL).call();
+                branches.forEach(r -> LOGGER.info("TOMTOMTOM branch {} ({})", r.getName(), r.getStorage()));
+
+                saveDependencies("gh-app", Set.of("test.a.b.c.lib", "test.q.w.e.lib"));
+                saveDependencies("gh-lib", Set.of("test.base.lib", "test.q.w.e.lib"));
+
+                for (String pack : List.of("test.a.b.c.lib", "test.q.w.e.lib", "test.base.lib")) {
+                    List<String> triggers = getTriggers(pack);
+                    triggers.forEach(s -> LOGGER.info("TOMTOMTOM {} --trig--> {}", pack, s));
+                }
+            } catch (Exception e) {
+                throw new Error("TOMTOMTOM unable to test DependenciesManager", e);
+            }
+        }
+    }
+}

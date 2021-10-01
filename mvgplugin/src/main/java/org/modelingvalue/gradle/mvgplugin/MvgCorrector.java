@@ -20,7 +20,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
-import static org.modelingvalue.gradle.mvgplugin.Info.MVG_GROUP;
+import static org.modelingvalue.gradle.mvgplugin.Info.MODELING_VALUE_GROUP;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -85,7 +85,7 @@ class MvgCorrector {
     }
 
     private void setup(Task task) {
-        task.setGroup(MVG_GROUP);
+        task.setGroup(MODELING_VALUE_GROUP);
         task.setDescription("correct various sources (version, headers, eols) and push to git");
         task.doLast(s -> execute());
     }

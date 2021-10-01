@@ -15,6 +15,8 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -24,8 +26,10 @@ import java.util.stream.Collectors;
 
 import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.TransportException;
+import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
@@ -47,6 +51,14 @@ public class GitUtil {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public static PersonIdent getAutomationIdent() {
+        return AUTOMATION_IDENT;
+    }
+
+    public static CredentialsProvider getCredentialProvider() {
+        return CREDENTIALS_PROV;
+    }
+
     public static List<String> getAllTags(Path root) {
         return calcWithGit(root, GitUtil::doListTags);
     }
@@ -57,27 +69,49 @@ public class GitUtil {
 
     public static void push(Path root, Set<Path> changes, String message) {
         calcWithGit(root, git -> {
-            doAdd(git, changes);
-            doCommit(git, message);
-            doPush(git);
+            push(git, changes, message);
             return null;
         });
     }
 
     public static void tag(Path root, String tag) {
         calcWithGit(root, git -> {
-            doTag(git, tag);
-            doPushTags(git);
+            tag(git, tag);
             return null;
         });
     }
 
     public static void untag(Path root, String... tags) {
         calcWithGit(root, git -> {
-            doDeleteTag(git, tags);
-            doPushTags(git);
+            untag(git, tags);
             return null;
         });
+    }
+
+    public static void push(Git git, Set<Path> changes, String message) throws GitAPIException, IOException {
+        doAdd(git, changes);
+        Status status = git.status().call();
+        status.getAdded().forEach(e -> LOGGER.info(/*             */" ## added      {}", e));
+        status.getChanged().forEach(e -> LOGGER.info(/*           */" ## changed    {}", e));
+        status.getModified().forEach(e -> LOGGER.info(/*          */" ## modified   {}", e));
+        status.getRemoved().forEach(e -> LOGGER.info(/*           */" ## removed    {}", e));
+        status.getMissing().forEach(e -> LOGGER.info(/*           */" ## missing    {}", e));
+        status.getUncommittedChanges().forEach(e -> LOGGER.info(/**/" ##                        uncommited {}", e));
+        LOGGER.info("+ need to push {} changes to dependencies repo", status.getUncommittedChanges().size());
+        if (!status.getUncommittedChanges().isEmpty()) {
+            doCommit(git, message);
+            doPush(git);
+        }
+    }
+
+    public static void tag(Git git, String tag) throws GitAPIException {
+        doTag(git, tag);
+        doPushTags(git);
+    }
+
+    public static void untag(Git git, String[] tags) throws GitAPIException {
+        doDeleteTag(git, tags);
+        doPushTags(git);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,25 +144,27 @@ public class GitUtil {
     private static void doAdd(Git git, Set<Path> changes) throws GitAPIException, IOException {
         Path   root   = git.getRepository().getDirectory().toPath().toAbsolutePath();
         String branch = git.getRepository().getBranch();
-        Info.LOGGER.info("+ add {} files under {} to branch '{}'", changes.size(), root, branch);
-        if (Info.LOGGER.isDebugEnabled()) {
-            Info.LOGGER.debug("++ added files:");
-            changes.forEach(x -> Info.LOGGER.debug("++  - {}", x));
+        LOGGER.info("+ add {} files under {} to branch '{}'", changes.size(), root, branch);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("++ added files:");
+            changes.forEach(x -> LOGGER.debug("++  - {}", x));
         }
         AddCommand add = git.add();
-        changes.forEach(f -> add.addFilepattern(f.toString()));
-        add.call();
+        for (Path f : changes) {
+            add.addFilepattern(f.toString());
+        }
+        DirCache call = add.call();
     }
 
     private static void doCommit(Git git, String message) throws GitAPIException {
-        Info.LOGGER.info("+ commit with message '{}'", message);
+        LOGGER.info("+ commit with message '{}'", message);
         RevCommit rc = git
                 .commit()
                 .setAuthor(AUTOMATION_IDENT)
                 .setCommitter(AUTOMATION_IDENT)
                 .setMessage(message)
                 .call();
-        Info.LOGGER.info("+ commit result: {}", rc);
+        LOGGER.info("+ commit result: {}", rc);
     }
 
     private static List<String> doListTags(Git git) throws GitAPIException {
@@ -140,20 +176,20 @@ public class GitUtil {
     }
 
     private static void doTag(Git git, String tag) throws GitAPIException {
-        Info.LOGGER.info("+ tagging with '{}'", tag);
+        LOGGER.info("+ tagging with '{}'", tag);
         Ref ref = git.tag()
                 .setName(tag)
                 .setForceUpdate(true)
                 .call();
-        Info.LOGGER.info("+ added tag '{}', id={}", tag, ref.getObjectId());
+        LOGGER.info("+ added tag '{}', id={}", tag, ref.getObjectId());
     }
 
     private static void doDeleteTag(Git git, String... tags) throws GitAPIException {
-        Info.LOGGER.info("+ delete tags: {}", Arrays.asList(tags));
+        LOGGER.info("+ delete tags: {}", Arrays.asList(tags));
         List<String> l = git.tagDelete()
                 .setTags(tags)
                 .call();
-        Info.LOGGER.info("+ deleted tags {}", l);
+        LOGGER.info("+ deleted tags {}", l);
     }
 
     private static void doPush(Git git) throws GitAPIException {
@@ -165,18 +201,18 @@ public class GitUtil {
     }
 
     private static void doPush(Git git, boolean withTags) throws GitAPIException {
-        Info.LOGGER.info("+ {}push", DRY_RUN ? "[dry] " : "");
+        LOGGER.info("+ {}push", DRY_RUN ? "[dry] " : "");
         Iterable<PushResult> result =
                 (withTags ? git.push().setPushTags() : git.push())
                         .setDryRun(DRY_RUN)
                         .setCredentialsProvider(CREDENTIALS_PROV)
                         .setProgressMonitor(PROGRESS_MONITOR)
                         .call();
-        if (Info.LOGGER.isInfoEnabled()) {
+        if (LOGGER.isInfoEnabled()) {
             result.forEach(pr -> {
-                Info.LOGGER.info("+ push result  : {}", pr.getMessages());
-                pr.getRemoteUpdates().forEach(x -> Info.LOGGER.info("+ remote update     - {}", x));
-                pr.getTrackingRefUpdates().forEach(x -> Info.LOGGER.info("+ tracking update   - {}", x));
+                LOGGER.info("+ push result  : {}", pr.getMessages());
+                pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ remote update     - {}", x));
+                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ tracking update   - {}", x));
             });
         }
     }

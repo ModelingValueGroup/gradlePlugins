@@ -20,7 +20,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
 import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.NOW_STAMP;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_MPS;
-import static org.modelingvalue.gradle.mvgplugin.Info.selectMasterDevelopElse;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.selectMasterDevelopElse;
 
 import java.io.File;
 

@@ -64,6 +64,7 @@ public class MvgCorrectorTest {
     private static final Path    yamlFile                  = Paths.get(".github", "workflows", "xyz.yaml");
     private static final Path    antFile                   = Paths.get("try_build.xml");
     private static final Path    headFile                  = Paths.get(".git", "HEAD");
+    private static final Path    configFile                = Paths.get(".git", "config");
     private static final Path    javaFile                  = Paths.get("src", "main", "java", "A.java");
     private static final Path    propFile                  = Paths.get("src", "main", "java", "testCR.properties");
     private static final Path    pruupFile                 = Paths.get("src", "main", "java", "testCRLF.pruuperties");
@@ -100,7 +101,7 @@ public class MvgCorrectorTest {
         assertNotEquals("notset", Info.ALLREP_TOKEN, "this test needs the ALLREP_TOKEN to succesfully terminate");
 
         // Setup the test build
-        cp(null, settingsFile, javaFile, gradlePropsFile, headFile, yamlFile, antFile);
+        cp(null, settingsFile, javaFile, gradlePropsFile, headFile, configFile, yamlFile, antFile);
         cp(s -> s
                         .replaceAll("~myPackage~", PLUGIN_PACKAGE_NAME)
                         .replaceAll("~myMvgCorrectorExtension~", CORRECTOR_TASK_NAME)
@@ -122,10 +123,12 @@ public class MvgCorrectorTest {
         assertFalse(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright"));
+        assertFalse(Files.readString(testWorkspaceDir.resolve(configFile)).contains("Copyright"));
 
         Map<String, String> env = new HashMap<>(System.getenv());
         env.putIfAbsent(Info.PROP_NAME_ALLREP_TOKEN, "DRY");
-        env.putIfAbsent("TESTING", "true");
+        env.put(Info.PROP_NAME_TESTING, "" + true);
+        System.setProperty(Info.PROP_NAME_TESTING, "" + true);
 
         // Run the build
         StringWriter outWriter = new StringWriter();
@@ -144,16 +147,20 @@ public class MvgCorrectorTest {
                     .forwardStdError(errWriter)
                     .withPluginClasspath()
                     .withProjectDir(testWorkspaceDir.toFile())
-                    .withArguments("--scan", "--info", "--stacktrace", "check")
+                    .withArguments("--scan", "--info", "--stacktrace", "check", "publish")
                     .build();
         } finally {
             out = outWriter.toString();
             err = errWriter.toString();
 
             System.out.println("/================================= out ====================================");
-            Arrays.stream(out.split("\n")).forEach(l -> System.out.println("| " + l));
+            if (0 < out.length()) {
+                Arrays.stream(out.replace('\r', '\n').split("\n")).forEach(l -> System.out.println("| " + l));
+            }
             System.out.println("+================================= err ====================================");
-            Arrays.stream(err.split("\n")).forEach(l -> System.out.println("| " + l));
+            if (0 < err.length()) {
+                Arrays.stream(err.replace('\r', '\n').split("\n")).forEach(l -> System.out.println("| " + l));
+            }
             System.out.println("\\==========================================================================");
 
             GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
@@ -168,8 +175,8 @@ public class MvgCorrectorTest {
                     () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
                     () -> assertEquals(5, numOccurences("+ eols   untouched   : ", out)),
                     () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
-                    () -> assertEquals(1, numOccurences("+ project 'testWorkspace': version: 0.0.1 => 0.0.4, group: group => group", out)),
-                    () -> assertEquals(3, numOccurences(getTestMarker("r+"), out)),
+                    () -> assertEquals(1, numOccurences("+ project 'test-name': version: 0.0.1 => 0.0.4, group: test.group => test.group", out)),
+                    () -> assertEquals(6, numOccurences(getTestMarker("r+"), out)),
                     () -> assertEquals(41, numOccurences(getTestMarker("r-"), out)),
                     () -> assertEquals(1, numOccurences("+ adding test.useJUnitPlatform", out)),
                     () -> assertEquals(1, numOccurences("+ increasing test heap from default to 2g", out)),
@@ -187,6 +194,7 @@ public class MvgCorrectorTest {
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(propFile)).contains("Copyright")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(pruupFile)).contains("Copyright")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(headFile)).contains("Copyright")),
+                    () -> assertFalse(Files.readString(testWorkspaceDir.resolve(configFile)).contains("Copyright")),
                     //
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r")),

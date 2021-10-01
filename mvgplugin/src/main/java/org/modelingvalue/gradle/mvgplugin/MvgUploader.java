@@ -18,9 +18,9 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 import static org.modelingvalue.gradle.mvgplugin.Info.JETBRAINS_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
-import static org.modelingvalue.gradle.mvgplugin.Info.MVG_GROUP;
+import static org.modelingvalue.gradle.mvgplugin.Info.MODELING_VALUE_GROUP;
 import static org.modelingvalue.gradle.mvgplugin.Info.UPLOADER_TASK_NAME;
-import static org.modelingvalue.gradle.mvgplugin.Info.selectMasterDevelopElse;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.selectMasterDevelopElse;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -110,7 +110,7 @@ public class MvgUploader {
     }
 
     private void setup(Task task) {
-        task.setGroup(MVG_GROUP);
+        task.setGroup(MODELING_VALUE_GROUP);
         task.setDescription("upload a plugin to jetbrains");
         task.doLast(s -> execute());
     }

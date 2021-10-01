@@ -17,22 +17,28 @@ package org.modelingvalue.gradle.mvgplugin;
 
 import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.gradle.BuildAdapter;
+import org.gradle.BuildResult;
 import org.gradle.api.Action;
-import org.gradle.api.artifacts.DependencySubstitution;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.artifacts.repositories.PasswordCredentials;
 import org.gradle.api.credentials.Credentials;
+import org.gradle.api.execution.TaskExecutionListener;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.publish.Publication;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.tasks.TaskState;
 import org.gradle.authentication.Authentication;
 import org.gradle.internal.authentication.AuthenticationInternal;
 import org.jetbrains.annotations.NotNull;
@@ -46,59 +52,87 @@ public class MvgBranchBasedBuilder {
     public static final String BRANCH_REASON              = "using Branch Based Building";
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
-    private final    Gradle                gradle;
-    private final    boolean               isCI;
-    private final    boolean               isMaster;
-    private volatile String                bbbIdCache;
-    private final    DependencyRepoManager dependencyRepoManager;
+    private final    Gradle      gradle;
+    private final    boolean     isCI;
+    private final    boolean     isMaster;
+    private volatile String      bbbIdCache;
+    private final    Set<String> dependencies = new HashSet<>();
 
     public MvgBranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
 
         isCI = Info.CI;
-        isMaster = Info.isMasterBranch(gradle);
-        dependencyRepoManager = new DependencyRepoManager(gradle);
+        isMaster = InfoGradle.isMasterBranch(gradle);
 
-        LOGGER.info("+ bbb: creating MvgBranchBasedBuilder (ci={} master={})", isCI, isMaster);
+        LOGGER.info("+ bbb: creating MvgBranchBasedBuilder (CI={} master={})", isCI, isMaster);
         TRACE.report(gradle);
 
         adjustDependencies();
         adjustPublications();
-        //dependencyRepoManager.replaceDependencies("probeer.a.b.c", List.of("z.x.c", "z.x.d"));//TODO only for testing
+
+        gradle.addListener(new BuildAdapter() {
+            @Override
+            public void buildFinished(BuildResult result) {
+                if (result.getFailure() == null) {
+                    DependenciesRepoManager dependencyRepoManager = new DependenciesRepoManager(gradle);
+                    dependencyRepoManager.test();
+                    dependencyRepoManager.saveDependencies(dependencies);
+                    dependencyRepoManager.trigger();
+                }
+            }
+        });
+
+        if (Info.TESTING) {
+            gradle.addListener(new TaskExecutionListener() {
+                @Override
+                public void beforeExecute(Task task) {
+                    LOGGER.info("~#~#~#~#~#~#~ >>>>> " + task.getName());
+                }
+
+                @Override
+                public void afterExecute(Task task, TaskState state) {
+                    LOGGER.info("~#~#~#~#~#~#~ <<<<< {} => didWork={}", task.getName(), state.getDidWork());
+                }
+            });
+        }
     }
 
     private void adjustDependencies() {
-        gradle.allprojects(p ->
-                p.getConfigurations().all(conf ->
-                        conf.resolutionStrategy(strategy ->
-                                strategy.dependencySubstitution(depSubs ->
-                                        depSubs.all(depSub -> {
-                                                    ComponentSelector component = depSub.getRequested();
-                                                    if (component instanceof ModuleComponentSelector) {
-                                                        checkReplacement(depSub, (ModuleComponentSelector) component);
-                                                    } else {
-                                                        LOGGER.info("+ bbb: can not handle unknown dependency class: " + component.getClass());
-                                                    }
-                                                }
-                                        )
-                                )
-                        )
-                )
-        );
-    }
+        String negTestMarker = getTestMarker("r-");
+        String posTestMarker = getTestMarker("r+");
+        gradle.allprojects(p -> {
+                    String projectName = String.format("%-30s", p.getName());
+                    p.getConfigurations().all(conf -> {
+                                String confName = String.format("%-30s", conf.getName());
+                                conf.resolutionStrategy(strategy ->
+                                        strategy.dependencySubstitution(depSubs ->
+                                                depSubs.all(depSub -> {
+                                                            ComponentSelector component = depSub.getRequested();
+                                                            if (!(component instanceof ModuleComponentSelector)) {
+                                                                LOGGER.info("+ bbb: {} {} can not handle unknown dependency class: {}", projectName, confName, component.getClass());
+                                                            } else {
+                                                                ModuleComponentSelector moduleComponent = (ModuleComponentSelector) component;
+                                                                if (!moduleComponent.getVersion().endsWith(BRANCH_INDICATOR)) {
+                                                                    LOGGER.info("+ bbb: {} {} {} no BRANCH dependency: {}", negTestMarker, projectName, confName, component);
+                                                                } else {
+                                                                    String g           = makeBbbGroup(moduleComponent.getGroup());
+                                                                    String a           = makeBbbArtifact(moduleComponent.getModule());
+                                                                    String v           = makeBbbVersion(moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
+                                                                    String replacement = g + ":" + a + ":" + v;
+                                                                    LOGGER.info("+ bbb: {} {} {} BRANCH dependency, replaced: {} => {}", posTestMarker, projectName, confName, component, replacement);
+                                                                    depSub.useTarget(replacement, BRANCH_REASON);
 
-    private void checkReplacement(DependencySubstitution depSub, ModuleComponentSelector component) {
-        String version = component.getVersion();
-        if (version.endsWith(BRANCH_INDICATOR)) {
-            String replacement =
-                    makeBbbGroup(component.getGroup()) + ":"
-                            + makeBbbArtifact(component.getModule()) + ":"
-                            + makeBbbVersion(version.replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
-            LOGGER.info("+ bbb: {} BRANCH dependency, replaced: {} => {}", getTestMarker("r+"), component, replacement);
-            depSub.useTarget(replacement, BRANCH_REASON);
-        } else {
-            LOGGER.info("+ bbb: {} no BRANCH dependency, kept : {}", getTestMarker("r-"), component);
-        }
+                                                                    dependencies.add(moduleComponent.getGroup() + "." + moduleComponent.getModule());
+                                                                }
+                                                            }
+                                                        }
+                                                )
+                                        )
+                                );
+                            }
+                    );
+                }
+        );
     }
 
     private void adjustPublications() {
@@ -136,10 +170,8 @@ public class MvgBranchBasedBuilder {
 
                 //noinspection ConstantConditions
                 if (!oldGroup.equals(newGroup) || !oldArtifact.equals(newArtifact) || !oldVersion.equals(newVersion)) {
-                    LOGGER.info("+ bbb: changed publication {}: '{}' => '{}'",
-                            mpub.getName(),
-                            oldGroup + ":" + oldArtifact + ":" + oldVersion,
-                            newGroup + ":" + newArtifact + ":" + newVersion);
+                    LOGGER.info("+ bbb: changed publication {}: '{}:{}:{}' => '{}:{}:{}'",
+                            mpub.getName(), oldGroup, oldArtifact, oldVersion, newGroup, newArtifact, newVersion);
 
                     mpub.setGroupId(newGroup);
                     mpub.setArtifactId(newArtifact);
@@ -161,7 +193,7 @@ public class MvgBranchBasedBuilder {
     private void publishToGitHub(PublishingExtension publishing, boolean master) {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
             LOGGER.info("+ bbb: adding github publishing repo: {}", master ? "master" : "snapshots");
-            Action<MavenArtifactRepository> maker = Info.getGithubMavenRepoMaker(gradle, Info.isMasterBranch(gradle));
+            Action<MavenArtifactRepository> maker = InfoGradle.getGithubMavenRepoMaker(gradle, InfoGradle.isMasterBranch(gradle));
             publishing.getRepositories().maven(maker);
             TRACE.report(publishing);
         }
@@ -183,7 +215,7 @@ public class MvgBranchBasedBuilder {
         if (bbbIdCache == null) {
             synchronized (gradle) {
                 if (bbbIdCache == null) {
-                    String branch    = Info.getBranch(gradle);
+                    String branch    = InfoGradle.getBranch(gradle);
                     int    hash      = branch.hashCode();
                     String sanatized = branch.replaceFirst("@.*", "").replaceAll("\\W", "_");
                     String part      = sanatized.substring(0, Math.min(sanatized.length(), MAX_BRANCHNAME_PART_LENGTH));
