@@ -89,8 +89,7 @@ public class GitUtil {
     }
 
     public static void addCommitPush(Git git, String message) throws GitAPIException, IOException {
-        doAdd(git);
-        if (!statusVerbose(git, "after add, before push").getUncommittedChanges().isEmpty()) {
+        if (doAdd(git)) {
             doCommit(git, message);
             doPush(git);
         }
@@ -99,7 +98,7 @@ public class GitUtil {
     public static Status statusVerbose(Git git, String traceMessage) throws GitAPIException {
         Status status = git.status().call();
 
-        LOGGER.debug(" ##### git status @{}", traceMessage);
+        LOGGER.debug("    ##### git status @{}", traceMessage);
         traceStatusClass(status.getAdded(), "added");
         traceStatusClass(status.getChanged(), "changed");
         traceStatusClass(status.getModified(), "modified");
@@ -149,41 +148,51 @@ public class GitUtil {
         }
     }
 
-    private static void doAdd(Git git) throws GitAPIException, IOException {
+    private static boolean doAdd(Git git) throws GitAPIException, IOException {
         Path   root   = git.getRepository().getDirectory().toPath().toAbsolutePath();
         String branch = git.getRepository().getBranch();
-        Status status = statusVerbose(git, "for add");
+        Status status = statusVerbose(git, "before add");
 
-        LOGGER.info("++ git staging changes on branch={} under {}", branch, root);
+        int modifications = status.getModified().size();
+        int creations     = status.getUntracked().size();
+        int deletions     = status.getMissing().size();
 
-        if (!status.getModified().isEmpty() || !status.getUntracked().isEmpty()) {
-            AddCommand addCommand = git.add();
-            for (String s : status.getModified()) {
-                addCommand.addFilepattern(s);
+        boolean nothing = modifications + creations + deletions == 0;
+        if (nothing) {
+            LOGGER.info("+ git: staging changes (nothing to stage; branch={} dir={})", branch, root);
+        } else {
+            LOGGER.info("+ git: staging changes (mod={} adds={} del={}; branch={} dir={})", modifications, creations, deletions, branch, root);
+
+            if (0 < modifications + creations) {
+                AddCommand addCommand = git.add();
+                for (String s : status.getModified()) {
+                    addCommand.addFilepattern(s);
+                }
+                for (String s : status.getUntracked()) {
+                    addCommand.addFilepattern(s);
+                }
+                addCommand.call();
             }
-            for (String s : status.getUntracked()) {
-                addCommand.addFilepattern(s);
+            if (0 < deletions) {
+                RmCommand remCommand = git.rm();
+                for (String s : status.getMissing()) {
+                    remCommand.addFilepattern(s);
+                }
+                remCommand.call();
             }
-            addCommand.call();
         }
-        if (!status.getMissing().isEmpty()) {
-            RmCommand remCommand = git.rm();
-            for (String s : status.getMissing()) {
-                remCommand.addFilepattern(s);
-            }
-            remCommand.call();
-        }
+        return !nothing;
     }
 
     private static void doCommit(Git git, String message) throws GitAPIException {
-        LOGGER.info("+ commit with message '{}'", message);
+        LOGGER.info("+ git: commit (message='{}')", message);
         RevCommit rc = git
                 .commit()
                 .setAuthor(AUTOMATION_IDENT)
                 .setCommitter(AUTOMATION_IDENT)
                 .setMessage(message)
                 .call();
-        LOGGER.info("+ commit result: {}", rc);
+        LOGGER.info("+ git: commit (result={})", rc);
     }
 
     private static List<String> doListTags(Git git) throws GitAPIException {
@@ -195,20 +204,20 @@ public class GitUtil {
     }
 
     private static void doTag(Git git, String tag) throws GitAPIException {
-        LOGGER.info("+ tagging with '{}'", tag);
+        LOGGER.info("+ git: tagging with '{}'", tag);
         Ref ref = git.tag()
                 .setName(tag)
                 .setForceUpdate(true)
                 .call();
-        LOGGER.info("+ added tag '{}', id={}", tag, ref.getObjectId());
+        LOGGER.info("+ git: added tag '{}', result id={}", tag, ref.getObjectId());
     }
 
     private static void doDeleteTag(Git git, String... tags) throws GitAPIException {
-        LOGGER.info("+ delete tags: {}", Arrays.asList(tags));
+        LOGGER.info("+ git: deleting tags: {}", Arrays.asList(tags));
         List<String> l = git.tagDelete()
                 .setTags(tags)
                 .call();
-        LOGGER.info("+ deleted tags {}", l);
+        LOGGER.info("+ git: deleting tags result={}", l);
     }
 
     private static void doPush(Git git) throws GitAPIException {
@@ -220,7 +229,7 @@ public class GitUtil {
     }
 
     private static void doPush(Git git, boolean withTags) throws GitAPIException {
-        LOGGER.info("+ {}push", DRY_RUN ? "[dry] " : "");
+        LOGGER.info("+ git: {}push", DRY_RUN ? "[dry] " : "");
         Iterable<PushResult> result =
                 (withTags ? git.push().setPushTags() : git.push())
                         .setDryRun(DRY_RUN)
@@ -229,9 +238,9 @@ public class GitUtil {
                         .call();
         if (LOGGER.isInfoEnabled()) {
             result.forEach(pr -> {
-                LOGGER.info("+ push result  : {}", pr.getMessages());
-                pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ remote update     - {}", x));
-                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ tracking update   - {}", x));
+                LOGGER.info("+ git: push result  : {}", pr.getMessages());
+                pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ git: remote update     - {}", x));
+                pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ git: tracking update   - {}", x));
             });
         }
     }
@@ -239,9 +248,9 @@ public class GitUtil {
     private static void traceStatusClass(Set<String> set, String name) {
         String name_ = String.format("%16s", name);
         if (set.isEmpty()) {
-            LOGGER.debug(" ## {}: NONE", name_);
+            LOGGER.debug("    ## {}: NONE", name_);
         } else {
-            set.stream().sorted().forEach(e -> LOGGER.debug(" ## {}: {}", name_, e));
+            set.stream().sorted().forEach(e -> LOGGER.debug("    ## {}: {}", name_, e));
         }
     }
 }
