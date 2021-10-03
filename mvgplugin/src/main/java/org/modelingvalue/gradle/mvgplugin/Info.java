@@ -46,6 +46,7 @@ public interface Info {
     String       PROP_NAME_VERSION_MPS        = "version_mps";
     String       PROP_NAME_ALLREP_TOKEN       = "ALLREP_TOKEN";
     String       PROP_NAME_JETBRAINS_TOKEN    = "JETBRAINS_PUBLISH_TOKEN";
+    String       PROP_NAME_GITHUB_WORKFLOW    = "GITHUB_WORKFLOW";
     String       PROP_NAME_CI                 = "CI";
     String       PROP_NAME_TESTING            = "TESTING";
     //
@@ -55,6 +56,7 @@ public interface Info {
     boolean      TESTING                      = envOrPropBoolean(PROP_NAME_TESTING);
     String       ALLREP_TOKEN                 = envOrProp(PROP_NAME_ALLREP_TOKEN, "notset");
     String       JETBRAINS_TOKEN              = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "notset");
+    String       GITHUB_WORKFLOW              = envOrProp(PROP_NAME_GITHUB_WORKFLOW, null);
     String       MASTER_BRANCH                = "master";
     String       DEVELOP_BRANCH               = "develop";
     String       DEFAULT_BRANCH               = "can-not-determine-branch";

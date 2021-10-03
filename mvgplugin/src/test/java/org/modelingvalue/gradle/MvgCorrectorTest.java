@@ -129,6 +129,7 @@ public class MvgCorrectorTest {
         env.putIfAbsent(Info.PROP_NAME_ALLREP_TOKEN, "DRY");
         env.put(Info.PROP_NAME_TESTING, "" + true);
         System.setProperty(Info.PROP_NAME_TESTING, "" + true);
+        System.setProperty(Info.PROP_NAME_GITHUB_WORKFLOW, "build");
 
         // Run the build
         StringWriter outWriter = new StringWriter();
