@@ -75,10 +75,6 @@ public class MvgBranchBasedBuilder {
                     DependenciesRepoManager dependencyRepoManager = new DependenciesRepoManager(gradle);
                     dependencyRepoManager.saveDependencies(dependencies);
                     dependencyRepoManager.trigger(publications);
-                    if (Info.TESTING) {
-                        dependencyRepoManager.test();
-                    }
-
                 }
             }
         });

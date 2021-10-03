@@ -99,7 +99,7 @@ public class GitUtil {
     public static Status statusVerbose(Git git, String traceMessage) throws GitAPIException {
         Status status = git.status().call();
 
-        LOGGER.info(" ##### git status @{}", traceMessage);
+        LOGGER.debug(" ##### git status @{}", traceMessage);
         traceStatusClass(status.getAdded(), "added");
         traceStatusClass(status.getChanged(), "changed");
         traceStatusClass(status.getModified(), "modified");
@@ -154,7 +154,7 @@ public class GitUtil {
         String branch = git.getRepository().getBranch();
         Status status = statusVerbose(git, "for add");
 
-        LOGGER.info("++ git staging changes: dir={} branch={}", root, branch);
+        LOGGER.info("++ git staging changes on branch={} under {}", branch, root);
 
         if (!status.getModified().isEmpty() || !status.getUntracked().isEmpty()) {
             AddCommand addCommand = git.add();
@@ -167,7 +167,7 @@ public class GitUtil {
             addCommand.call();
         }
         if (!status.getMissing().isEmpty()) {
-            RmCommand  remCommand = git.rm();
+            RmCommand remCommand = git.rm();
             for (String s : status.getMissing()) {
                 remCommand.addFilepattern(s);
             }
@@ -239,9 +239,9 @@ public class GitUtil {
     private static void traceStatusClass(Set<String> set, String name) {
         String name_ = String.format("%16s", name);
         if (set.isEmpty()) {
-            LOGGER.info(" ## {}: NONE", name_);
+            LOGGER.debug(" ## {}: NONE", name_);
         } else {
-            set.stream().sorted().forEach(e -> LOGGER.info(" ## {}: {}", name_, e));
+            set.stream().sorted().forEach(e -> LOGGER.debug(" ## {}: {}", name_, e));
         }
     }
 }

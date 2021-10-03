@@ -31,6 +31,10 @@ public class InfoGradle {
         return instance(gradle).projectDir;
     }
 
+    public static Path getWorkflowsDir(Gradle gradle) {
+        return instance(gradle).workflowsDir;
+    }
+
     public static String getBranch(Gradle gradle) {
         return instance(gradle).branch;
     }
@@ -79,6 +83,7 @@ public class InfoGradle {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private final Path                            projectDir;
+    private final Path                            workflowsDir;
     private final String                          projectName;
     private final String                          repoName;
     private final String                          branch;
@@ -87,6 +92,7 @@ public class InfoGradle {
 
     public InfoGradle(Gradle gradle) {
         projectDir = projectDir(gradle);
+        workflowsDir = workflowsDir();
         projectName = gradle.getRootProject().getName();
         repoName = getRepoName();
         branch = getBranch();
@@ -96,6 +102,10 @@ public class InfoGradle {
 
     private Path projectDir(Gradle gradle) {
         return gradle.getRootProject().getRootDir().toPath().toAbsolutePath();
+    }
+
+    private Path workflowsDir() {
+        return projectDir.resolve(".github").resolve("workflows");
     }
 
     private String getBranch() {

@@ -15,20 +15,30 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO_NAME;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import javax.net.ssl.HttpsURLConnection;
 
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.Git;
@@ -38,6 +48,7 @@ import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.util.FileUtils;
 import org.gradle.api.invocation.Gradle;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * keeps a repo with dependencies.
@@ -46,31 +57,35 @@ import org.jetbrains.annotations.NotNull;
  * <p>
  * if the following dependencies exist:
  * <pre>
- *  <B>gh-app</B> produces <B>some-application</B>
- *  <B>gh-lib</B> produces <B>test.ab.c.lib</B>
- *  <B>gh-bas</B> produces <B>test.base.lib</B>
+ *     <B>gh-app</B> produces <B>some-application</B>
+ *     <B>gh-lib</B> produces <B>test.ab.c.lib</B>
+ *     <B>gh-bas</B> produces <B>test.base.lib</B>
  *
- *  <B>gh-app</B> uses <B>test.ab.c.lib</B>
- *  <B>gh-app</B> uses <B>test.qw.e.lib</B>
- *  <B>gh-lib</B> uses <B>test.base.lib</B>
- *  <B>gh-lib</B> uses <B>test.qw.e.lib</B>
+ *     <B>gh-app</B> uses     <B>test.ab.c.lib</B>
+ *     <B>gh-app</B> uses     <B>test.qw.e.lib</B>
+ *     <B>gh-lib</B> uses     <B>test.base.lib</B>
+ *     <B>gh-lib</B> uses     <B>test.qw.e.lib</B>
  * </pre>
  * then the following files are created in the <B>dependencies</B> repo on the same branch as the underlaying project:
  * <pre>
- * <B>test/ab/c/lib/gh-app.trigger</B>
- * <B>test/base/lib/gh-lib.trigger</B>
- * <B>test/qw/e/lib/gh-app.trigger</B>
- * <B>test/qw/e/lib/gh-lib.trigger</B>
+ *     <B>test/ab/c/lib/gh-app.trigger</B>
+ *     <B>test/base/lib/gh-lib.trigger</B>
+ *     <B>test/qw/e/lib/gh-app.trigger</B>
+ *     <B>test/qw/e/lib/gh-lib.trigger</B>
  * </pre>
- * All files are empty files.
+ * All files are property files with a property WORKFLOWS with all the workflows to trigger (/-separated):
+ * <pre>
+ *     <B>WORKFLOWS=build.yaml/test.yml/xyzzy.yaml</B>
+ * </pre>
  */
 public class DependenciesRepoManager {
-    private static final String  TRIGGER_EXT = ".trigger";
-    private final        String  repoName;
-    private final        String  branch;
-    private final        boolean active;
-    private final        Path    dependenciesRepoDir;
-    private final        Git     git;
+    private static final String      TRIGGER_EXT = ".trigger";
+    private final        String      repoName;
+    private final        String      branch;
+    private final        boolean     active;
+    private final        Path        dependenciesRepoDir;
+    private final        Git         git;
+    private final        Set<String> workflowFileNames;
 
     public DependenciesRepoManager(Gradle gradle) {
         repoName = InfoGradle.getRepoName(gradle);
@@ -78,20 +93,70 @@ public class DependenciesRepoManager {
         active = InfoGradle.isMvgRepo(gradle) && (Info.CI || Info.TESTING);
         dependenciesRepoDir = gradle.getRootProject().getBuildDir().toPath().resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath();
         git = active ? cloneDependenciesRepo(dependenciesRepoDir, InfoGradle.getBranch(gradle)) : null;
+        workflowFileNames = findMyTriggerWorkflows(gradle);
     }
 
     public void saveDependencies(Set<String> packages) {
-        saveDependencies(repoName, packages);
+        if (active) {
+            if (Info.TESTING) {
+                test();
+            }
+            saveDependencies(repoName, packages);
+        }
     }
 
     public void trigger(Set<String> publications) {
+        if (active) {
+            try {
+                getTriggers(publications).forEach(tr -> tr.workflows.forEach(workflowFilename -> trigger(tr.repo, workflowFilename)));
+            } catch (IOException e) {
+                LOGGER.warn("triggers could not be retrieved", e);
+            }
+        }
+    }
+
+    private void trigger(String repo, String workflowFilename) {
+        /*
+                curl -v \
+                    -H "Authorization: token <token>" \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    -X POST \
+                    'https://api.github.com/repos/ModelingValueGroup/immutable-collections/actions/workflows/build.yaml/dispatches' \
+                    -d '{"ref":"develop"}'
+
+
+         */
+        LOGGER.info("TRIGGER repo '{}' on branch '{}'", repo, branch);
+
         try {
-            getTriggers(publications).forEach(repo -> {
-                LOGGER.info("TRIGGER repo '{}' on branch '{}'", repo, branch);
-                //TODO find out how to trigger
-            });
+            URL                url  = new URL("https://api.github.com/repos/ModelingValueGroup/" + repo + "/actions/workflows/" + workflowFilename + "/dispatches");
+            HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+            conn.setRequestProperty("Authorization", "token " + Info.ALLREP_TOKEN);
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            OutputStream os = conn.getOutputStream();
+            os.write(("{\"ref\":\"" + branch + "\"}").getBytes());
+            os.flush();
+            conn.connect();
+            try (InputStream err = conn.getErrorStream()) {
+                if (err != null) {
+                    String msg = new String(err.readAllBytes(), UTF_8);
+                    if (!msg.isEmpty()) {
+                        LOGGER.info("TRIGGER gave problem: err=" + msg);
+                    }
+                }
+
+                try (InputStream in = conn.getInputStream()) {
+                    String json = new String(in.readAllBytes(), UTF_8);
+                    if (!json.isBlank()) {
+                        LOGGER.info("DEBUG: " + json.length() + ":" + json);
+                    }
+                }
+            }
         } catch (IOException e) {
-            LOGGER.warn("triggers could not be retrieved", e);
+            LOGGER.info("+ bbb: could not trigger (repo={} wf={} msg={}:{})", repo, workflowFilename, e.getClass().getSimpleName(), e.getMessage());
+            LOGGER.debug("+ bbb: could not trigger", e);
         }
     }
 
@@ -160,14 +225,12 @@ public class DependenciesRepoManager {
     }
 
     void saveDependencies(String repo, Set<String> usedPackages) {
-        if (active) {
-            try {
-                clearExistingDependencies(repo);
-                writeDependencies(repo, usedPackages);
-                pushDependenciesRepo();
-            } catch (IOException | GitAPIException e) {
-                e.printStackTrace();
-            }
+        try {
+            clearExistingDependencies(repo);
+            writeDependencies(repo, usedPackages);
+            pushDependenciesRepo();
+        } catch (IOException | GitAPIException e) {
+            e.printStackTrace();
         }
     }
 
@@ -191,12 +254,13 @@ public class DependenciesRepoManager {
     }
 
     private void writeDependencies(String repo, Set<String> usedPackages) {
+        String prop = "WORKFLOWS=" + String.join("/", workflowFileNames) + "\n";
         usedPackages.forEach(usedPackage -> {
             try {
                 Path triggerFile = getTriggerFile(repo, usedPackage);
                 LOGGER.info("+ bbb: creating          trigger file: " + triggerFile);
                 Files.createDirectories(triggerFile.getParent());
-                Files.createFile(triggerFile);
+                Files.write(triggerFile, prop.getBytes());
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -204,26 +268,52 @@ public class DependenciesRepoManager {
     }
 
     private void pushDependenciesRepo() throws GitAPIException, IOException {
-        GitUtil.addCommitPush(git, "dependencies determined by build at " + Info.NOW_STAMP + " on " + Info.HOSTNAME);
+        GitUtil.addCommitPush(git, "reverse dependencies (@ " + Info.NOW_STAMP + " on " + Info.HOSTNAME + ")");
     }
 
-    private Stream<String> getTriggers(Set<String> publications) throws IOException {
+    private Stream<Trigger> getTriggers(Set<String> publications) throws IOException {
         return publications.stream().flatMap(this::getTriggers).distinct();
     }
 
-    private Stream<String> getTriggers(String pack) {
+    private Stream<Trigger> getTriggers(String pack) {
         Path path = getTriggerDirFor(pack);
         try {
             return !Files.isDirectory(path)
                     ? Stream.empty()
                     : Files.list(path)
                     .filter(Files::isRegularFile)
-                    .map(p -> p.getFileName().toString())
-                    .filter(n -> n.endsWith(TRIGGER_EXT))
-                    .map(n -> n.replaceFirst(Pattern.quote(TRIGGER_EXT) + "$", ""))
-                    .distinct();
+                    .filter(p -> p.getFileName().toString().endsWith(TRIGGER_EXT))
+                    .map(Trigger::new)
+                    .filter(tr -> tr.workflows != null);
         } catch (IOException e) {
             throw new Error("could not list directory " + path, e);
+        }
+    }
+
+    private static class Trigger {
+        public final String       repo;
+        public final List<String> workflows;
+
+        private Trigger(Path triggerFile) {
+            repo = triggerFile.getFileName().toString().replaceFirst(Pattern.quote(TRIGGER_EXT) + "$", "");
+            workflows = readWorkflows(triggerFile);
+        }
+
+        @Nullable
+        private List<String> readWorkflows(Path triggerFile) {
+            try {
+                Properties props = new Properties();
+                props.load(Files.newInputStream(triggerFile));
+                String workflowsString = (String) props.get("WORKFLOWS");
+                return workflowsString == null ? null : Arrays.stream(workflowsString.split("/")).collect(Collectors.toList());
+            } catch (IOException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "[repo='" + repo + '\'' + ", workflows=" + workflows + ']';
         }
     }
 
@@ -240,18 +330,71 @@ public class DependenciesRepoManager {
         return d.resolve(repo + TRIGGER_EXT);
     }
 
-    public void test() {
-        if (active) {
-            try {
-                saveDependencies("gh-app", Set.of("test.ab.c.lib", "test.qw.e.lib"));
-                saveDependencies("gh-lib", Set.of("test.base.lib", "test.qw.e.lib"));
-
-                for (String pack : List.of("test.ab.c.lib", "test.qw.e.lib", "test.base.lib")) {
-                    getTriggers(pack).forEach(s -> LOGGER.info("TESTING: {} --trig--> {}", pack, s));
+    /**
+     * Gets you the set of workflow file names with extensions but without any directory info
+     *
+     * @return set of workflowfile names
+     */
+    private Set<String> findMyTriggerWorkflows(Gradle gradle) {
+        Path workflowsDir = InfoGradle.getWorkflowsDir(gradle);
+        if (!Files.isDirectory(workflowsDir)) {
+            return Set.of();
+        }
+        String namePattern = "^name: *" + Pattern.quote(Info.GITHUB_WORKFLOW) + "$";
+        try {
+            Predicate<Path> fileFilter = p -> {
+                try {
+                    if (!Files.isRegularFile(p)) {
+                        return false;
+                    }
+                    if (!p.getFileName().toString().matches(".*\\.(yaml|yml)")) {
+                        return false;
+                    }
+                    List<String> lines = Files.readAllLines(p);
+                    return lines.stream().anyMatch(l -> l.contains("workflow_dispatch"));
+                } catch (IOException e) {
+                    return false;
                 }
-            } catch (Exception e) {
-                throw new Error("TESTING: unable to test DependenciesManager", e);
+            };
+            Set<String> set = Files.list(workflowsDir)
+                    .filter(fileFilter)
+                    .filter(p -> {
+                        try {
+                            List<String> lines = Files.readAllLines(p);
+                            return lines.stream().anyMatch(l -> l.matches(namePattern));
+                        } catch (IOException e) {
+                            return false;
+                        }
+                    })
+                    .map(p -> p.getFileName().toString())
+                    .collect(Collectors.toSet());
+            if (!set.isEmpty()) {
+                return set;
             }
+            return Files.list(workflowsDir)
+                    .filter(fileFilter)
+                    .map(p -> p.getFileName().toString())
+                    .collect(Collectors.toSet());
+        } catch (IOException e) {
+            return Set.of();
+        }
+    }
+
+    private void test() {
+        try {
+            LOGGER.info("TESTING============================================================ <<<");
+            saveDependencies("gh-app", Set.of("test.ab.c.lib", "test.qw.e.lib"));
+            saveDependencies("gh-lib", Set.of("test.base.lib", "test.qw.e.lib"));
+
+            for (String pack : List.of("test.ab.c.lib", "test.qw.e.lib", "test.base.lib")) {
+                getTriggers(pack).forEach(s -> LOGGER.info("TESTING: {} --trig--> {}", pack, s));
+            }
+            trigger("immutable-collections", "build.yaml");
+            trigger("immutable-collections", "no_wf.yaml");
+        } catch (Exception e) {
+            throw new Error("TESTING: unable to test DependenciesManager", e);
+        } finally {
+            LOGGER.info("TESTING============================================================ >>>");
         }
     }
 }

@@ -111,7 +111,7 @@ public class MvgPlugin implements Plugin<Project> {
 
 
     private void checkWorkflowFilesForLoopingDanger() {
-        Path workflowsDir = InfoGradle.getProjectDir(gradle).resolve(".github").resolve("workflows");
+        Path workflowsDir = InfoGradle.getWorkflowsDir(gradle);
         if (Files.isDirectory(workflowsDir)) {
             try {
                 AtomicBoolean errorsDetected = new AtomicBoolean();
