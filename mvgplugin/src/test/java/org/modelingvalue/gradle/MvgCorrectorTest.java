@@ -67,7 +67,8 @@ public class MvgCorrectorTest {
     private static final Path    settingsFile              = Paths.get("settings.gradle");
     private static final Path    buildFile                 = Paths.get("build.gradle.kts");
     private static final Path    gradlePropsFile           = Paths.get("gradle.properties");
-    private static final Path    yamlFile                  = Paths.get(".github", "workflows", "xyz.yaml");
+    private static final Path    workflowFile              = Paths.get(".github", "workflows", "xyz.yaml");
+    private static final Path    dependabotFile            = Paths.get(".github", "dependabot.yml");
     private static final Path    antFile                   = Paths.get("try_build.xml");
     private static final Path    javaFile                  = Paths.get("src", "main", "java", "A.java");
     private static final Path    propFile                  = Paths.get("src", "main", "java", "testCR.properties");
@@ -184,7 +185,7 @@ public class MvgCorrectorTest {
                     () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
                     () -> assertEquals(1, numOccurences("+ the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
-                    () -> assertEquals(1, numOccurences("+ git testWorkspace: staging changes (adds=6 rms=0; branch=", out)),
+                    () -> assertEquals(1, numOccurences("+ git testWorkspace: staging changes (adds=7 rms=0; branch=", out)),
                     () -> assertEquals(1, numOccurences("+ git testWorkspace: pushing without tags", out)),
                     () -> assertEquals(1, numOccurences("+ git testWorkspace: push skipped, there seems to be no remote (origin: not found.)", out)),
                     //
@@ -201,6 +202,8 @@ public class MvgCorrectorTest {
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
+                    //
+                    () -> assertEquals(264, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
                     //
                     () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\r]", "").length()),
                     () -> assertEquals(17, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\n]", "").length()),
@@ -231,7 +234,7 @@ public class MvgCorrectorTest {
                 .call()
                 .close();
 
-        cp(null, settingsFile, javaFile, gradlePropsFile, yamlFile, antFile);
+        cp(null, settingsFile, javaFile, gradlePropsFile, workflowFile, antFile);
         cp(s -> s
                         .replaceAll("~myPackage~", PLUGIN_PACKAGE_NAME)
                         .replaceAll("~myMvgCorrectorExtension~", CORRECTOR_TASK_NAME)

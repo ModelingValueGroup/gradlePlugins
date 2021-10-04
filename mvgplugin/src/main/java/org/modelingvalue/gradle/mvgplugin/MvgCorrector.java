@@ -98,6 +98,7 @@ class MvgCorrector {
             changes.addAll(new EolCorrector(ext).generate().getChangedFiles());
             changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
             changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
+            changes.addAll(new DependabotCorrector(ext).generate().getChangedFiles());
 
             LOGGER.info("+ changed {} files", changes.size());
 
