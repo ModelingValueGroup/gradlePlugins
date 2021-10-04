@@ -15,6 +15,42 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-public class GradleDotProperties {
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+
+public class GitManager {
+    private final static Map<Path, Git> PATH2GIT = new HashMap<>();
+
+    public synchronized static Git git(Path p) {
+        return PATH2GIT.computeIfAbsent(makeKey(p), GitManager::find);
+    }
+
+    private synchronized static Git find(Path path) {
+        try {
+            Repository repo = new FileRepositoryBuilder()
+                    .findGitDir(path.toFile())
+                    .readEnvironment()
+                    .build();
+            Path key = makeKey(repo.getDirectory().toPath());
+            Git  git = PATH2GIT.get(key);
+            if (git == null) {
+                git = new Git(repo);
+            } else {
+                repo.close();
+            }
+            return git;
+        } catch (IOException e) {
+            throw new Error("could not find git repo at " + path, e);
+        }
+    }
+
+    private static Path makeKey(Path p) {
+        return p.normalize().toAbsolutePath();
+    }
 }

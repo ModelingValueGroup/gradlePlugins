@@ -17,9 +17,9 @@ package org.modelingvalue.gradle.mvgplugin;
 
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -30,32 +30,32 @@ import org.gradle.api.GradleException;
 
 public class DotProperties {
     private final DotProperties parent;
-    private final File          file;
+    private final Path          file;
     private final boolean       valid;
     private final Properties    properties;
     private final List<String>  lines;
 
-    public DotProperties(DotProperties parent, File file) {
+    public DotProperties(DotProperties parent, Path file) {
         this.parent = parent;
         this.file = file;
-        valid = file.isFile();
+        valid = Files.isRegularFile(file);
         properties = valid ? Util.loadProperties(file) : new Properties();
         if (valid) {
             try {
-                lines = Files.readAllLines(file.toPath());
+                lines = Files.readAllLines(file);
             } catch (IOException e) {
-                throw new GradleException("properties file could not be read: " + file.getAbsolutePath(), e);
+                throw new GradleException("properties file could not be read: " + file.toAbsolutePath(), e);
             }
         } else {
             lines = new ArrayList<>();
         }
     }
 
-    public DotProperties(File file) {
+    public DotProperties(Path file) {
         this(null, file);
     }
 
-    public File getFile() {
+    public Path getFile() {
         return file;
     }
 
@@ -68,9 +68,9 @@ public class DotProperties {
     }
 
     public String getProp(String name, String def) {
-        Object o = properties.get(name);
+        Object o     = properties.get(name);
         String value = o != null ? o.toString() : parent != null ? parent.getProp(name, def) : def;
-        LOGGER.info("+~ getProp          : {} => {}   (from {}{})", name, Util.hide(value), file.getAbsolutePath(), valid ? "" : " - INVALID");
+        LOGGER.info("+~ getProp          : {} => {}   (from {}{})", name, Util.hide(value), file.toAbsolutePath(), valid ? "" : " - INVALID");
         return value;
     }
 
@@ -83,9 +83,9 @@ public class DotProperties {
             lines.clear();
             lines.addAll(newLines);
             try {
-                Files.write(file.toPath(), lines);
+                Files.write(file, lines);
             } catch (IOException e) {
-                throw new GradleException("properties file could not be written: " + file.getAbsolutePath(), e);
+                throw new GradleException("properties file could not be written: " + file.toAbsolutePath(), e);
             }
         }
     }

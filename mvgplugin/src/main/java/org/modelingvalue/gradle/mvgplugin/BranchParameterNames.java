@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.invocation.Gradle;
 
 public class BranchParameterNames {
     //
@@ -28,8 +27,8 @@ public class BranchParameterNames {
     //
     private static BranchParameterNames instance;
 
-    public static void init(Gradle gradle) {
-        init(InfoGradle.getBranch(gradle));
+    public static void init() {
+        init(InfoGradle.getBranch());
     }
 
     public static void init(String branchName) { // separated out for testing purposes

@@ -16,7 +16,7 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
-import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.MIN_TEST_HEAP_SIZE;
@@ -77,12 +77,11 @@ public class MvgPlugin implements Plugin<Project> {
             LOGGER.error("mvgplugin: the plugin {} can only be applied to the root project ({})", getClass().getSimpleName(), gradle.getRootProject());
             //throw new GradleException("the plugin " + getClass().getSimpleName() + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
         } else {
-
-            GradleDotProperties.setGradleDotProperties(gradle);
-            BranchParameterNames.init(gradle);
+            InfoGradle.setGradle(gradle);
+            BranchParameterNames.init();
 
             LOGGER.info("+ MvgPlugin.apply to project {}", project.getName());
-            Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(gradle), "develop", isDevelopBranch(gradle), PROP_NAME_ALLREP_TOKEN, Util.hide(ALLREP_TOKEN));
+            Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(), "develop", isDevelopBranch(), PROP_NAME_ALLREP_TOKEN, Util.hide(ALLREP_TOKEN));
 
             checkWorkflowFilesForLoopingDanger();
             checkIfWeAreUsingTheLatestPluginVersion();
@@ -111,7 +110,7 @@ public class MvgPlugin implements Plugin<Project> {
 
 
     private void checkWorkflowFilesForLoopingDanger() {
-        Path workflowsDir = InfoGradle.getWorkflowsDir(gradle);
+        Path workflowsDir = InfoGradle.getWorkflowsDir();
         if (Files.isDirectory(workflowsDir)) {
             try {
                 AtomicBoolean errorsDetected = new AtomicBoolean();
@@ -276,8 +275,8 @@ public class MvgPlugin implements Plugin<Project> {
 
             p.getRepositories().mavenCentral();
             p.getRepositories().mavenLocal();
-            p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(gradle, true));
-            p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(gradle, false));
+            p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(true));
+            p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(false));
 
             p.getRepositories().forEach(r -> LOGGER.info("+   - {}", r.getName()));
         });

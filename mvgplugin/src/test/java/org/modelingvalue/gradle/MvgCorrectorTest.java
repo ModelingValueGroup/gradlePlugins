@@ -28,11 +28,13 @@ import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_CLASS_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_PACKAGE_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_GITHUB_WORKFLOW;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_TESTING;
 import static org.modelingvalue.gradle.mvgplugin.Info.UPLOADER_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
 import static org.modelingvalue.gradle.mvgplugin.Util.numOccurences;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -49,9 +51,13 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.util.FileUtils;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.mvgplugin.DotProperties;
+import org.modelingvalue.gradle.mvgplugin.GitManager;
 import org.modelingvalue.gradle.mvgplugin.GitUtil;
 import org.modelingvalue.gradle.mvgplugin.Info;
 
@@ -63,15 +69,16 @@ public class MvgCorrectorTest {
     private static final Path    gradlePropsFile           = Paths.get("gradle.properties");
     private static final Path    yamlFile                  = Paths.get(".github", "workflows", "xyz.yaml");
     private static final Path    antFile                   = Paths.get("try_build.xml");
-    private static final Path    headFile                  = Paths.get(".git", "HEAD");
-    private static final Path    configFile                = Paths.get(".git", "config");
     private static final Path    javaFile                  = Paths.get("src", "main", "java", "A.java");
     private static final Path    propFile                  = Paths.get("src", "main", "java", "testCR.properties");
     private static final Path    pruupFile                 = Paths.get("src", "main", "java", "testCRLF.pruuperties");
+    private static final Path    headFile                  = Paths.get(".git", "HEAD");
+    private static final Path    configFile                = Paths.get(".git", "config");
+    private static final Path    dotGitIgnore              = Paths.get(".gitignore");
 
     @Test
     public void checkId() {
-        DotProperties props = new DotProperties(new File(new File(".."), GRADLE_PROPERTIES_FILE));
+        DotProperties props = new DotProperties(Paths.get("..", GRADLE_PROPERTIES_FILE));
 
         assertTrue(props.isValid());
 
@@ -97,25 +104,15 @@ public class MvgCorrectorTest {
     }
 
     @Test
-    public void checkFunctionality() throws IOException {
+    public void checkFunctionality() throws IOException, GitAPIException {
+        // need to set these before accessing the Info class!
+        System.setProperty(PROP_NAME_TESTING, "" + true);
+        System.setProperty(PROP_NAME_CI, "" + true);
+        System.setProperty(PROP_NAME_GITHUB_WORKFLOW, "build");
+
         assertNotEquals("notset", Info.ALLREP_TOKEN, "this test needs the ALLREP_TOKEN to succesfully terminate");
 
-        // Setup the test build
-        cp(null, settingsFile, javaFile, gradlePropsFile, headFile, configFile, yamlFile, antFile);
-        cp(s -> s
-                        .replaceAll("~myPackage~", PLUGIN_PACKAGE_NAME)
-                        .replaceAll("~myMvgCorrectorExtension~", CORRECTOR_TASK_NAME)
-                        .replaceAll("~myMvgMpsExtension~", MPS_TASK_NAME)
-                        .replaceAll("~myMvgUploaderExtension~", UPLOADER_TASK_NAME)
-                , buildFile);
-        cp(s -> s.replaceAll("\n", "\r"), propFile);
-        cp(s -> s.replaceAll("\n", "\r\n"), pruupFile);
-
-        // prepare git tags:
-        GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
-        GitUtil.tag(testWorkspaceDir, "v0.0.1");
-        GitUtil.tag(testWorkspaceDir, "v0.0.2");
-        GitUtil.tag(testWorkspaceDir, "v0.0.3");
+        prepareTestWorkspace();
 
         assertFalse(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright"));
         assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright"));
@@ -126,10 +123,9 @@ public class MvgCorrectorTest {
         assertFalse(Files.readString(testWorkspaceDir.resolve(configFile)).contains("Copyright"));
 
         Map<String, String> env = new HashMap<>(System.getenv());
-        env.putIfAbsent(Info.PROP_NAME_ALLREP_TOKEN, "DRY");
-        env.put(Info.PROP_NAME_TESTING, "" + true);
-        System.setProperty(Info.PROP_NAME_TESTING, "" + true);
-        System.setProperty(Info.PROP_NAME_GITHUB_WORKFLOW, "build");
+        env.put(PROP_NAME_TESTING, System.getProperty(PROP_NAME_TESTING));
+        env.put(PROP_NAME_CI, System.getProperty(PROP_NAME_CI));
+        env.put(PROP_NAME_GITHUB_WORKFLOW, System.getProperty(PROP_NAME_GITHUB_WORKFLOW));
 
         // Run the build
         StringWriter outWriter = new StringWriter();
@@ -166,7 +162,8 @@ public class MvgCorrectorTest {
 
             GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
 
-            DotProperties instance = new DotProperties(new File(testWorkspaceDir.toFile(), GRADLE_PROPERTIES_FILE));
+
+            DotProperties instance = new DotProperties(testWorkspaceDir.resolve(GRADLE_PROPERTIES_FILE));
 
             // Verify the result
             assertAll(
@@ -187,6 +184,9 @@ public class MvgCorrectorTest {
                     () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
                     () -> assertEquals(1, numOccurences("+ the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
+                    () -> assertEquals(1, numOccurences("+ git testWorkspace: staging changes (adds=6 rms=0; branch=", out)),
+                    () -> assertEquals(1, numOccurences("+ git testWorkspace: pushing without tags", out)),
+                    () -> assertEquals(1, numOccurences("+ git testWorkspace: push skipped, there seems to be no remote (origin: not found.)", out)),
                     //
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
@@ -216,6 +216,38 @@ public class MvgCorrectorTest {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Setup the test build
+    private void prepareTestWorkspace() throws IOException, GitAPIException {
+        String sourceBranch;
+        try (Git sourceGit = GitManager.git(Paths.get("."))) {
+            sourceBranch = sourceGit.getRepository().getBranch();
+        }
+        if (Files.isDirectory(testWorkspaceDir)) {
+            FileUtils.delete(testWorkspaceDir.toFile(), FileUtils.RECURSIVE);
+        }
+        Git.init()
+                .setDirectory(testWorkspaceDir.toFile())
+                .setInitialBranch(sourceBranch)
+                .call()
+                .close();
+
+        cp(null, settingsFile, javaFile, gradlePropsFile, yamlFile, antFile);
+        cp(s -> s
+                        .replaceAll("~myPackage~", PLUGIN_PACKAGE_NAME)
+                        .replaceAll("~myMvgCorrectorExtension~", CORRECTOR_TASK_NAME)
+                        .replaceAll("~myMvgMpsExtension~", MPS_TASK_NAME)
+                        .replaceAll("~myMvgUploaderExtension~", UPLOADER_TASK_NAME)
+                , buildFile);
+        cp(s -> s.replaceAll("\n", "\r"), propFile);
+        cp(s -> s.replaceAll("\n", "\r\n"), pruupFile);
+        Files.writeString(testWorkspaceDir.resolve(dotGitIgnore), "build\n.gradle\n");
+
+        GitUtil.stageCommitPush(testWorkspaceDir, "test-message");
+        GitUtil.tag(testWorkspaceDir, "v0.0.1");
+        GitUtil.tag(testWorkspaceDir, "v0.0.2");
+        GitUtil.tag(testWorkspaceDir, "v0.0.3");
+    }
+
     private static void cp(Function<String, String> postProcess, Path... fs) throws IOException {
         for (Path f : fs) {
             String name = f.getFileName().toString();

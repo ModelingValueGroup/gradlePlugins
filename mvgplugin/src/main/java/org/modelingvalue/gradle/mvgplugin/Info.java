@@ -37,7 +37,6 @@ public interface Info {
     String       UPLOADER_TASK_NAME           = MvgUploader.class.getSimpleName().toLowerCase(Locale.ROOT);
     String       TAG_TASK_NAME                = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
     String       MPS_TASK_NAME                = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
-    //
     Logger       LOGGER                       = Logging.getLogger(PLUGIN_NAME);
     String       GRADLE_PROPERTIES_FILE       = "gradle.properties";
     String       PROP_NAME_VERSION            = "version";

@@ -15,9 +15,13 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
+import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -26,51 +30,12 @@ import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.invocation.Gradle;
 
 public class InfoGradle {
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static Path getProjectDir(Gradle gradle) {
-        return instance(gradle).projectDir;
-    }
+    private static final Path          USER_PROP_FILE  = Paths.get(System.getProperty("user.home"), ".gradle", GRADLE_PROPERTIES_FILE);
+    private static final DotProperties USER_HOME_PROPS = new DotProperties(USER_PROP_FILE);
 
-    public static Path getWorkflowsDir(Gradle gradle) {
-        return instance(gradle).workflowsDir;
-    }
-
-    public static String getBranch(Gradle gradle) {
-        return instance(gradle).branch;
-    }
-
-    public static String getProjectName(Gradle gradle) {
-        return instance(gradle).projectName;
-    }
-
-    public static boolean isMvgRepo(Gradle gradle) {
-        return instance(gradle).repoName != null;
-    }
-
-    public static String getRepoName(Gradle gradle) {
-        return instance(gradle).repoName;
-    }
-
-    public static boolean isMasterBranch(Gradle gradle) {
-        return getBranch(gradle).equals(Info.MASTER_BRANCH);
-    }
-
-    public static boolean isDevelopBranch(Gradle gradle) {
-        return getBranch(gradle).equals(Info.DEVELOP_BRANCH);
-    }
-
-    public static <T> T selectMasterDevelopElse(Gradle gradle, T master, T develop, T other) {
-        return isMasterBranch(gradle) ? master : isDevelopBranch(gradle) ? develop : other;
-    }
-
-    public static Action<MavenArtifactRepository> getGithubMavenRepoMaker(Gradle gradle, boolean isMaster) {
-        return isMasterBranch(gradle) ? instance(gradle).repoMakerForMaster : instance(gradle).repoMakerForOther;
-    }
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     private static volatile InfoGradle instance;
 
-    private static InfoGradle instance(Gradle gradle) {
+    public static void setGradle(Gradle gradle) {
         if (instance == null) {
             synchronized (InfoGradle.class) {
                 if (instance == null) {
@@ -78,29 +43,89 @@ public class InfoGradle {
                 }
             }
         }
+        if (instance.gradle != gradle) {
+            throw new Error("InfoGradle.setGradle() should only be called once");
+        }
+    }
+
+    private static InfoGradle instance() {
+        if (instance == null) {
+            throw new Error("InfoGradle.setGradle() should be called first");
+        }
         return instance;
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public static DotProperties getGradleDotProperties() {
+        return instance == null ? USER_HOME_PROPS : instance().gradleDotProperties;
+    }
+
+    public static Path getProjectDir() {
+        return instance().projectDir;
+    }
+
+    public static Path getWorkflowsDir() {
+        return instance().workflowsDir;
+    }
+
+    public static String getBranch() {
+        return instance().branch;
+    }
+
+    public static String getProjectName() {
+        return instance().projectName;
+    }
+
+    public static String getMvgRepoName() {
+        return instance().mvgRepoName;
+    }
+
+    public static boolean isMvgRepo() {
+        return getMvgRepoName() != null;
+    }
+
+    public static boolean isMasterBranch() {
+        return getBranch().equals(Info.MASTER_BRANCH);
+    }
+
+    public static boolean isDevelopBranch() {
+        return getBranch().equals(Info.DEVELOP_BRANCH);
+    }
+
+    public static <T> T selectMasterDevelopElse(T master, T develop, T other) {
+        return isMasterBranch() ? master : isDevelopBranch() ? develop : other;
+    }
+
+    public static Action<MavenArtifactRepository> getGithubMavenRepoMaker(boolean forMaster) {
+        return forMaster ? instance().repoMakerForMaster : instance().repoMakerForOther;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    private final Gradle                          gradle;
     private final Path                            projectDir;
     private final Path                            workflowsDir;
     private final String                          projectName;
-    private final String                          repoName;
+    private final String                          mvgRepoName;
     private final String                          branch;
     private final Action<MavenArtifactRepository> repoMakerForMaster;
     private final Action<MavenArtifactRepository> repoMakerForOther;
+    private final DotProperties                   gradleDotProperties;
 
     public InfoGradle(Gradle gradle) {
-        projectDir = projectDir(gradle);
+        this.gradle = gradle;
+        gradleDotProperties = new DotProperties(USER_HOME_PROPS, gradle.getRootProject().getRootDir().toPath().resolve(GRADLE_PROPERTIES_FILE));
+        projectDir = projectDir();
         workflowsDir = workflowsDir();
         projectName = gradle.getRootProject().getName();
-        repoName = getRepoName();
-        branch = getBranch();
-        repoMakerForMaster = getGithubMavenRepoMaker(true);
-        repoMakerForOther = getGithubMavenRepoMaker(false);
+        mvgRepoName = mvgRepoName();
+        branch = branch();
+        repoMakerForMaster = githubMavenRepoMaker(true);
+        repoMakerForOther = githubMavenRepoMaker(false);
     }
 
-    private Path projectDir(Gradle gradle) {
+    private Path projectDir() {
         return gradle.getRootProject().getRootDir().toPath().toAbsolutePath();
     }
 
@@ -108,7 +133,7 @@ public class InfoGradle {
         return projectDir.resolve(".github").resolve("workflows");
     }
 
-    private String getBranch() {
+    private String branch() {
         Path headFile = projectDir.resolve(Info.GIT_HEAD_FILE).toAbsolutePath();
         if (Files.isRegularFile(headFile)) {
             try {
@@ -117,14 +142,14 @@ public class InfoGradle {
                     return lines.get(0).replaceFirst("^" + Pattern.quote(Info.GIT_HEAD_FILE_START), "");
                 }
             } catch (IOException e) {
-                Info.LOGGER.warn("could not read " + headFile + " to determine git-branch", e);
+                LOGGER.warn("could not read " + headFile + " to determine git-branch", e);
             }
         }
-        Info.LOGGER.warn("could not determine git branch (because {} not found), assuming branch '{}'", headFile, Info.DEFAULT_BRANCH);
+        LOGGER.warn("could not determine git branch (because {} not found), assuming branch '{}'", headFile, Info.DEFAULT_BRANCH);
         return Info.DEFAULT_BRANCH;
     }
 
-    private String getRepoName() {
+    private String mvgRepoName() {
         Path configFile = projectDir.resolve(Info.GIT_CONFIG_FILE).toAbsolutePath();
         if (Files.isRegularFile(configFile)) {
             try {
@@ -133,18 +158,23 @@ public class InfoGradle {
                         .filter(l -> l.matches("\\s*url\\s*=.*"))
                         .map(l -> l.replaceAll(".*=\\s*", ""))
                         .findFirst().orElse(null);
-                if (url != null && url.startsWith(Info.MVG_REPO_BASE_URL)) {
+                if (url == null) {
+                    LOGGER.warn("could not determine if MVG repo: could not find a url in the git config file at {}", configFile);
+                } else if (!url.startsWith(Info.MVG_REPO_BASE_URL)) {
+                    LOGGER.warn("could not determine if MVG repo: the repo at {} is not an MVG repo", configFile);
+                } else {
                     return url.replaceFirst(Pattern.quote(Info.MVG_REPO_BASE_URL), "").replaceFirst("\\.git$", "");
                 }
             } catch (IOException e) {
-                Info.LOGGER.warn("could not read " + configFile + " to determine git-branch", e);
+                LOGGER.warn("could not determine if MVG repo: could not read " + configFile, e);
             }
+        } else {
+            LOGGER.warn("could not determine if MVG repo: {} not found (assuming non-github and non-MVG repo)", configFile);
         }
-        Info.LOGGER.warn("could not determine github repo (because {} not found), assuming non-github and non-MVG repo", configFile);
         return null;
     }
 
-    private Action<MavenArtifactRepository> getGithubMavenRepoMaker(boolean isMaster) {
+    private Action<MavenArtifactRepository> githubMavenRepoMaker(boolean isMaster) {
         String name = isMaster ? projectDir.getFileName().toString() : Info.PACKAGES_SNAPSHOTS_REPO_NAME;
         String url  = Info.MVG_MAVEN_REPO_BASE_URL + name;
         return mar -> {
@@ -154,7 +184,7 @@ public class InfoGradle {
                 c.setUsername("");
                 c.setPassword(Info.ALLREP_TOKEN);
             });
-            Info.LOGGER.info("+ REPOMAKER created maven repo: name={} url={} pw={}", name, url, Util.hide(Info.ALLREP_TOKEN));
+            LOGGER.info("+ REPOMAKER created maven repo: name={} url={} pw={}", name, url, Util.hide(Info.ALLREP_TOKEN));
         };
     }
 }
