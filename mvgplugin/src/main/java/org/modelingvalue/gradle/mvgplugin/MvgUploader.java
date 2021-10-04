@@ -68,13 +68,13 @@ public class MvgUploader {
 
         public Extension(Gradle gradle) {
             this.gradle = gradle;
-            channel = getDefaultChannel(gradle);
+            channel = getDefaultChannel();
             hubToken = JETBRAINS_TOKEN;
             LOGGER.info("+ default channel selected by uploader: {}", channel);
         }
 
-        public String getDefaultChannel(Gradle gradle) {
-            return selectMasterDevelopElse(gradle, "stable", "EAP", BranchParameterNames.get("channel", "DEV"));
+        public String getDefaultChannel() {
+            return selectMasterDevelopElse("stable", "EAP", BranchParameterNames.get("channel", "DEV"));
         }
 
         public Path getZipFile() {

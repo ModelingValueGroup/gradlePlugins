@@ -103,7 +103,7 @@ public class MvgMps {
 
     private void checkAntFilesAgainstMpsBuildNumber() {
         try {
-            Files.walk(InfoGradle.getProjectDir(gradle))
+            Files.walk(InfoGradle.getProjectDir())
                     .filter(p -> p.getFileName().toString().endsWith(".xml"))
                     .map(AntFileMpsVersionsExtractor::new)
                     .filter(AntFileMpsVersionsExtractor::isAntFile)
@@ -123,9 +123,9 @@ public class MvgMps {
     }
 
     private Properties readMpsBuildProps() {
-        File propFile = new File(ext.getMpsInstallDir(), "build.properties");
-        if (!propFile.isFile()) {
-            LOGGER.warn("could not read the MPS properties file at {}", propFile.getAbsolutePath());
+        Path propFile = ext.getMpsInstallDir().toPath().resolve("build.properties");
+        if (!Files.isRegularFile(propFile)) {
+            LOGGER.warn("could not read the MPS properties file at {}", propFile.toAbsolutePath());
             return new Properties();
         } else {
             return Util.loadProperties(propFile);

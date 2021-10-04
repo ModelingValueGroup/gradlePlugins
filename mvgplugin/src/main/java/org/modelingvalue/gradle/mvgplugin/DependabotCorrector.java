@@ -15,6 +15,43 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-public class GradleDotProperties {
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
 
+public class DependabotCorrector extends Corrector {
+    public DependabotCorrector(MvgCorrectorExtension ext) {
+        super("dependabot");
+    }
+
+    public DependabotCorrector generate() throws IOException {
+        Path dependabotFile = InfoGradle.getProjectDir().resolve(".github").resolve("dependabot.yml");
+        if (!Files.isRegularFile(dependabotFile) || Files.readAllLines(dependabotFile).stream().noneMatch(l -> l.contains("#notouch"))) {
+            overwrite(dependabotFile, getFileContents());
+        }
+        return this;
+    }
+
+    public Set<Path> getChangedFiles() {
+        return super.getChangedFiles(InfoGradle.getProjectDir());
+    }
+
+    private List<String> getFileContents() {
+        return List.of(
+                "version: 2",
+                "updates:",
+                "  - package-ecosystem: \"gradle\"",
+                "    directory: \"/\"",
+                "    target-branch: \"develop\"",
+                "    schedule:",
+                "      interval: \"daily\"",
+                "  - package-ecosystem: \"github-actions\"",
+                "    directory: \"/\"",
+                "    target-branch: \"develop\"",
+                "    schedule:",
+                "      interval: \"daily\""
+        );
+    }
 }

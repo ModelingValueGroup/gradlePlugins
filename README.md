@@ -24,7 +24,6 @@ Additional cnfig is possible though:
 ```
 mvgplugin {
     headerUrl = "http://blablabl"
-    dry = true
     addTextFile("xyzzy")
     addNoTextFile("xyzzy")
     

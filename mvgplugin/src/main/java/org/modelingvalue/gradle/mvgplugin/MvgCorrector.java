@@ -98,11 +98,12 @@ class MvgCorrector {
             changes.addAll(new EolCorrector(ext).generate().getChangedFiles());
             changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
             changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
+            changes.addAll(new DependabotCorrector(ext).generate().getChangedFiles());
 
             LOGGER.info("+ changed {} files", changes.size());
 
             if (!changes.isEmpty() && CI && ALLREP_TOKEN != null) {
-                GitUtil.addCommitPush(ext.getRoot(), GitUtil.NO_CI_MESSAGE + " updated by mvgplugin");
+                GitUtil.stageCommitPush(ext.getRoot(), GitUtil.NO_CI_COMMIT_MARKER + " updated by mvgplugin", changes);
             }
         } catch (IOException e) {
             throw new Error("could not correct files", e);

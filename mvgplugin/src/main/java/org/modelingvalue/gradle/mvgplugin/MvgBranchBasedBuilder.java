@@ -60,7 +60,7 @@ public class MvgBranchBasedBuilder {
         this.gradle = gradle;
 
         isCI = Info.CI;
-        isMaster = InfoGradle.isMasterBranch(gradle);
+        isMaster = InfoGradle.isMasterBranch();
 
         LOGGER.info("+ bbb: creating MvgBranchBasedBuilder (CI={} master={})", isCI, isMaster);
         TRACE.report(gradle);
@@ -178,7 +178,7 @@ public class MvgBranchBasedBuilder {
     private void publishToGitHub(PublishingExtension publishing, boolean master) {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
             LOGGER.info("+ bbb: adding github publishing repo: {}", master ? "master" : "snapshots");
-            Action<MavenArtifactRepository> maker = InfoGradle.getGithubMavenRepoMaker(gradle, InfoGradle.isMasterBranch(gradle));
+            Action<MavenArtifactRepository> maker = InfoGradle.getGithubMavenRepoMaker(InfoGradle.isMasterBranch());
             publishing.getRepositories().maven(maker);
             TRACE.report(publishing);
         }
@@ -200,7 +200,7 @@ public class MvgBranchBasedBuilder {
         if (bbbIdCache == null) {
             synchronized (gradle) {
                 if (bbbIdCache == null) {
-                    String branch    = InfoGradle.getBranch(gradle);
+                    String branch    = InfoGradle.getBranch();
                     int    hash      = branch.hashCode();
                     String sanatized = branch.replaceFirst("@.*", "").replaceAll("\\W", "_");
                     String part      = sanatized.substring(0, Math.min(sanatized.length(), MAX_BRANCHNAME_PART_LENGTH));

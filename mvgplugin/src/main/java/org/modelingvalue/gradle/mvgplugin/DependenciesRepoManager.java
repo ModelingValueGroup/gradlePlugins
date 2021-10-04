@@ -15,15 +15,11 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO_NAME;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,8 +33,6 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import javax.net.ssl.HttpsURLConnection;
 
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.Git;
@@ -84,16 +78,19 @@ public class DependenciesRepoManager {
     private final        String      branch;
     private final        boolean     active;
     private final        Path        dependenciesRepoDir;
-    private final        Git         git;
     private final        Set<String> workflowFileNames;
+    private final        String      commitMessage;
 
     public DependenciesRepoManager(Gradle gradle) {
-        repoName = InfoGradle.getRepoName(gradle);
-        branch = InfoGradle.getBranch(gradle);
-        active = InfoGradle.isMvgRepo(gradle) && (Info.CI || Info.TESTING);
-        dependenciesRepoDir = gradle.getRootProject().getBuildDir().toPath().resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath();
-        git = active ? cloneDependenciesRepo(dependenciesRepoDir, InfoGradle.getBranch(gradle)) : null;
-        workflowFileNames = findMyTriggerWorkflows(gradle);
+        repoName = InfoGradle.getMvgRepoName();
+        branch = InfoGradle.getBranch();
+        active = Info.TESTING || (InfoGradle.isMvgRepo() && Info.CI);
+        dependenciesRepoDir = active ? gradle.getRootProject().getBuildDir().toPath().resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath() : null;
+        if (active) {
+            cloneDependenciesRepo(dependenciesRepoDir, InfoGradle.getBranch());
+        }
+        workflowFileNames = active ? findMyTriggerWorkflows() : null;
+        commitMessage = active ? InfoGradle.getMvgRepoName() + ":" + InfoGradle.getBranch() + " @" + Info.NOW_STAMP + " [" + Info.HOSTNAME + "]" : null;
     }
 
     public void saveDependencies(Set<String> packages) {
@@ -116,43 +113,11 @@ public class DependenciesRepoManager {
     }
 
     private void trigger(String repo, String workflowFilename) {
-        /*
-                curl -v \
-                    -H "Authorization: token <token>" \
-                    -H "Accept: application/vnd.github.v3+json" \
-                    -X POST \
-                    'https://api.github.com/repos/ModelingValueGroup/immutable-collections/actions/workflows/build.yaml/dispatches' \
-                    -d '{"ref":"develop"}'
-
-
-         */
-        LOGGER.info("TRIGGER repo '{}' on branch '{}'", repo, branch);
-
+        LOGGER.info("TRIGGER dependent project (repo={} branch={} workflow={})", repo, branch, workflowFilename);
         try {
-            URL                url  = new URL("https://api.github.com/repos/ModelingValueGroup/" + repo + "/actions/workflows/" + workflowFilename + "/dispatches");
-            HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-            conn.setRequestProperty("Authorization", "token " + Info.ALLREP_TOKEN);
-            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            OutputStream os = conn.getOutputStream();
-            os.write(("{\"ref\":\"" + branch + "\"}").getBytes());
-            os.flush();
-            conn.connect();
-            try (InputStream err = conn.getErrorStream()) {
-                if (err != null) {
-                    String msg = new String(err.readAllBytes(), UTF_8);
-                    if (!msg.isEmpty()) {
-                        LOGGER.info("TRIGGER gave problem: err=" + msg);
-                    }
-                }
-
-                try (InputStream in = conn.getInputStream()) {
-                    String json = new String(in.readAllBytes(), UTF_8);
-                    if (!json.isBlank()) {
-                        LOGGER.info("DEBUG: " + json.length() + ":" + json);
-                    }
-                }
+            String json = GithubApi.triggerWorkflow(repo, workflowFilename, branch, msg -> LOGGER.info("TRIGGER gave problem: err=" + msg));
+            if (!json.isBlank()) {
+                LOGGER.info("DEBUG: " + json.length() + ":" + json);
             }
         } catch (IOException e) {
             LOGGER.info("+ bbb: could not trigger (repo={} wf={} msg={}:{})", repo, workflowFilename, e.getClass().getSimpleName(), e.getMessage());
@@ -174,7 +139,7 @@ public class DependenciesRepoManager {
      * @param branch              the branch to clone the repo in
      * @return the Git object to manipulate the git repo
      */
-    private static Git cloneDependenciesRepo(Path dependenciesRepoDir, String branch) {
+    private static void cloneDependenciesRepo(Path dependenciesRepoDir, String branch) {
         long t0 = System.currentTimeMillis();
         try {
             if (Files.isDirectory(dependenciesRepoDir)) {
@@ -183,42 +148,41 @@ public class DependenciesRepoManager {
                 FileUtils.delete(dependenciesRepoDir.toFile(), FileUtils.RECURSIVE);
             }
             LOGGER.info("+ bbb: cloning dependencies repo {} branch {} in {}", MVG_DEPENDENCIES_REPO_NAME, branch, dependenciesRepoDir);
-            Git git = Git.cloneRepository()
+            try (Git git = Git.cloneRepository()
                     .setURI(MVG_DEPENDENCIES_REPO)
                     .setDirectory(dependenciesRepoDir.toFile())
-                    .call();
-            if (git.branchList().setListMode(ListMode.REMOTE).call().stream().anyMatch(ref -> ref.getName().endsWith("/" + branch))) {
-                git.checkout()
-                        .setName(branch)
-                        .setCreateBranch(true)
-                        .setUpstreamMode(SetupUpstreamMode.TRACK)
-                        .setStartPoint("origin/" + branch)
-                        .call();
-            } else {
-                git.branchCreate()
-                        .setName(branch)
-                        .call();
-                git.push()
-                        .setCredentialsProvider(GitUtil.getCredentialProvider())
-                        .setRemote("origin")
-                        .setRefSpecs(new RefSpec(branch + ":" + branch))
-                        .call();
-                git.branchCreate()
-                        .setName(branch)
-                        .setUpstreamMode(SetupUpstreamMode.SET_UPSTREAM)
-                        .setStartPoint("origin/" + branch)
-                        .setForce(true)
-                        .call();
-                git.checkout()
-                        .setName(branch)
-                        .setUpstreamMode(SetupUpstreamMode.TRACK)
-                        .setStartPoint("origin/" + branch)
-                        .call();
+                    .call()) {
+                if (git.branchList().setListMode(ListMode.REMOTE).call().stream().anyMatch(ref -> ref.getName().endsWith("/" + branch))) {
+                    git.checkout()
+                            .setName(branch)
+                            .setCreateBranch(true)
+                            .setUpstreamMode(SetupUpstreamMode.TRACK)
+                            .setStartPoint("origin/" + branch)
+                            .call();
+                } else {
+                    git.branchCreate()
+                            .setName(branch)
+                            .call();
+                    git.push()
+                            .setCredentialsProvider(GitUtil.getCredentialProvider())
+                            .setRemote("origin")
+                            .setRefSpecs(new RefSpec(branch + ":" + branch))
+                            .call();
+                    git.branchCreate()
+                            .setName(branch)
+                            .setUpstreamMode(SetupUpstreamMode.SET_UPSTREAM)
+                            .setStartPoint("origin/" + branch)
+                            .setForce(true)
+                            .call();
+                    git.checkout()
+                            .setName(branch)
+                            .setUpstreamMode(SetupUpstreamMode.TRACK)
+                            .setStartPoint("origin/" + branch)
+                            .call();
+                }
             }
-            return git;
         } catch (GitAPIException | IOException e) {
             LOGGER.error("+ bbb: problem with dependencies repo", e);
-            return null;
         } finally {
             LOGGER.info("+ bbb: dependencies repo done ({} ms)", System.currentTimeMillis() - t0);
         }
@@ -254,21 +218,25 @@ public class DependenciesRepoManager {
     }
 
     private void writeDependencies(String repo, Set<String> usedPackages) {
-        String prop = "WORKFLOWS=" + String.join("/", workflowFileNames) + "\n";
-        usedPackages.forEach(usedPackage -> {
-            try {
-                Path triggerFile = getTriggerFile(repo, usedPackage);
-                LOGGER.info("+ bbb: creating          trigger file: " + triggerFile);
-                Files.createDirectories(triggerFile.getParent());
-                Files.write(triggerFile, prop.getBytes());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
+        if (repo == null) {
+            LOGGER.info("+ bbb: writeDependencies skipped because repo==null");
+        } else {
+            String prop = "WORKFLOWS=" + String.join("/", workflowFileNames) + "\n";
+            usedPackages.forEach(usedPackage -> {
+                try {
+                    Path triggerFile = getTriggerFile(repo, usedPackage);
+                    LOGGER.info("+ bbb: creating          trigger file: " + triggerFile);
+                    Files.createDirectories(triggerFile.getParent());
+                    Files.write(triggerFile, prop.getBytes());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
     }
 
     private void pushDependenciesRepo() throws GitAPIException, IOException {
-        GitUtil.addCommitPush(git, "reverse dependencies (@ " + Info.NOW_STAMP + " on " + Info.HOSTNAME + ")");
+        GitUtil.stageCommitPush(dependenciesRepoDir, commitMessage, null);
     }
 
     private Stream<Trigger> getTriggers(Set<String> publications) throws IOException {
@@ -335,8 +303,8 @@ public class DependenciesRepoManager {
      *
      * @return set of workflowfile names
      */
-    private Set<String> findMyTriggerWorkflows(Gradle gradle) {
-        Path workflowsDir = InfoGradle.getWorkflowsDir(gradle);
+    private Set<String> findMyTriggerWorkflows() {
+        Path workflowsDir = InfoGradle.getWorkflowsDir();
         if (!Files.isDirectory(workflowsDir)) {
             return Set.of();
         }
@@ -395,6 +363,7 @@ public class DependenciesRepoManager {
             throw new Error("TESTING: unable to test DependenciesManager", e);
         } finally {
             LOGGER.info("TESTING============================================================ >>>");
+
         }
     }
 }

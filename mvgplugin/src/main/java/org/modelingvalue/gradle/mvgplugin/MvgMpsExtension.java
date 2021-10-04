@@ -15,7 +15,7 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-import static org.modelingvalue.gradle.mvgplugin.GradleDotProperties.getGradleDotProperties;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
 import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.NOW_STAMP;
@@ -50,11 +50,11 @@ public class MvgMpsExtension {
     }
 
     public String getVersionExtra() {
-        return selectMasterDevelopElse(gradle, "", "EAP", "DEV");
+        return selectMasterDevelopElse("", "EAP", "DEV");
     }
 
     public String getVersionStamp() {
-        return selectMasterDevelopElse(gradle, "", NOW_STAMP, NOW_STAMP);
+        return selectMasterDevelopElse("", NOW_STAMP, NOW_STAMP);
     }
 
     public File getMpsDownloadDir() {

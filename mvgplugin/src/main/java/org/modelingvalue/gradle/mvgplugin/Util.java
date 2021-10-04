@@ -17,8 +17,6 @@ package org.modelingvalue.gradle.mvgplugin;
 
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -43,7 +41,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 public class Util {
-    public static final int    NUM_CHARS_TO_SHOW_OF_SECRETS = 6;
+    public static final int NUM_CHARS_TO_SHOW_OF_SECRETS = 6;
 
     public static String getTestMarker(String m) {
         return "™" + m + "™";
@@ -94,14 +92,15 @@ public class Util {
     }
 
     public static boolean envOrPropBoolean(String name) {
-        return Boolean.parseBoolean(envOrProp(name,"false"));
+        return Boolean.parseBoolean(envOrProp(name, "false"));
     }
 
     public static String envOrProp(String name, String def) {
-        String value = elvis(GradleDotProperties.getGradleDotProperties().getProp(name),
-                () -> elvis(getSystemProperty(name),
+        String value =
+                elvis(getSystemProperty(name),
                         () -> elvis(getSystemEnv(name),
-                                () -> def)));
+                                () -> elvis(InfoGradle.getGradleDotProperties().getProp(name),
+                                        () -> def)));
         LOGGER.info("+~ envOrProp        : {} => {}", name, Util.hide(value));
         return value;
     }
@@ -188,13 +187,13 @@ public class Util {
                 .map(f -> f.substring(f.lastIndexOf(".") + 1));
     }
 
-    public static Properties loadProperties(File file) {
-        try (InputStream s = new FileInputStream(file)) {
+    public static Properties loadProperties(Path file) {
+        try (InputStream s = Files.newInputStream(file)) {
             Properties props = new Properties();
             props.load(s);
             return props;
         } catch (IOException e) {
-            throw new GradleException("can not read properties file at " + file.getAbsolutePath(), e);
+            throw new GradleException("can not read properties file at " + file.toAbsolutePath(), e);
         }
     }
 
@@ -205,4 +204,5 @@ public class Util {
             return secret.substring(0, NUM_CHARS_TO_SHOW_OF_SECRETS) + "*".repeat(secret.length() - NUM_CHARS_TO_SHOW_OF_SECRETS);
         }
     }
+
 }
