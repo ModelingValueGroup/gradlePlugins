@@ -4,8 +4,8 @@ plugins {
     `maven-publish`
 }
 dependencies {
-    implementation("demo-lib:lib:3.0.52-BRANCHED")
-    implementation("org.modelingvalue:sync-proxy:0.0.0-BRANCHED")
+    implementation("demo-lib:lib:3.1.14-BRANCHED")
+    implementation("org.modelingvalue:sync-proxy:2.0.2-BRANCHED")
 
     implementation(mpsJar("mps-core"))
     implementation(mpsJar("closures.runtime.jar"))
