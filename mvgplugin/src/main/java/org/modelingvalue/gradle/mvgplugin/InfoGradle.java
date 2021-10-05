@@ -35,20 +35,26 @@ public class InfoGradle {
 
     private static volatile InfoGradle instance;
 
-    public static void setGradle(Gradle gradle) {
+    public static synchronized void setGradle(Gradle gradle) {
+        LOGGER.lifecycle("l~~~setGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
+        LOGGER.info("i~~~setGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
         if (instance == null) {
-            synchronized (InfoGradle.class) {
-                if (instance == null) {
-                    instance = new InfoGradle(gradle);
-                }
-            }
+            LOGGER.lifecycle("l~~~first InfoGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
+            LOGGER.info("i~~~first InfoGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
+            instance = new InfoGradle(gradle);
         }
         if (instance.gradle != gradle) {
-            throw new Error("InfoGradle.setGradle() should only be called once");
+            if (gradle.getRootProject().equals(instance.gradle.getRootProject())) {
+                LOGGER.lifecycle("l~~~new InfoGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
+                LOGGER.info("i~~~new InfoGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
+                instance = new InfoGradle(gradle);
+            } else {
+                throw new Error("InfoGradle.setGradle() should only be called once");
+            }
         }
     }
 
-    private static InfoGradle instance() {
+    private static synchronized InfoGradle instance() {
         if (instance == null) {
             throw new Error("InfoGradle.setGradle() should be called first");
         }
