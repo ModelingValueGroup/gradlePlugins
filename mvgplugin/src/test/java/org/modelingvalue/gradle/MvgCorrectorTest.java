@@ -186,9 +186,9 @@ public class MvgCorrectorTest {
                     () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
                     () -> assertEquals(1, numOccurences("+ the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
-                    () -> assertEquals(1, numOccurences("+ git testWorkspace: staging changes (adds=7 rms=0; branch=", out)),
-                    () -> assertEquals(1, numOccurences("+ git testWorkspace: pushing without tags", out)),
-                    () -> assertEquals(1, numOccurences("+ git testWorkspace: push skipped, there seems to be no remote (origin: not found.)", out)),
+                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": staging changes (adds=7 rms=0; branch=", out)),
+                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": pushing without tags", out)),
+                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": push skipped, there seems to be no remote (origin: not found.)", out)),
                     //
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
