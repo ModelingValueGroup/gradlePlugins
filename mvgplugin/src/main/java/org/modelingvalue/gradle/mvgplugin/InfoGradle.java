@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.invocation.Gradle;
 
 public class InfoGradle {
     private static final Path          USER_PROP_FILE  = Paths.get(System.getProperty("user.home"), ".gradle", GRADLE_PROPERTIES_FILE);
@@ -35,22 +34,15 @@ public class InfoGradle {
 
     private static volatile InfoGradle instance;
 
-    public static synchronized void setGradle(Gradle gradle) {
-        LOGGER.lifecycle("l~~~setGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
-        LOGGER.info("i~~~setGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
+    public static synchronized void setGradle(Path absProjectDir, String projectName) {
         if (instance == null) {
-            LOGGER.lifecycle("l~~~first InfoGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
-            LOGGER.info("i~~~first InfoGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
-            instance = new InfoGradle(gradle);
+            instance = new InfoGradle(absProjectDir, projectName);
         }
-        if (instance.gradle != gradle) {
-            if (gradle.getRootProject().equals(instance.gradle.getRootProject())) {
-                LOGGER.lifecycle("l~~~new InfoGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
-                LOGGER.info("i~~~new InfoGradle: {} {} {}", gradle, gradle.getRootProject(), System.identityHashCode(gradle));
-                instance = new InfoGradle(gradle);
-            } else {
-                throw new Error("InfoGradle.setGradle() should only be called once");
-            }
+        if (!instance.absProjectDir.equals(absProjectDir) || !instance.projectName.equals(projectName)) {
+            LOGGER.info("~~~ STRANGE: InfoGradle got a new Gradle object: {} -> {} and {} -> {}",
+                    instance.projectName, projectName,
+                    instance.absProjectDir, absProjectDir);
+            instance = new InfoGradle(absProjectDir, projectName);
         }
     }
 
@@ -66,8 +58,8 @@ public class InfoGradle {
         return instance == null ? USER_HOME_PROPS : instance().gradleDotProperties;
     }
 
-    public static Path getProjectDir() {
-        return instance().projectDir;
+    public static Path getAbsProjectDir() {
+        return instance().absProjectDir;
     }
 
     public static Path getWorkflowsDir() {
@@ -109,38 +101,33 @@ public class InfoGradle {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private final Gradle                          gradle;
-    private final Path                            projectDir;
-    private final Path                            workflowsDir;
+    private final Path                            absProjectDir;
     private final String                          projectName;
+    private final Path                            workflowsDir;
     private final String                          mvgRepoName;
     private final String                          branch;
     private final Action<MavenArtifactRepository> repoMakerForMaster;
     private final Action<MavenArtifactRepository> repoMakerForOther;
     private final DotProperties                   gradleDotProperties;
 
-    public InfoGradle(Gradle gradle) {
-        this.gradle = gradle;
-        gradleDotProperties = new DotProperties(USER_HOME_PROPS, gradle.getRootProject().getRootDir().toPath().resolve(GRADLE_PROPERTIES_FILE));
-        projectDir = projectDir();
+    public InfoGradle(Path absProjectDir, String projectName) {
+        this.absProjectDir = absProjectDir;
+        this.projectName = projectName;
+
+        gradleDotProperties = new DotProperties(USER_HOME_PROPS, absProjectDir.resolve(GRADLE_PROPERTIES_FILE));
         workflowsDir = workflowsDir();
-        projectName = gradle.getRootProject().getName();
         mvgRepoName = mvgRepoName();
         branch = branch();
         repoMakerForMaster = githubMavenRepoMaker(true);
         repoMakerForOther = githubMavenRepoMaker(false);
     }
 
-    private Path projectDir() {
-        return gradle.getRootProject().getRootDir().toPath().toAbsolutePath();
-    }
-
     private Path workflowsDir() {
-        return projectDir.resolve(".github").resolve("workflows");
+        return absProjectDir.resolve(".github").resolve("workflows");
     }
 
     private String branch() {
-        Path headFile = projectDir.resolve(Info.GIT_HEAD_FILE).toAbsolutePath();
+        Path headFile = absProjectDir.resolve(Info.GIT_HEAD_FILE).toAbsolutePath();
         if (Files.isRegularFile(headFile)) {
             try {
                 List<String> lines = Files.readAllLines(headFile);
@@ -156,7 +143,7 @@ public class InfoGradle {
     }
 
     private String mvgRepoName() {
-        Path configFile = projectDir.resolve(Info.GIT_CONFIG_FILE).toAbsolutePath();
+        Path configFile = absProjectDir.resolve(Info.GIT_CONFIG_FILE).toAbsolutePath();
         if (Files.isRegularFile(configFile)) {
             try {
                 String url = Files.readAllLines(configFile)
@@ -181,7 +168,7 @@ public class InfoGradle {
     }
 
     private Action<MavenArtifactRepository> githubMavenRepoMaker(boolean isMaster) {
-        String name = isMaster ? projectDir.getFileName().toString() : Info.PACKAGES_SNAPSHOTS_REPO_NAME;
+        String name = isMaster ? absProjectDir.getFileName().toString() : Info.PACKAGES_SNAPSHOTS_REPO_NAME;
         String url  = Info.MVG_MAVEN_REPO_BASE_URL + name;
         return mar -> {
             mar.setUrl(url);

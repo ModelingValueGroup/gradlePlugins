@@ -27,7 +27,7 @@ public class DependabotCorrector extends Corrector {
     }
 
     public DependabotCorrector generate() throws IOException {
-        Path dependabotFile = InfoGradle.getProjectDir().resolve(".github").resolve("dependabot.yml");
+        Path dependabotFile = InfoGradle.getAbsProjectDir().resolve(".github").resolve("dependabot.yml");
         if (!Files.isRegularFile(dependabotFile) || Files.readAllLines(dependabotFile).stream().noneMatch(l -> l.contains("#notouch"))) {
             overwrite(dependabotFile, getFileContents());
         }
@@ -35,7 +35,7 @@ public class DependabotCorrector extends Corrector {
     }
 
     public Set<Path> getChangedFiles() {
-        return super.getChangedFiles(InfoGradle.getProjectDir());
+        return super.getChangedFiles(InfoGradle.getAbsProjectDir());
     }
 
     private List<String> getFileContents() {

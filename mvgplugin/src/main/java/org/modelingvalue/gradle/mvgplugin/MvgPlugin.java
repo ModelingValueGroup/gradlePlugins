@@ -16,13 +16,13 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
-import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.MIN_TEST_HEAP_SIZE;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_JAVA;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isDevelopBranch;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
@@ -72,12 +72,13 @@ public class MvgPlugin implements Plugin<Project> {
     public void apply(Project project) {
         LOGGER.info("+ apply {} on project {}", getClass().getSimpleName(), project.getName());
         gradle = project.getGradle();
-        inactiveBecauseNotRootProject = gradle.getRootProject() != project;
+        Project rootProject = gradle.getRootProject();
+        inactiveBecauseNotRootProject = rootProject != project;
         if (inactiveBecauseNotRootProject) {
-            LOGGER.error("mvgplugin: the plugin {} can only be applied to the root project ({})", getClass().getSimpleName(), gradle.getRootProject());
+            LOGGER.error("mvgplugin: the plugin {} can only be applied to the root project ({})", getClass().getSimpleName(), rootProject);
             //throw new GradleException("the plugin " + getClass().getSimpleName() + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
         } else {
-            InfoGradle.setGradle(gradle);
+            InfoGradle.setGradle(rootProject.getRootDir().toPath().toAbsolutePath(), rootProject.getName());
             BranchParameterNames.init();
 
             LOGGER.info("+ MvgPlugin.apply to project {}", project.getName());

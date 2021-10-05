@@ -103,7 +103,7 @@ public class MvgMps {
 
     private void checkAntFilesAgainstMpsBuildNumber() {
         try {
-            Files.walk(InfoGradle.getProjectDir())
+            Files.walk(InfoGradle.getAbsProjectDir())
                     .filter(p -> p.getFileName().toString().endsWith(".xml"))
                     .map(AntFileMpsVersionsExtractor::new)
                     .filter(AntFileMpsVersionsExtractor::isAntFile)
