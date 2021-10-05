@@ -63,7 +63,8 @@ import org.modelingvalue.gradle.mvgplugin.Info;
 
 public class MvgCorrectorTest {
     private static final boolean I_NEED_TO_DEBUG_THIS_TEST = true;
-    private static final Path    testWorkspaceDir          = Paths.get("build", "testWorkspace").toAbsolutePath();
+    public static final  String  TEST_WORKSPACE_NAME       = "gradlePlugins";
+    private static final Path    testWorkspaceDir          = Paths.get("build", TEST_WORKSPACE_NAME).toAbsolutePath();
     private static final Path    settingsFile              = Paths.get("settings.gradle");
     private static final Path    buildFile                 = Paths.get("build.gradle.kts");
     private static final Path    gradlePropsFile           = Paths.get("gradle.properties");
@@ -185,9 +186,9 @@ public class MvgCorrectorTest {
                     () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
                     () -> assertEquals(1, numOccurences("+ the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
-                    () -> assertEquals(1, numOccurences("+ git testWorkspace: staging changes (adds=7 rms=0; branch=", out)),
-                    () -> assertEquals(1, numOccurences("+ git testWorkspace: pushing without tags", out)),
-                    () -> assertEquals(1, numOccurences("+ git testWorkspace: push skipped, there seems to be no remote (origin: not found.)", out)),
+                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": staging changes (adds=7 rms=0; branch=", out)),
+                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": pushing without tags", out)),
+                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": push skipped, there seems to be no remote (origin: not found.)", out)),
                     //
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
