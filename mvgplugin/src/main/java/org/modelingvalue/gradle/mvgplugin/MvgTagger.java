@@ -60,7 +60,7 @@ class MvgTagger {
             throw new GradleException("version of the rootProject is not set");
         } else if (InfoGradle.isMasterBranch()) {
             LOGGER.info("+ tagging this version with '{}' because this is the master branch", tag);
-            GitUtil.tag(InfoGradle.getProjectDir(), tag);
+            GitUtil.tag(InfoGradle.getAbsProjectDir(), tag);
         } else {
             LOGGER.info("+ not tagging this version with '{}' because this is not the master branch", tag);
         }
