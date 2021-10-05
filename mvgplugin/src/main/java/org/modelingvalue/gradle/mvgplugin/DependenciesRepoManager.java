@@ -137,7 +137,6 @@ public class DependenciesRepoManager {
      *
      * @param dependenciesRepoDir the dir to clone the repo in
      * @param branch              the branch to clone the repo in
-     * @return the Git object to manipulate the git repo
      */
     private static void cloneDependenciesRepo(Path dependenciesRepoDir, String branch) {
         long t0 = System.currentTimeMillis();
