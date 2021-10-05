@@ -130,7 +130,7 @@ public class MvgBranchBasedBuilder {
                     makePublicationsBbb(publishing);
                 }
                 if (isCI) {
-                    publishToGitHub(publishing, isMaster);
+                    publishToGitHub(publishing);
                 } else {
                     publishToMavenLocal(publishing);
                 }
@@ -175,9 +175,9 @@ public class MvgBranchBasedBuilder {
         }
     }
 
-    private void publishToGitHub(PublishingExtension publishing, boolean master) {
+    private void publishToGitHub(PublishingExtension publishing) {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
-            LOGGER.info("+ bbb: adding github publishing repo: {}", master ? "master" : "snapshots");
+            LOGGER.info("+ bbb: adding github publishing repo: {}", isMaster ? "master" : "snapshots");
             Action<MavenArtifactRepository> maker = InfoGradle.getGithubMavenRepoMaker(InfoGradle.isMasterBranch());
             publishing.getRepositories().maven(maker);
             TRACE.report(publishing);

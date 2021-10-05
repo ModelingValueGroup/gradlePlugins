@@ -84,13 +84,13 @@ public class DependenciesRepoManager {
     public DependenciesRepoManager(Gradle gradle) {
         repoName = InfoGradle.getMvgRepoName();
         branch = InfoGradle.getBranch();
-        active = Info.TESTING || (InfoGradle.isMvgRepo() && Info.CI);
+        active = Info.TESTING || (Info.CI && InfoGradle.isMvgRepo() && InfoGradle.isMasterBranch());
         dependenciesRepoDir = active ? gradle.getRootProject().getBuildDir().toPath().resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath() : null;
+        workflowFileNames = active ? findMyTriggerWorkflows() : null;
+        commitMessage = active ? InfoGradle.getMvgRepoName() + ":" + InfoGradle.getBranch() + " @" + Info.NOW_STAMP + " [" + Info.HOSTNAME + "]" : null;
         if (active) {
             cloneDependenciesRepo(dependenciesRepoDir, InfoGradle.getBranch());
         }
-        workflowFileNames = active ? findMyTriggerWorkflows() : null;
-        commitMessage = active ? InfoGradle.getMvgRepoName() + ":" + InfoGradle.getBranch() + " @" + Info.NOW_STAMP + " [" + Info.HOSTNAME + "]" : null;
     }
 
     public void saveDependencies(Set<String> packages) {
