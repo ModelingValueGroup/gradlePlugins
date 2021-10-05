@@ -188,7 +188,7 @@ public class MvgCorrectorTest {
                     () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
                     () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": staging changes (adds=7 rms=0; branch=", out)),
                     () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": pushing without tags", out)),
-                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": push skipped, there seems to be no remote (origin: not found.)", out)),
+                    () -> assertTrue(0 < numOccurences("+ git " + TEST_WORKSPACE_NAME + ": push skipped, there seems to be no remote (origin: not found.)", out)), // occurs 1 or 2 time dependent on the branch
                     //
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
