@@ -61,7 +61,7 @@ import org.modelingvalue.gradle.mvgplugin.GitManager;
 import org.modelingvalue.gradle.mvgplugin.GitUtil;
 import org.modelingvalue.gradle.mvgplugin.Info;
 
-public class MvgCorrectorTest {
+public class MvgPluginTest {
     private static final boolean I_NEED_TO_DEBUG_THIS_TEST = true;
     public static final  String  TEST_WORKSPACE_NAME       = "gradlePlugins";
     private static final Path    testWorkspaceDir          = Paths.get("build", TEST_WORKSPACE_NAME).toAbsolutePath();
@@ -106,7 +106,7 @@ public class MvgCorrectorTest {
     }
 
     @Test
-    public void checkFunctionality() throws IOException, GitAPIException {
+    public void checkPlugin() throws IOException, GitAPIException {
         // need to set these before accessing the Info class!
         System.setProperty(PROP_NAME_TESTING, "" + true);
         System.setProperty(PROP_NAME_CI, "" + true);
@@ -188,6 +188,10 @@ public class MvgCorrectorTest {
                     () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
                     () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": staging changes (adds=7 rms=0; branch=", out)),
                     () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": pushing without tags", out)),
+                    () -> assertEquals(2, numOccurences(getTestMarker("t"), out)),
+                    () -> assertEquals(4, numOccurences(getTestMarker("triggers"), out)),
+                    () -> assertEquals(2, numOccurences("TRIGGER dependent project (repo=sync-proxy branch=develop workflow=", out)),
+                    () -> assertEquals(1, numOccurences(getTestMarker("!"), out)),
                     () -> assertTrue(0 < numOccurences("+ git " + TEST_WORKSPACE_NAME + ": push skipped, there seems to be no remote (origin: not found.)", out)), // occurs 1 or 2 time dependent on the branch
                     //
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
@@ -255,7 +259,7 @@ public class MvgCorrectorTest {
     private static void cp(Function<String, String> postProcess, Path... fs) throws IOException {
         for (Path f : fs) {
             String name = f.getFileName().toString();
-            try (InputStream in = MvgCorrectorTest.class.getResourceAsStream(name)) {
+            try (InputStream in = MvgPluginTest.class.getResourceAsStream(name)) {
                 try (Scanner scanner = new Scanner(Objects.requireNonNull(in), UTF_8).useDelimiter("\\A")) {
                     String content = scanner.hasNext() ? scanner.next() : "";
                     if (postProcess != null) {

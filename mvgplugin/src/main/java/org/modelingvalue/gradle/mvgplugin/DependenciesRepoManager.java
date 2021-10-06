@@ -18,6 +18,7 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO_NAME;
+import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -84,7 +85,7 @@ public class DependenciesRepoManager {
     public DependenciesRepoManager(Gradle gradle) {
         repoName = InfoGradle.getMvgRepoName();
         branch = InfoGradle.getBranch();
-        active = !InfoGradle.isMasterBranch() && InfoGradle.isMvgRepo() && (Info.TESTING || Info.CI);
+        active = !InfoGradle.isMasterBranch() && (Info.TESTING || (Info.CI && InfoGradle.isMvgRepo()));
         dependenciesRepoDir = active ? gradle.getRootProject().getBuildDir().toPath().resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath() : null;
         workflowFileNames = active ? findMyTriggerWorkflows() : null;
         commitMessage = active ? InfoGradle.getMvgRepoName() + ":" + InfoGradle.getBranch() + " @" + Info.NOW_STAMP + " [" + Info.HOSTNAME + "]" : null;
@@ -98,29 +99,33 @@ public class DependenciesRepoManager {
             if (Info.TESTING) {
                 test();
             }
-            saveDependencies(repoName, packages);
+            if (repoName == null) {
+                LOGGER.info("+ bbb: saveDependencies skipped because not a proper MVG repository at {}", InfoGradle.getAbsProjectDir());
+            } else {
+                saveDependencies(repoName, packages);
+            }
         }
     }
 
     public void trigger(Set<String> publications) {
         if (active) {
             try {
-                getTriggers(publications).forEach(tr -> tr.workflows.forEach(workflowFilename -> trigger(tr.repo, workflowFilename)));
+                getTriggers(publications).forEach(tr -> tr.workflows.forEach(workflowFilename -> trigger(tr.repoName, workflowFilename)));
             } catch (IOException e) {
                 LOGGER.warn("triggers could not be retrieved", e);
             }
         }
     }
 
-    private void trigger(String repo, String workflowFilename) {
-        LOGGER.info("TRIGGER dependent project (repo={} branch={} workflow={})", repo, branch, workflowFilename);
+    private void trigger(String repoName, String workflowFilename) {
+        LOGGER.info("TRIGGER dependent project (repo={} branch={} workflow={})", repoName, branch, workflowFilename);
         try {
-            String json = GithubApi.triggerWorkflow(repo, workflowFilename, branch, msg -> LOGGER.info("TRIGGER gave problem: err=" + msg));
+            String json = GithubApi.triggerWorkflow(repoName, workflowFilename, branch, msg -> LOGGER.info("TRIGGER gave problem: err=" + msg));
             if (!json.isBlank()) {
                 LOGGER.info("DEBUG: " + json.length() + ":" + json);
             }
         } catch (IOException e) {
-            LOGGER.info("+ bbb: could not trigger (repo={} wf={} msg={}:{})", repo, workflowFilename, e.getClass().getSimpleName(), e.getMessage());
+            LOGGER.info("+ bbb: {} could not trigger (repo={} wf={} msg='{}:{}')", getTestMarker("!"), repoName, workflowFilename, e.getClass().getSimpleName(), e.getMessage());
             LOGGER.debug("+ bbb: could not trigger", e);
         }
     }
@@ -187,17 +192,17 @@ public class DependenciesRepoManager {
         }
     }
 
-    void saveDependencies(String repo, Set<String> usedPackages) {
+    void saveDependencies(String repoName, Set<String> usedPackages) {
         try {
-            clearExistingDependencies(repo);
-            writeDependencies(repo, usedPackages);
+            clearExistingDependencies(repoName);
+            writeDependencies(repoName, usedPackages);
             pushDependenciesRepo();
         } catch (IOException | GitAPIException e) {
             e.printStackTrace();
         }
     }
 
-    private void clearExistingDependencies(String repo) throws IOException {
+    private void clearExistingDependencies(String repoName) throws IOException {
         if (Files.isDirectory(dependenciesRepoDir)) {
             Files.walkFileTree(dependenciesRepoDir, new SimpleFileVisitor<>() {
                 @Override
@@ -205,7 +210,7 @@ public class DependenciesRepoManager {
                     if (dir.getFileName().toString().equals(".git")) {
                         return FileVisitResult.SKIP_SUBTREE;
                     }
-                    Path file = getTriggerFile(dir, repo);
+                    Path file = getTriggerFile(dir, repoName);
                     if (Files.isRegularFile(file)) {
                         LOGGER.info("+ bbb: deleting obsolete trigger file: {}", file);
                         Files.delete(file);
@@ -216,22 +221,18 @@ public class DependenciesRepoManager {
         }
     }
 
-    private void writeDependencies(String repo, Set<String> usedPackages) {
-        if (repo == null) {
-            LOGGER.info("+ bbb: writeDependencies skipped because repo==null");
-        } else {
-            String prop = "WORKFLOWS=" + String.join("/", workflowFileNames) + "\n";
-            usedPackages.forEach(usedPackage -> {
-                try {
-                    Path triggerFile = getTriggerFile(repo, usedPackage);
-                    LOGGER.info("+ bbb: creating          trigger file: " + triggerFile);
-                    Files.createDirectories(triggerFile.getParent());
-                    Files.write(triggerFile, prop.getBytes());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-        }
+    private void writeDependencies(String repoName, Set<String> usedPackages) {
+        String prop = "WORKFLOWS=" + String.join("/", workflowFileNames) + "\n";
+        usedPackages.forEach(usedPackage -> {
+            try {
+                Path triggerFile = getTriggerFile(repoName, usedPackage);
+                LOGGER.info("+ bbb: creating          trigger file: " + triggerFile);
+                Files.createDirectories(triggerFile.getParent());
+                Files.write(triggerFile, prop.getBytes());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private void pushDependenciesRepo() throws GitAPIException, IOException {
@@ -258,11 +259,11 @@ public class DependenciesRepoManager {
     }
 
     private static class Trigger {
-        public final String       repo;
+        public final String       repoName;
         public final List<String> workflows;
 
         private Trigger(Path triggerFile) {
-            repo = triggerFile.getFileName().toString().replaceFirst(Pattern.quote(TRIGGER_EXT) + "$", "");
+            repoName = triggerFile.getFileName().toString().replaceFirst(Pattern.quote(TRIGGER_EXT) + "$", "");
             workflows = readWorkflows(triggerFile);
         }
 
@@ -280,7 +281,7 @@ public class DependenciesRepoManager {
 
         @Override
         public String toString() {
-            return "[repo='" + repo + '\'' + ", workflows=" + workflows + ']';
+            return "{repo=" + repoName + ", workflows=" + workflows + '}';
         }
     }
 
@@ -288,13 +289,13 @@ public class DependenciesRepoManager {
         return dependenciesRepoDir.resolve(pack.replace('.', '/'));
     }
 
-    private Path getTriggerFile(String repo, String pack) {
-        return getTriggerFile(getTriggerDirFor(pack), repo);
+    private Path getTriggerFile(String repoName, String pack) {
+        return getTriggerFile(getTriggerDirFor(pack), repoName);
     }
 
     @NotNull
-    private Path getTriggerFile(Path d, String repo) {
-        return d.resolve(repo + TRIGGER_EXT);
+    private Path getTriggerFile(Path d, String repoName) {
+        return d.resolve(repoName + TRIGGER_EXT);
     }
 
     /**
@@ -349,19 +350,19 @@ public class DependenciesRepoManager {
 
     private void test() {
         try {
-            LOGGER.info("TESTING============================================================ <<<");
+            LOGGER.info(getTestMarker("t") + "===TESTING============================================================ <<<");
             saveDependencies("gh-app", Set.of("test.ab.c.lib", "test.qw.e.lib"));
             saveDependencies("gh-lib", Set.of("test.base.lib", "test.qw.e.lib"));
 
             for (String pack : List.of("test.ab.c.lib", "test.qw.e.lib", "test.base.lib")) {
-                getTriggers(pack).forEach(s -> LOGGER.info("TESTING: {} --trig--> {}", pack, s));
+                getTriggers(pack).forEach(s -> LOGGER.info("TESTING: {}  ===" + getTestMarker("triggers") + "===>  {}", pack, s));
             }
-            trigger("immutable-collections", "build.yaml");
-            trigger("immutable-collections", "no_wf.yaml");
+            trigger("sync-proxy", "build.yaml");
+            trigger("sync-proxy", "no_wf.yaml");
         } catch (Exception e) {
             throw new Error("TESTING: unable to test DependenciesManager", e);
         } finally {
-            LOGGER.info("TESTING============================================================ >>>");
+            LOGGER.info(getTestMarker("t") + "===TESTING============================================================ >>>");
 
         }
     }
