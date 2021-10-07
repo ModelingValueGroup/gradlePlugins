@@ -20,48 +20,47 @@ import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
-public abstract class Corrector {
-    protected final String    name;
-    protected final String    nameField;
-    protected final Set<Path> changedFiles = new HashSet<>();
+public class BashCorrector extends Corrector {
+    public static final String CORRECTOR_EXT = ".corrector.sh";
 
-    public Corrector(String name) {
-        this.name = name;
-        nameField = String.format("%-10s",name);
+    public BashCorrector(MvgCorrectorExtension ext) {
+        super("bash");
     }
 
-    protected void overwrite(Path file, List<String> lines) {
+    public BashCorrector generate() throws IOException {
+        Files.walk(InfoGradle.getAbsProjectDir())
+                .filter(Files::isRegularFile)
+                .filter(p -> p.getFileName().toString().matches(".*" + Pattern.quote(CORRECTOR_EXT)))
+                .forEach(this::run);
+        return this;
+    }
+
+    private void run(Path script) {
+        String simpleScriptName = script.getFileName().toString();
         try {
-            if (!Files.isRegularFile(file)) {
-                LOGGER.info("+ mvg: {} generated   : {}", nameField, file);
-                Files.write(file, lines);
-                changedFiles.add(file);
+            LOGGER.info("+ mvg running {}", script);
+            BashRunner bashRunner = new BashRunner(script).waitForExit();
+            if (bashRunner.exitValue() != 0) {
+                LOGGER.error("run of script {} resulted in an error ({})", script, bashRunner.exitValue());
             } else {
-                String was = Files.readString(file);
-                String req = String.join("\n", lines);
-                if (was.endsWith("\n") || was.endsWith("\r")) {
-                    req += "\n";
+                List<String> stderr = bashRunner.getStderr();
+                if (!stderr.isEmpty()) {
+                    LOGGER.info("+ mvg: running {} produced messages on stderr:", simpleScriptName);
+                    stderr.forEach(line -> LOGGER.info("+ mvg:     {}", line));
                 }
-                if (!req.equals(was)) {
-                    LOGGER.info("+ mvg: {} regenerated : {}", nameField, file);
-                    LOGGER.debug("++ mvg: ====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
-                    Files.write(file, req.getBytes());
-                    changedFiles.add(file);
-                } else {
-                    LOGGER.info("+ mvg: {} untouched   : {}", nameField, file);
-                }
+                Path outFile = script.getParent().resolve(simpleScriptName.replaceFirst(Pattern.quote(CORRECTOR_EXT) + "$", ""));
+                overwrite(outFile, bashRunner.getStdout());
             }
         } catch (IOException e) {
-            throw new Error("could not overwrite file for " + name + " : " + file, e);
+            LOGGER.error("could not run {}: {} (ignored for now)", simpleScriptName, e.getMessage());
         }
     }
 
-    public Set<Path> getChangedFiles(Path rel) {
-        return changedFiles.stream().map(rel::relativize).collect(Collectors.toSet());
+    public Set<Path> getChangedFiles() {
+        return super.getChangedFiles(InfoGradle.getAbsProjectDir());
     }
 }

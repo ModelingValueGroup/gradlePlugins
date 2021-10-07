@@ -15,9 +15,9 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.CI;
+import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MIN_TEST_HEAP_SIZE;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
@@ -25,6 +25,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_JAVA;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isDevelopBranch;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isTestingOrMvgCI;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
 import java.io.IOException;
@@ -39,9 +40,11 @@ import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.execution.TaskExecutionListener;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.TaskCollection;
+import org.gradle.api.tasks.TaskState;
 import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
@@ -71,19 +74,36 @@ public class MvgPlugin implements Plugin<Project> {
     }
 
     public void apply(Project project) {
-        LOGGER.info("+ apply {} on project {}", getClass().getSimpleName(), project.getName());
+        LOGGER.info("+ mvg: apply {} on project {}", getClass().getSimpleName(), project.getName());
         gradle = project.getGradle();
         Project rootProject = gradle.getRootProject();
+        InfoGradle.setGradle(rootProject.getRootDir().toPath().toAbsolutePath(), rootProject.getName());
+
         inactiveBecauseNotRootProject = rootProject != project;
         if (inactiveBecauseNotRootProject) {
             LOGGER.error("mvgplugin: the plugin {} can only be applied to the root project ({})", getClass().getSimpleName(), rootProject);
             //throw new GradleException("the plugin " + getClass().getSimpleName() + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
         } else {
-            InfoGradle.setGradle(rootProject.getRootDir().toPath().toAbsolutePath(), rootProject.getName());
+            gradle.addListener(new TaskExecutionListener() {
+                @Override
+                public void beforeExecute(Task task) {
+                    LOGGER.info("+ mvg: >>>>> {}",task.getName());
+                }
+
+                @Override
+                public void afterExecute(Task task, TaskState taskState) {
+                    LOGGER.info("+ mvg: <<<<< {}\n", task.getName());
+                }
+            });
             BranchParameterNames.init();
 
-            LOGGER.info("+ MvgPlugin.apply to project {}", project.getName());
-            Info.LOGGER.info("+ {}={}, {}={}, {}={}, {}={}", PROP_NAME_CI, CI, "master", isMasterBranch(), "develop", isDevelopBranch(), PROP_NAME_ALLREP_TOKEN, Util.hide(ALLREP_TOKEN));
+            LOGGER.info("+ mvg: MvgPlugin.apply to project {}", project.getName());
+            LOGGER.info("+ mvg: {}={}, {}={} {}={}, {}={}, {}={}",
+                    PROP_NAME_CI, CI,
+                    "TEST|CI", isTestingOrMvgCI(),
+                    "master", isMasterBranch(),
+                    "develop", isDevelopBranch(),
+                    PROP_NAME_ALLREP_TOKEN, Util.hide(ALLREP_TOKEN));
 
             checkWorkflowFilesForLoopingDanger();
             checkIfWeAreUsingTheLatestPluginVersion();
@@ -149,15 +169,15 @@ public class MvgPlugin implements Plugin<Project> {
     private void checkIfWeAreUsingTheLatestPluginVersion() {
         Version v = Util.getMyPluginVersion();
         if (v == null) {
-            LOGGER.info("+ can not determine if using the latest version of mvg plugin: can not determine running version");
+            LOGGER.info("+ mvg: can not determine if using the latest version of mvg plugin: can not determine running version");
         } else {
             MavenMetaVersionExtractor extractor = new MavenMetaVersionExtractor(Info.PLUGIN_META_URL);
             if (extractor.error()) {
-                LOGGER.warn("+ can not determine if using the latest version of mvg plugin: metainfo of myself not readable ({}, msg={})", Info.PLUGIN_META_URL, extractor.getException().getMessage());
+                LOGGER.warn("+ mvg: can not determine if using the latest version of mvg plugin: metainfo of myself not readable ({}, msg={})", Info.PLUGIN_META_URL, extractor.getException().getMessage());
             } else if (!extractor.getLatest().equals(v)) {
-                LOGGER.warn("+ NOT using the latest mvg plugin version (using {}, latest is {})", v, extractor.getLatest());
+                LOGGER.warn("+ mvg: NOT using the latest mvg plugin version (using {}, latest is {})", v, extractor.getLatest());
             } else {
-                LOGGER.info("+ OK: using the latest mvg plugin version ({})", v);
+                LOGGER.info("+ mvg: OK: using the latest mvg plugin version ({})", v);
             }
         }
     }
@@ -167,15 +187,15 @@ public class MvgPlugin implements Plugin<Project> {
             gradle.afterProject(p -> {
                 if (!traceHeaderDone) {
                     traceHeaderDone = true;
-                    LOGGER.debug("++++-------------------------------------------------------------------------------------------------------------------------------------");
-                    LOGGER.debug("++++ mvg found                {} {} {}", String.format("%-30s", "NAME"), String.format("%-30s", "PROJECT"), "CLASS");
-                    LOGGER.debug("++++-------------------------------------------------------------------------------------------------------------------------------------");
+                    LOGGER.debug("++-------------------------------------------------------------------------------------------------------------------------------------");
+                    LOGGER.debug("++ mvg: found                {} {} {}", String.format("%-30s", "NAME"), String.format("%-30s", "PROJECT"), "CLASS");
+                    LOGGER.debug("++-------------------------------------------------------------------------------------------------------------------------------------");
                 }
                 String projectName = String.format("%-30s", p.getName());
-                ((DefaultConvention) p.getExtensions()).getAsMap().forEach((name, ext) -> LOGGER.debug("++++ mvg found extension    : {} {} {}", /*          */String.format("%-30s", name), /*                         */projectName, ext.getClass().getSimpleName()));
-                p.getTasks().all(task -> /*                                             */LOGGER.debug("++++ mvg found task         : {} {} {}", /*          */String.format("%-30s", task.getName()), /*               */projectName, task.getClass().getSimpleName()));
-                p.getConfigurations().all(conf -> /*                                    */LOGGER.debug("++++ mvg found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), /*               */projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
-                p.getPlugins().all(plugin -> /*                                         */LOGGER.debug("++++ mvg found plugin       : {} {}", /*             */String.format("%-30s", plugin.getClass().getSimpleName()), projectName));
+                ((DefaultConvention) p.getExtensions()).getAsMap().forEach((name, ext) -> LOGGER.debug("++ mvg: found extension    : {} {} {}", /*          */String.format("%-30s", name), /*                         */projectName, ext.getClass().getSimpleName()));
+                p.getTasks().all(task -> /*                                             */LOGGER.debug("++ mvg: found task         : {} {} {}", /*          */String.format("%-30s", task.getName()), /*               */projectName, task.getClass().getSimpleName()));
+                p.getConfigurations().all(conf -> /*                                    */LOGGER.debug("++ mvg: found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), /*               */projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
+                p.getPlugins().all(plugin -> /*                                         */LOGGER.debug("++ mvg: found plugin       : {} {}", /*             */String.format("%-30s", plugin.getClass().getSimpleName()), projectName));
             });
         }
     }
@@ -186,22 +206,22 @@ public class MvgPlugin implements Plugin<Project> {
             if (t instanceof Test) {
                 Test test = (Test) t;
 
-                LOGGER.info("+ adding test.useJUnitPlatform");
+                LOGGER.info("+ mvg: adding test.useJUnitPlatform");
                 test.useJUnitPlatform();
 
                 if (test.getMaxHeapSize() == null || toBytes(test.getMaxHeapSize()) < toBytes(MIN_TEST_HEAP_SIZE)) {
-                    LOGGER.info("+ increasing test heap from {} to {}", test.getMaxHeapSize() == null ? "default" : test.getMaxHeapSize(), MIN_TEST_HEAP_SIZE);
+                    LOGGER.info("+ mvg: increasing test heap from {} to {}", test.getMaxHeapSize() == null ? "default" : test.getMaxHeapSize(), MIN_TEST_HEAP_SIZE);
                     test.setMaxHeapSize(MIN_TEST_HEAP_SIZE);
                 }
 
                 Object java = p.getExtensions().findByName("java");
                 if (java != null) {
-                    LOGGER.info("+ adding junit5 dependencies");
+                    LOGGER.info("+ mvg: adding junit5 dependencies");
                     Info.JUNIT_IMPLEMENTATION_DEPS.forEach(dep -> p.getDependencies().add("testImplementation", dep));
                     Info.JUNIT_RUNTIMEONLY_DEPS.forEach(dep -> p.getDependencies().add("testRuntimeOnly", dep));
                 }
             } else if (t != null) {
-                LOGGER.info("+ 'test' task is not of type Test (but of type '{}')", t.getClass().getSimpleName());
+                LOGGER.info("+ mvg: 'test' task is not of type Test (but of type '{}')", t.getClass().getSimpleName());
             }
         });
     }
@@ -209,12 +229,12 @@ public class MvgPlugin implements Plugin<Project> {
     private void tuneJavaPlugin() {
         String javaVersionInProps = getGradleDotProperties().getProp(PROP_NAME_VERSION_JAVA, "11");
         if (javaVersionInProps == null) {
-            LOGGER.info("+ java version not adjusted because there is no {} property in {}", PROP_NAME_VERSION_JAVA, getGradleDotProperties().getFile());
+            LOGGER.info("+ mvg: java version not adjusted because there is no {} property in {}", PROP_NAME_VERSION_JAVA, getGradleDotProperties().getFile());
         }
         gradle.afterProject(p -> {
             JavaPluginExtension java = (JavaPluginExtension) p.getExtensions().findByName("java");
             if (java != null) {
-                LOGGER.info("+ adding tasks for javadoc & source jars");
+                LOGGER.info("+ mvg: adding tasks for javadoc & source jars");
                 java.withJavadocJar();
                 java.withSourcesJar();
 
@@ -224,7 +244,7 @@ public class MvgPlugin implements Plugin<Project> {
                     if (!current.isCompatibleWith(requested)) {
                         LOGGER.error("mvgplugin: the requested java version ({} in gradle.properties = {}) is not compatible with the running java version ({}). continuing with {}", PROP_NAME_VERSION_JAVA, requested, current, current);
                     } else {
-                        LOGGER.info("+ setting java source&target compatibility from ({}&{}) to {}", java.getSourceCompatibility(), java.getTargetCompatibility(), requested);
+                        LOGGER.info("+ mvg: setting java source&target compatibility from ({}&{}) to {}", java.getSourceCompatibility(), java.getTargetCompatibility(), requested);
                         java.setSourceCompatibility(requested);
                         java.setTargetCompatibility(requested);
                     }
@@ -238,7 +258,7 @@ public class MvgPlugin implements Plugin<Project> {
             TaskCollection<Javadoc> javadocTasks = p.getTasks().withType(Javadoc.class);
             javadocTasks.forEach(jd -> jd.options(opt -> {
                 if (opt instanceof StandardJavadocDocletOptions) {
-                    LOGGER.info("+ adding javadoc option to ignore warnings");
+                    LOGGER.info("+ mvg: adding javadoc option to ignore warnings");
                     ((StandardJavadocDocletOptions) opt).addStringOption("Xdoclint:none", "-quiet");
                 }
             }));
@@ -252,7 +272,7 @@ public class MvgPlugin implements Plugin<Project> {
             javacomileTasks.forEach(t -> {
                 CompileOptions options = t.getOptions();
                 if (!utf8.equals(options.getEncoding())) {
-                    LOGGER.info("+ setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
+                    LOGGER.info("+ mvg: setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
                     options.setEncoding(utf8);
                 }
             });
@@ -260,7 +280,7 @@ public class MvgPlugin implements Plugin<Project> {
             javadocTasks.forEach(t -> {
                 MinimalJavadocOptions options = t.getOptions();
                 if (!utf8.equals(options.getEncoding())) {
-                    LOGGER.info("+ setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
+                    LOGGER.info("+ mvg: setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
                     options.setEncoding(utf8);
                 }
             });
@@ -271,7 +291,7 @@ public class MvgPlugin implements Plugin<Project> {
         gradle.afterProject(p -> {
             BuildScanExtension buildScan = (BuildScanExtension) p.getExtensions().findByName("buildScan");
             if (buildScan != null) {
-                LOGGER.info("+ agreeing to buildScan");
+                LOGGER.info("+ mvg: agreeing to buildScan");
                 buildScan.setTermsOfServiceAgree("yes");
                 buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
             }
@@ -280,14 +300,14 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void addMVGRepositories() {
         gradle.allprojects(p -> {
-            LOGGER.info("+ adding MVG repositories to project {}", p.getName());
+            LOGGER.info("+ mvg: adding MVG repositories to project {}", p.getName());
 
             p.getRepositories().mavenCentral();
             p.getRepositories().mavenLocal();
             p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(true));
             p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(false));
 
-            p.getRepositories().forEach(r -> LOGGER.info("+   - {}", r.getName()));
+            p.getRepositories().forEach(r -> LOGGER.info("+ mvg:   - {}", r.getName()));
         });
     }
 }

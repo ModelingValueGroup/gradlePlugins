@@ -85,12 +85,12 @@ public class DependenciesRepoManager {
     public DependenciesRepoManager(Gradle gradle) {
         repoName = InfoGradle.getMvgRepoName();
         branch = InfoGradle.getBranch();
-        active = !InfoGradle.isMasterBranch() && (Info.TESTING || (Info.CI && InfoGradle.isMvgRepo()));
+        active = !InfoGradle.isMasterBranch() && InfoGradle.isTestingOrMvgCI();
         dependenciesRepoDir = active ? gradle.getRootProject().getBuildDir().toPath().resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath() : null;
         workflowFileNames = active ? findMyTriggerWorkflows() : null;
-        commitMessage = active ? InfoGradle.getMvgRepoName() + ":" + InfoGradle.getBranch() + " @" + Info.NOW_STAMP + " [" + Info.HOSTNAME + "]" : null;
+        commitMessage = active ? repoName + ":" + branch + " @" + Info.NOW_STAMP + " [" + Info.HOSTNAME + "]" : null;
         if (active) {
-            cloneDependenciesRepo(dependenciesRepoDir, InfoGradle.getBranch());
+            cloneDependenciesRepo(dependenciesRepoDir, branch);
         }
     }
 
@@ -100,7 +100,7 @@ public class DependenciesRepoManager {
                 test();
             }
             if (repoName == null) {
-                LOGGER.info("+ bbb: saveDependencies skipped because not a proper MVG repository at {}", InfoGradle.getAbsProjectDir());
+                LOGGER.info("+ mvg-bbb: saveDependencies skipped because not a proper MVG repository at {}", InfoGradle.getAbsProjectDir());
             } else {
                 saveDependencies(repoName, packages);
             }
@@ -118,15 +118,15 @@ public class DependenciesRepoManager {
     }
 
     private void trigger(String repoName, String workflowFilename) {
-        LOGGER.info("TRIGGER dependent project (repo={} branch={} workflow={})", repoName, branch, workflowFilename);
+        LOGGER.info("+ mvg-bbb: TRIGGER dependent project (repo={} branch={} workflow={})", repoName, branch, workflowFilename);
         try {
-            String json = GithubApi.triggerWorkflow(repoName, workflowFilename, branch, msg -> LOGGER.info("TRIGGER gave problem: err=" + msg));
+            String json = GithubApi.triggerWorkflow(repoName, workflowFilename, branch, msg -> LOGGER.info("+ mvg-bbb: TRIGGER gave problem: err={}", msg));
             if (!json.isBlank()) {
-                LOGGER.info("DEBUG: " + json.length() + ":" + json);
+                LOGGER.info("+ mvg-bbb: trigger error: {}: {}", json.length(), json);
             }
         } catch (IOException e) {
-            LOGGER.info("+ bbb: {} could not trigger (repo={} wf={} msg='{}:{}')", getTestMarker("!"), repoName, workflowFilename, e.getClass().getSimpleName(), e.getMessage());
-            LOGGER.debug("+ bbb: could not trigger", e);
+            LOGGER.info("+ mvg-bbb: {} could not trigger (repo={} wf={} msg='{}:{}')", getTestMarker("!"), repoName, workflowFilename, e.getClass().getSimpleName(), e.getMessage());
+            LOGGER.debug("++ mvg-bbb: could not trigger", e);
         }
     }
 
@@ -148,10 +148,10 @@ public class DependenciesRepoManager {
         try {
             if (Files.isDirectory(dependenciesRepoDir)) {
                 // will normally not happen in CI, but can happen in testing
-                LOGGER.info("+ bbb: deleting old dependencies repo at {}", dependenciesRepoDir);
+                LOGGER.info("+ mvg-bbb: deleting old dependencies repo at {}", dependenciesRepoDir);
                 FileUtils.delete(dependenciesRepoDir.toFile(), FileUtils.RECURSIVE);
             }
-            LOGGER.info("+ bbb: cloning dependencies repo {} branch {} in {}", MVG_DEPENDENCIES_REPO_NAME, branch, dependenciesRepoDir);
+            LOGGER.info("+ mvg-bbb: cloning dependencies repo {} branch {} in {}", MVG_DEPENDENCIES_REPO_NAME, branch, dependenciesRepoDir);
             try (Git git = Git.cloneRepository()
                     .setURI(MVG_DEPENDENCIES_REPO)
                     .setDirectory(dependenciesRepoDir.toFile())
@@ -186,9 +186,9 @@ public class DependenciesRepoManager {
                 }
             }
         } catch (GitAPIException | IOException e) {
-            LOGGER.error("+ bbb: problem with dependencies repo", e);
+            LOGGER.error("+ mvg-bbb: problem with dependencies repo", e);
         } finally {
-            LOGGER.info("+ bbb: dependencies repo done ({} ms)", System.currentTimeMillis() - t0);
+            LOGGER.info("+ mvg-bbb: dependencies repo done ({} ms)", System.currentTimeMillis() - t0);
         }
     }
 
@@ -212,7 +212,7 @@ public class DependenciesRepoManager {
                     }
                     Path file = getTriggerFile(dir, repoName);
                     if (Files.isRegularFile(file)) {
-                        LOGGER.info("+ bbb: deleting obsolete trigger file: {}", file);
+                        LOGGER.info("+ mvg-bbb: deleting obsolete trigger file: {}", file);
                         Files.delete(file);
                     }
                     return FileVisitResult.CONTINUE;
@@ -226,7 +226,7 @@ public class DependenciesRepoManager {
         usedPackages.forEach(usedPackage -> {
             try {
                 Path triggerFile = getTriggerFile(repoName, usedPackage);
-                LOGGER.info("+ bbb: creating          trigger file: " + triggerFile);
+                LOGGER.info("+ mvg-bbb: creating          trigger file: {}", triggerFile);
                 Files.createDirectories(triggerFile.getParent());
                 Files.write(triggerFile, prop.getBytes());
             } catch (IOException e) {
@@ -350,19 +350,19 @@ public class DependenciesRepoManager {
 
     private void test() {
         try {
-            LOGGER.info(getTestMarker("t") + "===TESTING============================================================ <<<");
+            LOGGER.info("+ mvg: ===TESTING============================================================ <<< {}", getTestMarker("t"));
             saveDependencies("gh-app", Set.of("test.ab.c.lib", "test.qw.e.lib"));
             saveDependencies("gh-lib", Set.of("test.base.lib", "test.qw.e.lib"));
 
             for (String pack : List.of("test.ab.c.lib", "test.qw.e.lib", "test.base.lib")) {
-                getTriggers(pack).forEach(s -> LOGGER.info("TESTING: {}  ===" + getTestMarker("triggers") + "===>  {}", pack, s));
+                getTriggers(pack).forEach(s -> LOGGER.info("+ mvg: test trigger: {}  ==={}===>  {}", pack, getTestMarker("triggers"), s));
             }
             trigger("sync-proxy", "build.yaml");
             trigger("sync-proxy", "no_wf.yaml");
         } catch (Exception e) {
             throw new Error("TESTING: unable to test DependenciesManager", e);
         } finally {
-            LOGGER.info(getTestMarker("t") + "===TESTING============================================================ >>>");
+            LOGGER.info("+ mvg: ===TESTING============================================================ >>> {}", getTestMarker("t"));
 
         }
     }

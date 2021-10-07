@@ -15,7 +15,7 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,7 +58,7 @@ public class MvgMps {
         if (jar == null) {
             throw new GradleException("no jar found for '" + dep + "' in " + ext.getMpsInstallDir());
         }
-        LOGGER.info("+ MPS: dependency     replaced: " + dep + " => " + jar);
+        LOGGER.info("+ mvg-mps: dependency     replaced: {} => {}" ,dep, jar);
         return gradle.getRootProject().files(jar);
     }
 
@@ -91,8 +91,8 @@ public class MvgMps {
                 mpsBuildNumber = getBuildNumber();
                 checkAntFilesAgainstMpsBuildNumber();
 
-                LOGGER.info("+ indexed {} jars in MPS dir {}", jarIndex.size(), ext.getMpsInstallDir());
-                LOGGER.info("+ loaded MPS properties, mps.build.number={}", mpsBuildNumber);
+                LOGGER.info("+ mvg: indexed {} jars in MPS dir {}", jarIndex.size(), ext.getMpsInstallDir());
+                LOGGER.info("+ mvg: loaded MPS properties, mps.build.number={}", mpsBuildNumber);
 
                 mpsHasBeenLoaded = true;
                 assert jarIndex != null;
@@ -114,7 +114,7 @@ public class MvgMps {
                         } else if (a.getUntil() != null && 0 < mpsBuildNumber.compareTo(a.getUntil())) {
                             LOGGER.warn("the MPS build number {} of MPS {} is above the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
                         } else {
-                            LOGGER.info("+ the MPS build number {} of MPS {} is in range [{}...{}] of the requested in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
+                            LOGGER.info("+ mvg-mps: the MPS build number {} of MPS {} is in range [{}...{}] of the requested in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
                         }
                     });
         } catch (IOException e) {
@@ -163,7 +163,7 @@ public class MvgMps {
                 if (redirect == null) {
                     break;
                 }
-                LOGGER.info("+ MPS download redirect => {}", redirect);
+                LOGGER.info("+ mvg-mps: MPS download redirect => {}", redirect);
                 urlConnection = new URL(redirect).openConnection();
             }
             try (InputStream is = urlConnection.getInputStream()) {
@@ -173,12 +173,12 @@ public class MvgMps {
                     mpsZip.delete();
                     throw new GradleException("could not download MPS " + ext.getVersion() + " from " + url + " (got empty file)");
                 }
-                LOGGER.info("+ read {} bytes of zip file", len);
+                LOGGER.info("+ mvg-mps: read {} bytes of zip file", len);
             }
         } catch (IOException e) {
             throw new GradleException("could not download MPS " + ext.getVersion() + " from " + url + " (" + e.getMessage() + ")", e);
         }
-        LOGGER.info("+ downloading MPS {} took {} ms", ext.getVersion(), System.currentTimeMillis() - t0);
+        LOGGER.info("+ mvg-mps: downloading MPS {} took {} ms", ext.getVersion(), System.currentTimeMillis() - t0);
     }
 
     private static void unzip(MvgMpsExtension ext, File fileZip, File destDir) {
@@ -213,7 +213,7 @@ public class MvgMps {
         } catch (IOException e) {
             throw new GradleException("could not unzip MPS zip: " + fileZip, e);
         }
-        LOGGER.info("+ unzipping   MPS {} took {} ms: {}", ext.getVersion(), System.currentTimeMillis() - t0, destDir);
+        LOGGER.info("+ mvg-mps: unzipping   MPS {} took {} ms: {}", ext.getVersion(), System.currentTimeMillis() - t0, destDir);
     }
 
     private static Map<String, File> makeJarIndex(File rootDir) {

@@ -70,7 +70,7 @@ public class MvgUploader {
             this.gradle = gradle;
             channel = getDefaultChannel();
             hubToken = JETBRAINS_TOKEN;
-            LOGGER.info("+ default channel selected by uploader: {}", channel);
+            LOGGER.info("+ mvg: default channel selected by uploader: {}", channel);
         }
 
         public String getDefaultChannel() {
@@ -81,11 +81,11 @@ public class MvgUploader {
             Path path = null;
             if (zipFile != null) {
                 path = Paths.get(zipFile).toAbsolutePath();
-                LOGGER.info("+ upload file found at {} as indicated by {} ext", path, UPLOADER_TASK_NAME);
+                LOGGER.info("+ mvg: upload file found at {} as indicated by {} ext", path, UPLOADER_TASK_NAME);
             } else {
                 Path artiDir = gradle.getRootProject().getBuildDir().toPath().resolve("artifacts");
                 if (!Files.isDirectory(artiDir)) {
-                    LOGGER.info("+ artifacts dir not found: {}", artiDir.toAbsolutePath());
+                    LOGGER.info("+ mvg: artifacts dir not found: {}", artiDir.toAbsolutePath());
                 } else {
                     try {
                         List<Path> zipFiles = Files.list(artiDir)
@@ -94,14 +94,14 @@ public class MvgUploader {
                                 .filter(Files::isRegularFile)
                                 .collect(Collectors.toList());
                         if (zipFiles.isEmpty()) {
-                            LOGGER.info("+ no zip files found in artifacts dir: {}", artiDir.toAbsolutePath());
+                            LOGGER.info("+ mvg: no zip files found in artifacts dir: {}", artiDir.toAbsolutePath());
                         } else if (1 < zipFiles.size()) {
-                            LOGGER.info("+ too many ({}) zip files found in artifacts dir: {}", zipFiles.size(), artiDir.toAbsolutePath());
+                            LOGGER.info("+ mvg: too many ({}) zip files found in artifacts dir: {}", zipFiles.size(), artiDir.toAbsolutePath());
                         } else {
                             path = zipFiles.get(0);
                         }
                     } catch (IOException e) {
-                        LOGGER.info("+ can not list artifact dir: {} ({})", artiDir.toAbsolutePath(), e.getMessage());
+                        LOGGER.info("+ mvg: can not list artifact dir: {} ({})", artiDir.toAbsolutePath(), e.getMessage());
                     }
                 }
             }
@@ -116,7 +116,7 @@ public class MvgUploader {
     }
 
     private void execute() {
-        LOGGER.info("+ execute {} task", UPLOADER_TASK_NAME);
+        LOGGER.info("+ mvg: execute {} task", UPLOADER_TASK_NAME);
 
         String hubToken = ext.hubToken;
         String pluginId = ext.pluginId;
@@ -127,12 +127,12 @@ public class MvgUploader {
             throw new GradleException("the selected plugin upload zipfile can not be identified: " + zipFile);
         }
 
-        LOGGER.info("+ uploading plugin {} to channel {} from file {}", pluginId, channel, zipFile);
+        LOGGER.info("+ mvg: uploading plugin {} to channel {} from file {}", pluginId, channel, zipFile);
 
         if ("DRY".equals(pluginId) || "DRY".equals(hubToken)) {
-            LOGGER.warn("+ DRY run: upload skipped");
+            LOGGER.warn("+ mvg: DRY run: upload skipped");
         } else if (channel == null || pluginId == null || hubToken == null) {
-            LOGGER.warn("+ no channel/pluginId/hubToken ({}/{}/{}): upload skipped", channel, pluginId, Util.hide(hubToken));
+            LOGGER.warn("+ mvg: no channel/pluginId/hubToken ({}/{}/{}): upload skipped", channel, pluginId, Util.hide(hubToken));
         } else {
             uploadToJetBrains(channel, hubToken, pluginId, zipFile);
         }
@@ -154,7 +154,7 @@ public class MvgUploader {
             HttpResponse response   = httpClient.execute(request);
             String       answer     = EntityUtils.toString(response.getEntity());
 
-            LOGGER.info("+ upload plugin to JetBrains returned: {}", answer);
+            LOGGER.info("+ mvg: upload plugin to JetBrains returned: {}", answer);
 
             if (!answer.startsWith("{") || !answer.endsWith("}")) {
                 throw new GradleException("plugin upload returned no json object: " + answer);

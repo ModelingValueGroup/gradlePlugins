@@ -39,7 +39,7 @@ public class InfoGradle {
             instance = new InfoGradle(absProjectDir, projectName);
         }
         if (!instance.absProjectDir.equals(absProjectDir) || !instance.projectName.equals(projectName)) {
-            LOGGER.info("~~~ STRANGE: InfoGradle got a new Gradle object: {} -> {} and {} -> {}",
+            LOGGER.info("+ mvg: ~~~~~~ STRANGE: InfoGradle got a new Gradle object: {} -> {} and {} -> {}",
                     instance.projectName, projectName,
                     instance.absProjectDir, absProjectDir);
             instance = new InfoGradle(absProjectDir, projectName);
@@ -70,16 +70,12 @@ public class InfoGradle {
         return instance().branch;
     }
 
-    public static String getProjectName() {
-        return instance().projectName;
-    }
-
     public static String getMvgRepoName() {
         return instance().mvgRepoName;
     }
 
-    public static boolean isMvgRepo() {
-        return getMvgRepoName() != null;
+    public static boolean isTestingOrMvgCI() {
+        return Info.TESTING || (Info.CI && getMvgRepoName() != null);
     }
 
     public static boolean isMasterBranch() {
@@ -177,7 +173,7 @@ public class InfoGradle {
                 c.setUsername("");
                 c.setPassword(Info.ALLREP_TOKEN);
             });
-            LOGGER.info("+ REPOMAKER created maven repo: name={} url={} pw={}", name, url, Util.hide(Info.ALLREP_TOKEN));
+            LOGGER.info("+ mvg: REPOMAKER created maven repo: name={} url={} pw={}", name, url, Util.hide(Info.ALLREP_TOKEN));
         };
     }
 }
