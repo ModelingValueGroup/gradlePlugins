@@ -64,6 +64,7 @@ public class MvgPlugin implements Plugin<Project> {
     private MvgBranchBasedBuilder mvgBranchBasedBuilder;
     private MvgMps                mvgMps;
     private MvgUploader           mvgUploader;
+    private boolean               traceHeaderDone;
 
     public MvgPlugin() {
         singleton = this;
@@ -162,13 +163,21 @@ public class MvgPlugin implements Plugin<Project> {
     }
 
     private void trace() {
-        gradle.afterProject(p -> {
-            String projectName = String.format("%30s", p.getName());
-            ((DefaultConvention) p.getExtensions()).getAsMap().forEach((k, v) -> LOGGER.info("++++ {}.ext  [{}] = {}", projectName, String.format("%-30s", k), v.getClass()));
-            p.getTasks().all(x -> LOGGER.info("++++ {}.task [{}] = {}", projectName, String.format("%-30s", x.getName()), x.getClass()));
-            p.getConfigurations().all(x -> LOGGER.info("++++ {}.conf [{}] = {} #{}", projectName, String.format("%-30s", x.getName()), x.getClass(), x.getAllArtifacts().size()));
-            p.getPlugins().all(x -> LOGGER.info("++++ {}.plugin = {}", projectName, x.getClass()));
-        });
+        if (LOGGER.isDebugEnabled()) {
+            gradle.afterProject(p -> {
+                if (!traceHeaderDone) {
+                    traceHeaderDone = true;
+                    LOGGER.debug("++++-------------------------------------------------------------------------------------------------------------------------------------");
+                    LOGGER.debug("++++ mvg found                {} {} {}", String.format("%-30s", "NAME"), String.format("%-30s", "PROJECT"), "CLASS");
+                    LOGGER.debug("++++-------------------------------------------------------------------------------------------------------------------------------------");
+                }
+                String projectName = String.format("%-30s", p.getName());
+                ((DefaultConvention) p.getExtensions()).getAsMap().forEach((name, ext) -> LOGGER.debug("++++ mvg found extension    : {} {} {}", /*          */String.format("%-30s", name), /*                         */projectName, ext.getClass().getSimpleName()));
+                p.getTasks().all(task -> /*                                             */LOGGER.debug("++++ mvg found task         : {} {} {}", /*          */String.format("%-30s", task.getName()), /*               */projectName, task.getClass().getSimpleName()));
+                p.getConfigurations().all(conf -> /*                                    */LOGGER.debug("++++ mvg found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), /*               */projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
+                p.getPlugins().all(plugin -> /*                                         */LOGGER.debug("++++ mvg found plugin       : {} {}", /*             */String.format("%-30s", plugin.getClass().getSimpleName()), projectName));
+            });
+        }
     }
 
     private void tuneTesting() {
@@ -197,7 +206,6 @@ public class MvgPlugin implements Plugin<Project> {
         });
     }
 
-    @SuppressWarnings("UnstableApiUsage")
     private void tuneJavaPlugin() {
         String javaVersionInProps = getGradleDotProperties().getProp(PROP_NAME_VERSION_JAVA, "11");
         if (javaVersionInProps == null) {
