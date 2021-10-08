@@ -59,6 +59,7 @@ import org.modelingvalue.gradle.mvgplugin.DotProperties;
 import org.modelingvalue.gradle.mvgplugin.GitManager;
 import org.modelingvalue.gradle.mvgplugin.GitUtil;
 import org.modelingvalue.gradle.mvgplugin.Info;
+import org.modelingvalue.gradle.mvgplugin.InfoGradle;
 
 public class MvgPluginTest {
     private static final boolean I_NEED_TO_DEBUG_THIS_TEST = true;
@@ -164,6 +165,7 @@ public class MvgPluginTest {
 
 
             DotProperties instance = new DotProperties(testWorkspaceDir.resolve(GRADLE_PROPERTIES_FILE));
+            int           z        = InfoGradle.isMasterBranch() ? 2 : 1;
 
             // Verify the result
             assertAll(
@@ -185,7 +187,7 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ mvg-mps: dependency     replaced: ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
-                    () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": NOT pushing, repo has no remotes", out)),
+                    () -> assertEquals(z, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": NOT pushing, repo has no remotes", out)),
                     () -> assertEquals(2, numOccurences(getTestMarker("t"), out)),
                     () -> assertEquals(4, numOccurences(getTestMarker("triggers"), out)),
                     () -> assertEquals(2, numOccurences("+ mvg-bbb: TRIGGER dependent project (repo=sync-proxy branch=develop workflow=", out)),
