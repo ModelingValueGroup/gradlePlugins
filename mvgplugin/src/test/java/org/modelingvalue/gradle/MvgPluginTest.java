@@ -165,7 +165,7 @@ public class MvgPluginTest {
 
 
             DotProperties instance = new DotProperties(testWorkspaceDir.resolve(GRADLE_PROPERTIES_FILE));
-            int           z        = InfoGradle.isMasterBranch() ? 2 : 1;
+            int           m        = InfoGradle.isMasterBranch() ? 1 : 0;
 
             // Verify the result
             assertAll(
@@ -187,10 +187,11 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ mvg-mps: dependency     replaced: ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
-                    () -> assertEquals(z, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": NOT pushing, repo has no remotes", out)),
+                    () -> assertEquals(1 + m, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": NOT pushing, repo has no remotes", out)),
                     () -> assertEquals(2, numOccurences(getTestMarker("t"), out)),
                     () -> assertEquals(4, numOccurences(getTestMarker("triggers"), out)),
-                    () -> assertEquals(2, numOccurences("+ mvg-bbb: TRIGGER dependent project (repo=sync-proxy branch=develop workflow=", out)),
+                    () -> assertEquals(1 - m, numOccurences("+ mvg: not tagging this version with 'v0.0.4' because this is not the master branch", out)),
+                    () -> assertEquals(m, numOccurences("+ mvg: tagging this version with 'v0.0.4' because this is the master branch", out)),
                     () -> assertEquals(1, numOccurences(getTestMarker("!"), out)),
                     //
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
