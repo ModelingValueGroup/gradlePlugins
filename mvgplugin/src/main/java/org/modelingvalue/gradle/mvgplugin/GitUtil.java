@@ -31,9 +31,9 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.lib.TextProgressMonitor;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.transport.CredentialsProvider;
@@ -76,14 +76,14 @@ public class GitUtil {
 
     public static void tag(Path root, String tag) {
         Git git = GitManager.git(root);
-        LOGGER.info("+ git {}: adding tag '{}'", describe(git), tag);
+        LOGGER.info("+ mvg-git:{}: adding tag '{}'", describe(git), tag);
         try {
             Ref ref = git.tag()
                     .setName(tag)
                     .setForceUpdate(true)
                     .call();
             push(git, true);
-            LOGGER.info("+ git {}: added tag '{}' => {}", describe(git), tag, ref.getObjectId());
+            LOGGER.info("+ mvg-git:{}: added tag '{}' => {}", describe(git), tag, ref.getObjectId());
         } catch (GitAPIException e) {
             throw new Error("could not add tag " + tag + " to git " + describe(git), e);
         }
@@ -91,12 +91,12 @@ public class GitUtil {
 
     public static void untag(Path root, String... tags) {
         Git git = GitManager.git(root);
-        LOGGER.info("+ git {}: deleting tags: {}", describe(git), Arrays.asList(tags));
+        LOGGER.info("+ mvg-git:{}: deleting tags: {}", describe(git), Arrays.asList(tags));
         try {
             List<String> l = git.tagDelete()
                     .setTags(tags)
                     .call();
-            LOGGER.info("+ git {}: deleted tags {} => result={}", describe(git), Arrays.asList(tags), l);
+            LOGGER.info("+ mvg-git:{}: deleted tags {} => result={}", describe(git), Arrays.asList(tags), l);
             push(git, true);
         } catch (GitAPIException e) {
             throw new Error("could not delete tag " + Arrays.asList(tags) + " from git " + describe(git), e);
@@ -131,9 +131,9 @@ public class GitUtil {
     private static void traceStatusClass(Set<String> set, String name) {
         String name_ = String.format("%16s", name);
         if (set.isEmpty()) {
-            LOGGER.debug("    ## {}: NONE", name_);
+            LOGGER.debug("++ mvg-git:    ## {}: NONE", name_);
         } else {
-            set.stream().sorted().forEach(e -> LOGGER.debug("    ## {}: {}", name_, e));
+            set.stream().sorted().forEach(e -> LOGGER.debug("++ mvg-git:    ## {}: {}", name_, e));
         }
     }
 
@@ -156,13 +156,13 @@ public class GitUtil {
             Set<String> missedChanges = new HashSet<>(changesNames);
             missedChanges.removeAll(adds);
             missedChanges.removeAll(rms);
-            missedChanges.forEach(s -> LOGGER.info("+ git {}: CHANGE NOT FOUND: {}", describe(git), s));
+            missedChanges.forEach(s -> LOGGER.info("+ mvg-git:{}: CHANGE NOT FOUND: {}", describe(git), s));
             Set<String> filtered = new HashSet<>();
             filtered.addAll(toAdd);
             filtered.addAll(toRm);
             filtered.removeAll(adds);
             filtered.removeAll(rms);
-            filtered.forEach(s -> LOGGER.info("+ git {}: CHANGED BUT NOT STAGED: {}", describe(git), s));
+            filtered.forEach(s -> LOGGER.info("+ mvg-git:{}: CHANGED BUT NOT STAGED: {}", describe(git), s));
         }
 
         int numAdds = adds.size();
@@ -170,14 +170,14 @@ public class GitUtil {
 
         boolean nothing = numAdds + numRms == 0;
         if (nothing) {
-            LOGGER.info("+ git {}: staging changes (nothing to stage; branch={})", describe(git), branch);
+            LOGGER.info("+ mvg-git:{}: staging changes (nothing to stage; branch={})", describe(git), branch);
         } else {
-            LOGGER.info("+ git {}: staging changes (adds={} rms={}; branch={})", describe(git), numAdds, numRms, branch);
+            LOGGER.info("+ mvg-git:{}: staging changes (adds={} rms={}; branch={})", describe(git), numAdds, numRms, branch);
 
             if (0 < numAdds) {
                 AddCommand addCommand = git.add();
                 for (String s : adds) {
-                    LOGGER.debug("+ git {}:    add {}", describe(git), s);
+                    LOGGER.debug("++ mvg-git:{}:    add {}", describe(git), s);
                     addCommand.addFilepattern(s);
                 }
                 addCommand.call();
@@ -185,7 +185,7 @@ public class GitUtil {
             if (0 < numRms) {
                 RmCommand remCommand = git.rm();
                 for (String s : rms) {
-                    LOGGER.debug("+ git {}:    rm  {}", describe(git), s);
+                    LOGGER.debug("++ mvg-git:{}:    rm  {}", describe(git), s);
                     remCommand.addFilepattern(s);
                 }
                 remCommand.call();
@@ -196,34 +196,32 @@ public class GitUtil {
     }
 
     public static void commit(Git git, String message) throws GitAPIException {
-        LOGGER.info("+ git {}: commit (message='{}')", describe(git), message);
+        LOGGER.info("+ mvg-git:{}: commit (message='{}')", describe(git), message);
         RevCommit rc = git.commit()
                 .setAuthor(AUTOMATION_IDENT)
                 .setCommitter(AUTOMATION_IDENT)
                 .setMessage(message)
                 .call();
-        LOGGER.info("+ git {}: commit (result={})", describe(git), rc);
+        LOGGER.info("+ mvg-git:{}: commit (result={})", describe(git), rc);
     }
 
     public static void push(Git git, boolean withTags) throws GitAPIException {
-        LOGGER.info("+ git {}: pushing {} tags", describe(git), withTags ? "with" : "without");
-        try {
+        StoredConfig config = git.getRepository().getConfig();
+
+        if (config.getSubsections("remote").isEmpty()) {
+            LOGGER.info("+ mvg-git:{}: NOT pushing, repo has no remotes", describe(git));
+        } else {
+            LOGGER.info("+ mvg-git:{}: pushing {} tags", describe(git), withTags ? "with" : "without");
             Iterable<PushResult> result = (withTags ? git.push().setPushTags() : git.push())
                     .setCredentialsProvider(CREDENTIALS_PROV)
                     .setProgressMonitor(PROGRESS_MONITOR)
                     .call();
             if (LOGGER.isInfoEnabled()) {
                 result.forEach(pr -> {
-                    LOGGER.info("+ git {}: push result  : {}", describe(git), pr.getMessages());
-                    pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ git {}: remote update     - {}", describe(git), x));
-                    pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ git {}: tracking update   - {}", describe(git), x));
+                    LOGGER.info("+ mvg-git:{}: push result  : {}", describe(git), pr.getMessages());
+                    pr.getRemoteUpdates().forEach(x -> LOGGER.info("+ mvg-git:{}: remote update     - {}", describe(git), x));
+                    pr.getTrackingRefUpdates().forEach(x -> LOGGER.info("+ mvg-git:{}: tracking update   - {}", describe(git), x));
                 });
-            }
-        } catch (TransportException e) {
-            if (e.getMessage().matches(".*: not found\\.")) {
-                LOGGER.info("+ git {}: push skipped, there seems to be no remote ({})", describe(git), e.getMessage());
-            } else {
-                throw e;
             }
         }
     }
@@ -231,7 +229,7 @@ public class GitUtil {
     private static Status statusVerbose(Git git, String traceMessage) throws GitAPIException {
         Status status = git.status().call();
 
-        LOGGER.debug("    ##### git status @{}", traceMessage);
+        LOGGER.debug("++ mvg-git:    ##### git status @{}", traceMessage);
         traceStatusClass(status.getAdded/*             */(), "added");
         traceStatusClass(status.getChanged/*           */(), "changed");
         traceStatusClass(status.getModified/*          */(), "modified");

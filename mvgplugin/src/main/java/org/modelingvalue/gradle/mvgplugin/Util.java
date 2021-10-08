@@ -75,7 +75,7 @@ public class Util {
         try (InputStream in = url.openStream()) {
             return Arrays.asList(new String(in.readAllBytes(), StandardCharsets.UTF_8).split("\n"));
         } catch (IOException e) {
-            LOGGER.info("+ failure getting file from: {} ({})", url, e.getMessage());
+            LOGGER.info("+ mvg: failure getting file from: {} ({})", url, e.getMessage());
             return null;
         }
     }
@@ -101,19 +101,19 @@ public class Util {
                         () -> elvis(getSystemEnv(name),
                                 () -> elvis(InfoGradle.getGradleDotProperties().getProp(name),
                                         () -> def)));
-        LOGGER.info("+~ envOrProp        : {} => {}", name, Util.hide(value));
+        LOGGER.info("+ mvg: envOrProp        : {} => {}", name, Util.hide(value));
         return value;
     }
 
     public static String getSystemProperty(String name) {
         String value = System.getProperty(name);
-        LOGGER.info("+~ getSystemProperty: {} => {}", name, Util.hide(value));
+        LOGGER.info("+ mvg: getSystemProperty: {} => {}", name, Util.hide(value));
         return value;
     }
 
     public static String getSystemEnv(String name) {
         String value = System.getenv(name);
-        LOGGER.info("+~ getSystemEnv     : {} => {}", name, Util.hide(value));
+        LOGGER.info("+ mvg: getSystemEnv     : {} => {}", name, Util.hide(value));
         return value;
     }
 

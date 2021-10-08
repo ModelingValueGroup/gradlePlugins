@@ -28,7 +28,6 @@ import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_CLASS_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_PACKAGE_NAME;
-import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_GITHUB_WORKFLOW;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_TESTING;
 import static org.modelingvalue.gradle.mvgplugin.Info.UPLOADER_TASK_NAME;
@@ -61,11 +60,12 @@ import org.modelingvalue.gradle.mvgplugin.GitManager;
 import org.modelingvalue.gradle.mvgplugin.GitUtil;
 import org.modelingvalue.gradle.mvgplugin.Info;
 
-public class MvgCorrectorTest {
+public class MvgPluginTest {
     private static final boolean I_NEED_TO_DEBUG_THIS_TEST = true;
     public static final  String  TEST_WORKSPACE_NAME       = "gradlePlugins";
     private static final Path    testWorkspaceDir          = Paths.get("build", TEST_WORKSPACE_NAME).toAbsolutePath();
     private static final Path    settingsFile              = Paths.get("settings.gradle");
+    private static final Path    bashFile                  = Paths.get("bashProduced.txt.corrector.sh");
     private static final Path    buildFile                 = Paths.get("build.gradle.kts");
     private static final Path    gradlePropsFile           = Paths.get("gradle.properties");
     private static final Path    workflowFile              = Paths.get(".github", "workflows", "xyz.yaml");
@@ -106,10 +106,9 @@ public class MvgCorrectorTest {
     }
 
     @Test
-    public void checkFunctionality() throws IOException, GitAPIException {
+    public void checkPlugin() throws IOException, GitAPIException {
         // need to set these before accessing the Info class!
         System.setProperty(PROP_NAME_TESTING, "" + true);
-        System.setProperty(PROP_NAME_CI, "" + true);
         System.setProperty(PROP_NAME_GITHUB_WORKFLOW, "build");
 
         assertNotEquals("notset", Info.ALLREP_TOKEN, "this test needs the ALLREP_TOKEN to succesfully terminate");
@@ -126,7 +125,6 @@ public class MvgCorrectorTest {
 
         Map<String, String> env = new HashMap<>(System.getenv());
         env.put(PROP_NAME_TESTING, System.getProperty(PROP_NAME_TESTING));
-        env.put(PROP_NAME_CI, System.getProperty(PROP_NAME_CI));
         env.put(PROP_NAME_GITHUB_WORKFLOW, System.getProperty(PROP_NAME_GITHUB_WORKFLOW));
 
         // Run the build
@@ -171,24 +169,27 @@ public class MvgCorrectorTest {
             assertAll(
                     () -> assertEquals("0.0.4", instance.getProp(Info.PROP_NAME_VERSION)),
                     //
-                    () -> assertEquals(5, numOccurences("+ header regenerated : ", out)),
-                    () -> assertEquals(2, numOccurences("+ eols   regenerated : ", out)),
-                    () -> assertEquals(5, numOccurences("+ eols   untouched   : ", out)),
-                    () -> assertEquals(1, numOccurences("+ found vacant version: 0.0.4 (was 0.0.1)", out)),
-                    () -> assertEquals(1, numOccurences("+ project 'test-name': version: 0.0.1 => 0.0.4, group: test.group => test.group", out)),
+                    () -> assertEquals(6, numOccurences("+ mvg: header     regenerated : ", out)),
+                    () -> assertEquals(2, numOccurences("+ mvg: eols       regenerated : ", out)),
+                    () -> assertEquals(6, numOccurences("+ mvg: eols       untouched   : ", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: found vacant version: 0.0.4 (was 0.0.1)", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: project 'test-name': version: 0.0.1 => 0.0.4, group: test.group => test.group", out)),
                     () -> assertEquals(6, numOccurences(getTestMarker("r+"), out)),
                     () -> assertEquals(41, numOccurences(getTestMarker("r-"), out)),
-                    () -> assertEquals(1, numOccurences("+ adding test.useJUnitPlatform", out)),
-                    () -> assertEquals(1, numOccurences("+ increasing test heap from default to 2g", out)),
-                    () -> assertEquals(1, numOccurences("+ adding junit5 dependencies", out)),
-                    () -> assertEquals(1, numOccurences("+ agreeing to buildScan", out)),
-                    () -> assertEquals(1, numOccurences("+ adding tasks for javadoc & source jars", out)),
-                    () -> assertEquals(1, numOccurences("+ setting java source&target compatibility from (11&11) to 11", out)),
-                    () -> assertEquals(1, numOccurences("+ the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
-                    () -> assertEquals(3, numOccurences("+ MPS: dependency     replaced: ", out)),
-                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": staging changes (adds=7 rms=0; branch=", out)),
-                    () -> assertEquals(1, numOccurences("+ git " + TEST_WORKSPACE_NAME + ": pushing without tags", out)),
-                    () -> assertTrue(0 < numOccurences("+ git " + TEST_WORKSPACE_NAME + ": push skipped, there seems to be no remote (origin: not found.)", out)), // occurs 1 or 2 time dependent on the branch
+                    () -> assertEquals(1, numOccurences("+ mvg: adding test.useJUnitPlatform", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: increasing test heap from default to 2g", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: adding junit5 dependencies", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: agreeing to buildScan", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: adding tasks for javadoc & source jars", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (11&11) to 11", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
+                    () -> assertEquals(3, numOccurences("+ mvg-mps: dependency     replaced: ", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": NOT pushing, repo has no remotes", out)),
+                    () -> assertEquals(2, numOccurences(getTestMarker("t"), out)),
+                    () -> assertEquals(4, numOccurences(getTestMarker("triggers"), out)),
+                    () -> assertEquals(2, numOccurences("+ mvg-bbb: TRIGGER dependent project (repo=sync-proxy branch=develop workflow=", out)),
+                    () -> assertEquals(1, numOccurences(getTestMarker("!"), out)),
                     //
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
@@ -235,7 +236,7 @@ public class MvgCorrectorTest {
                 .call()
                 .close();
 
-        cp(null, settingsFile, javaFile, gradlePropsFile, workflowFile, antFile);
+        cp(null, bashFile, settingsFile, javaFile, gradlePropsFile, workflowFile, antFile);
         cp(s -> s
                         .replaceAll("~myPackage~", PLUGIN_PACKAGE_NAME)
                         .replaceAll("~myMvgCorrectorExtension~", CORRECTOR_TASK_NAME)
@@ -255,7 +256,7 @@ public class MvgCorrectorTest {
     private static void cp(Function<String, String> postProcess, Path... fs) throws IOException {
         for (Path f : fs) {
             String name = f.getFileName().toString();
-            try (InputStream in = MvgCorrectorTest.class.getResourceAsStream(name)) {
+            try (InputStream in = MvgPluginTest.class.getResourceAsStream(name)) {
                 try (Scanner scanner = new Scanner(Objects.requireNonNull(in), UTF_8).useDelimiter("\\A")) {
                     String content = scanner.hasNext() ? scanner.next() : "";
                     if (postProcess != null) {

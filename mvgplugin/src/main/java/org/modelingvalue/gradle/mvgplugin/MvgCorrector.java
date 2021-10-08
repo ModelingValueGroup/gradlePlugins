@@ -17,18 +17,18 @@ package org.modelingvalue.gradle.mvgplugin;
 
 import static java.util.regex.Pattern.quote;
 import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
-import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MODELING_VALUE_GROUP;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isTestingOrMvgCI;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
@@ -37,30 +37,6 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 class MvgCorrector {
-    private static final List<Pattern> NOT_BEFORE_TASKS = List.of(
-            ".*jar",
-            ".*kotlin.*",
-            "buildEnvironment",
-            "buildScanPublishPrevious",
-            "components",
-            "dependen.*",
-            "help",
-            "init",
-            "model",
-            "mvg.*",
-            "outgoingVariants",
-            "prepareKotlinBuildScriptModel",
-            "process.*",
-            "projects",
-            "properties",
-            "provisionGradleEnterpriseAccessKey",
-            "publish.*",
-            "tasks",
-            "test",
-            "wrapper",
-            quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*"
-    ).stream().map(s -> Pattern.compile("^(?i)" + s + "$")).collect(Collectors.toList());
-
     private final MvgCorrectorExtension ext;
 
     public MvgCorrector(Gradle gradle) {
@@ -71,17 +47,43 @@ class MvgCorrector {
         gradle.allprojects(p -> p.getTasks().all(t -> {
             String name  = t.getName();
             String group = "" + t.getGroup(); // may return null
-            LOGGER.debug("+ checking if task '{}' should be before '{}' (group '{}'", tp.getName(), name, group);
-            if (!name.equals(tp.getName())                                                                // ... not myself (duh)
-                    && NOT_BEFORE_TASKS.stream().noneMatch(pat -> pat.matcher(name).matches())            // ... not the cleaning tasks
-                    && !group.matches("(?i)" + quote(HelpTasksPlugin.HELP_GROUP))                   // ... not the help group tasks
-                    && !group.matches("(?i)build setup")                                            // ... not the build setup group tasks
-                    && !group.matches("(?i)gradle enterprise")                                      // ... not the gradle enterprise group tasks
+            LOGGER.debug("++ mvg: checking if task '{}' should be before '{}' (group '{}'", tp.getName(), name, group);
+            if (!name.equals(tp.getName())                                                  // ... not myself (duh)
+                    && isANotBeforeTask(name)                                               // ... not a task that needs to be excluded
+                    && !group.matches("(?i)" + quote(HelpTasksPlugin.HELP_GROUP))     // ... not the help group tasks
+                    && !group.matches("(?i)build setup")                              // ... not the build setup group tasks
+                    && !group.matches("(?i)gradle enterprise")                        // ... not the gradle enterprise group tasks
             ) {
-                LOGGER.info("+ adding task dependency: {} before {} (group {})", tp.getName(), name, t.getGroup());
+                LOGGER.info("+ mvg: adding task dependency: {} before {} (group {})", tp.getName(), name, t.getGroup());
                 t.dependsOn(tp);
             }
         }));
+    }
+
+    private boolean isANotBeforeTask(String name) {
+        return Stream.of(
+                ".*jar",
+                ".*kotlin.*",
+                "buildEnvironment",
+                "buildScanPublishPrevious",
+                "components",
+                "dependen.*",
+                "help",
+                "init",
+                "model",
+                "mvg.*",
+                "outgoingVariants",
+                "prepareKotlinBuildScriptModel",
+                "process.*",
+                "projects",
+                "properties",
+                "provisionGradleEnterpriseAccessKey",
+                "publish.*",
+                "tasks",
+                "test",
+                "wrapper",
+                quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*"
+        ).map(s -> Pattern.compile("^(?i)" + s + "$")).collect(Collectors.toList()).stream().noneMatch(pat -> pat.matcher(name).matches());
     }
 
     private void setup(Task task) {
@@ -91,7 +93,7 @@ class MvgCorrector {
     }
 
     private void execute() {
-        LOGGER.info("+ execute {} task", CORRECTOR_TASK_NAME);
+        LOGGER.info("+ mvg: execute {} task", CORRECTOR_TASK_NAME);
         try {
             Set<Path> changes = new HashSet<>();
 
@@ -99,10 +101,11 @@ class MvgCorrector {
             changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
             changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
             changes.addAll(new DependabotCorrector(ext).generate().getChangedFiles());
+            changes.addAll(new BashCorrector(ext).generate().getChangedFiles());
 
-            LOGGER.info("+ changed {} files", changes.size());
+            LOGGER.info("+ mvg: changed {} files", changes.size());
 
-            if (!changes.isEmpty() && CI && ALLREP_TOKEN != null) {
+            if (!changes.isEmpty() && isTestingOrMvgCI() && ALLREP_TOKEN != null) {
                 GitUtil.stageCommitPush(ext.getRoot(), GitUtil.NO_CI_COMMIT_MARKER + " updated by mvgplugin", changes);
             }
         } catch (IOException e) {

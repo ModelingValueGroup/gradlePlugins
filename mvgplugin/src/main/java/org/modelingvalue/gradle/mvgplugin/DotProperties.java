@@ -70,7 +70,7 @@ public class DotProperties {
     public String getProp(String name, String def) {
         Object o     = properties.get(name);
         String value = o != null ? o.toString() : parent != null ? parent.getProp(name, def) : def;
-        LOGGER.info("+~ getProp          : {} => {}   (from {}{})", name, Util.hide(value), file.toAbsolutePath(), valid ? "" : " - INVALID");
+        LOGGER.info("+ mvg: getProp          : {} => {}   (from {}{})", name, Util.hide(value), file.toAbsolutePath(), valid ? "" : " - INVALID");
         return value;
     }
 

@@ -37,7 +37,7 @@ public interface Info {
     String       UPLOADER_TASK_NAME           = MvgUploader.class.getSimpleName().toLowerCase(Locale.ROOT);
     String       TAG_TASK_NAME                = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
     String       MPS_TASK_NAME                = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
-    Logger       LOGGER                       = Logging.getLogger(PLUGIN_NAME);
+    Logger       LOGGER                       = new TimedLogger(Logging.getLogger(PLUGIN_NAME));
     String       GRADLE_PROPERTIES_FILE       = "gradle.properties";
     String       PROP_NAME_VERSION            = "version";
     String       PROP_NAME_GROUP              = "group";
@@ -64,7 +64,7 @@ public interface Info {
     String       GIT_HEAD_FILE_START          = "ref: refs/heads/";
     String       NO_CI_GUARD                  = "!contains(github.event.head_commit.message, '[no-ci]')";
     String       MIN_TEST_HEAP_SIZE           = "2g";
-    String       JUNIT_VERSION                = "5.8.0";
+    String       JUNIT_VERSION                = "5.8.1";
     String       JUNIT_GROUP_ID               = "org.junit.jupiter";
     List<String> JUNIT_IMPLEMENTATION_DEPS    = List.of(
             JUNIT_GROUP_ID + ":junit-jupiter-api:" + JUNIT_VERSION,

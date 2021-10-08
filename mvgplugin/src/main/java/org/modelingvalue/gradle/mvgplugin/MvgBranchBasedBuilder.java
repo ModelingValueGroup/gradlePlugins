@@ -15,6 +15,10 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static org.modelingvalue.gradle.mvgplugin.Info.CI;
+import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isTestingOrMvgCI;
 import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
 
 import java.util.HashSet;
@@ -32,7 +36,6 @@ import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.artifacts.repositories.PasswordCredentials;
 import org.gradle.api.credentials.Credentials;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.api.logging.Logger;
 import org.gradle.api.publish.Publication;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
@@ -41,7 +44,6 @@ import org.gradle.internal.authentication.AuthenticationInternal;
 import org.jetbrains.annotations.NotNull;
 
 public class MvgBranchBasedBuilder {
-    public static final Logger LOGGER                     = Info.LOGGER;
     public static final String BRANCH_INDICATOR           = "-BRANCHED";
     public static final String SNAPSHOT_VERSION_POST      = "-SNAPSHOT";
     public static final String SNAPSHOTS_REPO_POST        = "-snapshots";
@@ -50,8 +52,6 @@ public class MvgBranchBasedBuilder {
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
     private final    Gradle      gradle;
-    private final    boolean     isCI;
-    private final    boolean     isMaster;
     private volatile String      bbbIdCache;
     private final    Set<String> dependencies = new HashSet<>();
     private final    Set<String> publications = new HashSet<>();
@@ -59,10 +59,7 @@ public class MvgBranchBasedBuilder {
     public MvgBranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
 
-        isCI = Info.CI;
-        isMaster = InfoGradle.isMasterBranch();
-
-        LOGGER.info("+ bbb: creating MvgBranchBasedBuilder (CI={} master={})", isCI, isMaster);
+        LOGGER.info("+ mvg-bbb: creating MvgBranchBasedBuilder (CI={} TEST|CI={} master={})", CI, isTestingOrMvgCI(), isMasterBranch());
         TRACE.report(gradle);
 
         adjustDependencies();
@@ -92,17 +89,17 @@ public class MvgBranchBasedBuilder {
                                                 depSubs.all(depSub -> {
                                                             ComponentSelector component = depSub.getRequested();
                                                             if (!(component instanceof ModuleComponentSelector)) {
-                                                                LOGGER.info("+ bbb: {} {} can not handle unknown dependency class: {}", projectName, confName, component.getClass());
+                                                                LOGGER.info("+ mvg-bbb: {} {} can not handle unknown dependency class: {}", projectName, confName, component.getClass());
                                                             } else {
                                                                 ModuleComponentSelector moduleComponent = (ModuleComponentSelector) component;
                                                                 if (!moduleComponent.getVersion().endsWith(BRANCH_INDICATOR)) {
-                                                                    LOGGER.info("+ bbb: {} {} {} no BRANCH dependency: {}", negTestMarker, projectName, confName, component);
+                                                                    LOGGER.info("+ mvg-bbb: {} {} {} no BRANCH dependency: {}", negTestMarker, projectName, confName, component);
                                                                 } else {
                                                                     String g           = makeBbbGroup(moduleComponent.getGroup());
                                                                     String a           = makeBbbArtifact(moduleComponent.getModule());
                                                                     String v           = makeBbbVersion(moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
                                                                     String replacement = g + ":" + a + ":" + v;
-                                                                    LOGGER.info("+ bbb: {} {} {} BRANCH dependency, replaced: {} => {}", posTestMarker, projectName, confName, component, replacement);
+                                                                    LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency, replaced: {} => {}", posTestMarker, projectName, confName, component, replacement);
                                                                     depSub.useTarget(replacement, BRANCH_REASON);
 
                                                                     dependencies.add(moduleComponent.getGroup() + "." + moduleComponent.getModule());
@@ -120,18 +117,20 @@ public class MvgBranchBasedBuilder {
 
     private void adjustPublications() {
         gradle.afterProject(p -> {
-            LOGGER.info("+ bbb: running adjustPublications on project {}", p.getName());
+            LOGGER.info("+ mvg-bbb: running adjustPublications on project {}", p.getName());
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
             if (publishing != null) {
                 if (!publishing.getRepositories().isEmpty()) {
                     LOGGER.warn("The repository set for project {} is not empty; bbb will not set the proper publish repo (local-maven or github-mvg-packages). Make it empty to activate bbb publishing.", p.getName());
                 }
-                if (!(isCI && isMaster)) {
-                    makePublicationsBbb(publishing);
-                }
-                if (isCI) {
+                // only publish as-is if not master-CI, otherwise adjust the publications into snapshots
+                if (isTestingOrMvgCI()) {
+                    if (!isMasterBranch()) {
+                        makePublicationsBbb(publishing);
+                    }
                     publishToGitHub(publishing);
                 } else {
+                    makePublicationsBbb(publishing);
                     publishToMavenLocal(publishing);
                 }
             }
@@ -153,7 +152,7 @@ public class MvgBranchBasedBuilder {
 
                 //noinspection ConstantConditions
                 if (!oldGroup.equals(newGroup) || !oldArtifact.equals(newArtifact) || !oldVersion.equals(newVersion)) {
-                    LOGGER.info("+ bbb: changed publication {}: '{}:{}:{}' => '{}:{}:{}'",
+                    LOGGER.info("+ mvg-bbb: changed publication {}: '{}:{}:{}' => '{}:{}:{}'",
                             mpub.getName(), oldGroup, oldArtifact, oldVersion, newGroup, newArtifact, newVersion);
 
                     mpub.setGroupId(newGroup);
@@ -169,7 +168,7 @@ public class MvgBranchBasedBuilder {
 
     private void publishToMavenLocal(PublishingExtension publishing) {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
-            LOGGER.info("+ bbb: adding mavenLocal publishing repo...");
+            LOGGER.info("+ mvg-bbb: adding mavenLocal publishing repo...");
             publishing.getRepositories().mavenLocal();
             TRACE.report(publishing);
         }
@@ -177,15 +176,15 @@ public class MvgBranchBasedBuilder {
 
     private void publishToGitHub(PublishingExtension publishing) {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
-            LOGGER.info("+ bbb: adding github publishing repo: {}", isMaster ? "master" : "snapshots");
-            Action<MavenArtifactRepository> maker = InfoGradle.getGithubMavenRepoMaker(InfoGradle.isMasterBranch());
+            LOGGER.info("+ mvg-bbb: adding github publishing repo: {}", isMasterBranch() ? "master" : "snapshots");
+            Action<MavenArtifactRepository> maker = InfoGradle.getGithubMavenRepoMaker(isMasterBranch());
             publishing.getRepositories().maven(maker);
             TRACE.report(publishing);
         }
     }
 
     private String makeBbbGroup(String g) {
-        return (isCI && isMaster) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
+        return (isTestingOrMvgCI() && isMasterBranch()) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
     }
 
     private String makeBbbArtifact(String a) {
@@ -193,7 +192,7 @@ public class MvgBranchBasedBuilder {
     }
 
     private String makeBbbVersion(String v) {
-        return (isCI && isMaster) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
+        return (isTestingOrMvgCI() && isMasterBranch()) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
     }
 
     private String cachedBbbId() {
@@ -219,28 +218,28 @@ public class MvgBranchBasedBuilder {
             if (LOGGER.isDebugEnabled()) {
                 gradle.allprojects(p -> {
                     PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
-                    LOGGER.debug("+ bbb ---------------------------[ proj={}", p.getName());
+                    LOGGER.debug("++ mvg-bbb: ---------------------------[ proj={}", p.getName());
                     if (publishing == null) {
-                        LOGGER.debug("+      bbb publishing==null");
+                        LOGGER.debug("++ mvg-bbb:     bbb publishing==null");
                     } else {
-                        publishing.getPublications().forEach(x -> LOGGER.debug("+      bbb PUBL {}: {}", x.getName(), describe(x)));
-                        publishing.getRepositories().forEach(x -> LOGGER.debug("+      bbb REPO {}: {}", x.getName(), describe(x)));
+                        publishing.getPublications().forEach(x -> LOGGER.debug("++ mvg-bbb:     bbb PUBL {}: {}", x.getName(), describe(x)));
+                        publishing.getRepositories().forEach(x -> LOGGER.debug("++ mvg-bbb:     bbb REPO {}: {}", x.getName(), describe(x)));
                     }
-                    LOGGER.debug("+ bbb ---------------------------] proj={}", p.getName());
+                    LOGGER.debug("++ mvg-bbb: ---------------------------] proj={}", p.getName());
                 });
             }
         }
 
         private static void report(PublishingExtension publishing) {
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("+ bbb ---------------------------[");
+                LOGGER.debug("++ mvg-bbb: ---------------------------[");
                 if (publishing == null) {
-                    LOGGER.debug("+      bbb publishing==null");
+                    LOGGER.debug("++ mvg-bbb:     bbb publishing==null");
                 } else {
-                    publishing.getPublications().forEach(x -> LOGGER.debug("+      bbb PUBL {}: {}", x.getName(), describe(x)));
-                    publishing.getRepositories().forEach(x -> LOGGER.debug("+      bbb REPO {}: {}", x.getName(), describe(x)));
+                    publishing.getPublications().forEach(x -> LOGGER.debug("++ mvg-bbb:     bbb PUBL {}: {}", x.getName(), describe(x)));
+                    publishing.getRepositories().forEach(x -> LOGGER.debug("++ mvg-bbb:     bbb REPO {}: {}", x.getName(), describe(x)));
                 }
-                LOGGER.debug("+ bbb ---------------------------]");
+                LOGGER.debug("++ mvg-bbb: ---------------------------]");
             }
         }
 

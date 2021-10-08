@@ -34,8 +34,8 @@ public abstract class TreeCorrector extends Corrector {
         this.root = root;
         this.excludes = excludes;
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("++ ========================================");
-            excludes.forEach(x -> LOGGER.debug("++ # " + name + " excludes        : " + x));
+            LOGGER.debug("++ mvg: ========================================");
+            excludes.forEach(x -> LOGGER.debug("++ mvg: # " + name + " excludes        : " + x));
         }
     }
 

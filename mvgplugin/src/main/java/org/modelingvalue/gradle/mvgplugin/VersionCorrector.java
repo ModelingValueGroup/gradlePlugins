@@ -15,10 +15,11 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-import static org.gradle.api.internal.tasks.compile.JavaCompilerArgumentsBuilder.LOGGER;
-import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
+import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_GROUP;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isTestingOrMvgCI;
 
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -31,7 +32,7 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 
 public class VersionCorrector {
-    private final static String        DEFAULT_VERSION = "0.0.1";
+    private static final String        DEFAULT_VERSION = "0.0.1";
     //
     private final        Path          root;
     private final        Project       project;
@@ -52,21 +53,21 @@ public class VersionCorrector {
 
     public VersionCorrector generate() {
         if (!gradleDotProperties.isValid()) {
-            LOGGER.info("+ can not determine version: no properties file found at {}", gradleDotProperties.getFile());
+            LOGGER.info("+ mvg: can not determine version: no properties file found at {}", gradleDotProperties.getFile());
         } else {
             String oldVersion = gradleDotProperties.getProp(PROP_NAME_VERSION, DEFAULT_VERSION);
             String group      = gradleDotProperties.getProp(PROP_NAME_GROUP, defaultGroup);
             String newVersion = adjustVersion(oldVersion);
 
             if (!oldVersion.equals(newVersion)) {
-                LOGGER.info("+ overwriting property {} with new version {} (was {}) in property file {}", PROP_NAME_VERSION, newVersion, oldVersion, gradleDotProperties.getFile());
+                LOGGER.info("+ mvg: overwriting property {} with new version {} (was {}) in property file {}", PROP_NAME_VERSION, newVersion, oldVersion, gradleDotProperties.getFile());
                 gradleDotProperties.setProp(PROP_NAME_VERSION, newVersion);
                 changedFiles.add(root.relativize(gradleDotProperties.getFile()));
             }
 
             project.getAllprojects().forEach(p -> {
                 if (!Objects.equals(p.getVersion(), newVersion) || !Objects.equals(p.getGroup(), group)) {
-                    LOGGER.info("+ project '{}': version: {} => {}, group: {} => {}", p.getName(), p.getVersion(), newVersion, p.getGroup(), group);
+                    LOGGER.info("+ mvg: project '{}': version: {} => {}, group: {} => {}", p.getName(), p.getVersion(), newVersion, p.getGroup(), group);
                     p.setVersion(newVersion);
                     p.setGroup(group);
                 }
@@ -76,8 +77,8 @@ public class VersionCorrector {
     }
 
     private String adjustVersion(String oldVersion) {
-        if (!Info.TESTING && !Info.CI) {
-            LOGGER.info("+ not on CI (and not TESTING): version not adjusted, version stays {}", oldVersion);
+        if (!isTestingOrMvgCI()) {
+            LOGGER.info("+ mvg: not on CI (and not TESTING): version not adjusted, version stays {}", oldVersion);
             return oldVersion;
         } else {
             List<String> tags           = GitUtil.listTags(root);
@@ -91,9 +92,9 @@ public class VersionCorrector {
             while (versionTags.contains("v" + newVersion)) {
                 versionParts[versionParts.length - 1] = Integer.toString(Integer.parseInt(versionParts[versionParts.length - 1]) + 1);
                 newVersion = String.join(".", versionParts);
-                Info.LOGGER.debug("+ ...trying next version: {}", newVersion);
+                Info.LOGGER.debug("++ mvg: ...trying next version: {}", newVersion);
             }
-            Info.LOGGER.info("+ found vacant version: {} (was {})", newVersion, oldVersion);
+            Info.LOGGER.info("+ mvg: found vacant version: {} (was {})", newVersion, oldVersion);
             return newVersion;
         }
     }

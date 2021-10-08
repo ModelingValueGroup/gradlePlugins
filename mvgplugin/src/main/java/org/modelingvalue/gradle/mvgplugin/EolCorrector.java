@@ -30,16 +30,16 @@ public class EolCorrector extends TreeCorrector {
     private final Set<String> noTextFiles;
 
     public EolCorrector(MvgCorrectorExtension ext) {
-        super("eols  ", ext.getRoot(), ext.getEolFileExcludes());
+        super("eols", ext.getRoot(), ext.getEolFileExcludes());
         textExtensions = ext.getTextFileExtensions();
         noTextExtensions = ext.getNoTextFileExtensions();
         textFiles = ext.getTextFiles();
         noTextFiles = ext.getNoTextFiles();
         if (LOGGER.isDebugEnabled()) {
-            textExtensions/*  */.forEach(x -> LOGGER.debug("++ # eols   textExtensions  : " + x));
-            noTextExtensions/**/.forEach(x -> LOGGER.debug("++ # eols   noTextExtensions: " + x));
-            textFiles/*       */.forEach(x -> LOGGER.debug("++ # eols   textFiles       : " + x));
-            noTextFiles/*     */.forEach(x -> LOGGER.debug("++ # eols   noTextFiles     : " + x));
+            textExtensions/*  */.forEach(x -> LOGGER.debug("++ mvg: # eols   textExtensions  : " + x));
+            noTextExtensions/**/.forEach(x -> LOGGER.debug("++ mvg: # eols   noTextExtensions: " + x));
+            textFiles/*       */.forEach(x -> LOGGER.debug("++ mvg: # eols   textFiles       : " + x));
+            noTextFiles/*     */.forEach(x -> LOGGER.debug("++ mvg: # eols   noTextFiles     : " + x));
         }
     }
 
@@ -54,7 +54,7 @@ public class EolCorrector extends TreeCorrector {
         try {
             overwrite(f, Files.readAllLines(f));
         } catch (IOException e) {
-            LOGGER.info("IOException '{}' detected (and ignored) on file {}", e.getMessage(), f.toAbsolutePath());
+            LOGGER.info("+ mvg: IOException '{}' detected (and ignored) on file {}", e.getMessage(), f.toAbsolutePath());
         }
     }
 
@@ -79,7 +79,7 @@ public class EolCorrector extends TreeCorrector {
         if (noTextExtensions.contains(ext.get())) {
             return false;
         }
-        LOGGER.info("+ unknown file type (not correcting EOLs): {}", f);
+        LOGGER.info("+ mvg: unknown file type (not correcting EOLs): {}", f);
         return false;
     }
 

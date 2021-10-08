@@ -20,8 +20,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.List;
+
 import org.gradle.api.GradleException;
 import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.BashRunner;
 import org.modelingvalue.gradle.mvgplugin.BranchParameterNames;
 import org.modelingvalue.gradle.mvgplugin.Util;
 
@@ -92,5 +100,25 @@ public class UtilTest {
         assertEquals("123456***", Util.hide("123456789"));
         assertEquals("123456****", Util.hide("1234567890"));
         assertEquals("!@#$%^***********************", Util.hide("!@#$%^&*!@#$%^&*({}+|\":<>?/.,"));
+    }
+
+    @Test
+    public void bashRunnerTest() throws IOException {
+        Path script = Paths.get("build", "testing123.sh");
+
+        Files.deleteIfExists(script);
+        Files.createFile(script, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+        Files.writeString(script,
+                "#!/bin.bash\n" +
+                        "x=10\n" +
+                        "y=20\n" +
+                        "echo $((x+y))\n"
+        );
+        BashRunner bashRunner = new BashRunner(script).waitForExit();
+        Files.delete(script);
+
+        assertEquals(0, bashRunner.exitValue());
+        assertEquals(List.of(), bashRunner.getStderr());
+        assertEquals(List.of("30"), bashRunner.getStdout());
     }
 }
