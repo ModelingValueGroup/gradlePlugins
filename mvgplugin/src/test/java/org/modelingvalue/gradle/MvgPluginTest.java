@@ -59,7 +59,6 @@ import org.modelingvalue.gradle.mvgplugin.DotProperties;
 import org.modelingvalue.gradle.mvgplugin.GitManager;
 import org.modelingvalue.gradle.mvgplugin.GitUtil;
 import org.modelingvalue.gradle.mvgplugin.Info;
-import org.modelingvalue.gradle.mvgplugin.InfoGradle;
 
 public class MvgPluginTest {
     private static final boolean I_NEED_TO_DEBUG_THIS_TEST = true;
@@ -165,7 +164,7 @@ public class MvgPluginTest {
 
 
             DotProperties instance = new DotProperties(testWorkspaceDir.resolve(GRADLE_PROPERTIES_FILE));
-            int           m        = InfoGradle.isMasterBranch() ? 1 : 0;
+            int           m        = 0 < numOccurences("master=true", out) ? 1 : 0;
 
             // Verify the result
             assertAll(
