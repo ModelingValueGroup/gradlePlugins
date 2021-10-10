@@ -173,7 +173,7 @@ public class MvgPluginTest {
                     //
                     () -> assertEquals(6, numOccurences("+ mvg: header     regenerated : ", out)),
                     () -> assertEquals(2, numOccurences("+ mvg: eols       regenerated : ", out)),
-                    () -> assertEquals(6, numOccurences("+ mvg: eols       untouched   : ", out)),
+                    () -> assertEquals(7, numOccurences("+ mvg: eols       untouched   : ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: found vacant version: 0.0.4 (was 0.0.1)", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: project 'test-name': version: 0.0.1 => 0.0.4, group: test.group => test.group", out)),
                     () -> assertEquals(6, numOccurences(getTestMarker("r+"), out)),

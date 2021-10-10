@@ -138,21 +138,30 @@ public class GitUtil {
     }
 
     public static boolean stage(Git git, Set<Path> changes) throws GitAPIException, IOException {
-        Set<String> changesNames = changes == null ? null : changes.stream().map(Path::toString).collect(Collectors.toSet());
+        Set<String> changesNames = changes == null ? Set.of() : changes.stream().map(Path::toString).collect(Collectors.toSet());
         String      branch       = git.getRepository().getBranch();
         Status      status       = statusVerbose(git, "before add");
 
         Set<String> toAdd = Stream.concat(status.getModified().stream(), status.getUntracked().stream()).collect(Collectors.toSet());
         Set<String> toRm  = status.getMissing();
 
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("++ mvg-git:{}: {} changes passed to stage()", describe(git), changesNames.size());
+            changesNames.stream().sorted().forEach(n -> LOGGER.debug("++ mvg-git:{}:   - {}", describe(git), n));
+            LOGGER.debug("++ mvg-git:{}: {} to-adds found on disk", describe(git), toAdd.size());
+            toAdd.stream().sorted().forEach(n -> LOGGER.debug("++ mvg-git:{}:   - {}", describe(git), n));
+            LOGGER.debug("++ mvg-git:{}: {} to-removes found on disk", describe(git), toRm.size());
+            toRm.stream().sorted().forEach(n -> LOGGER.debug("++ mvg-git:{}:   - {}", describe(git), n));
+        }
+
         Set<String> adds = toAdd.stream()
-                .filter(s -> changesNames == null || changesNames.contains(s))
+                .filter(s -> changesNames.isEmpty() || changesNames.contains(s))
                 .collect(Collectors.toSet());
         Set<String> rms = toRm.stream()
-                .filter(s -> changesNames == null || changesNames.contains(s))
+                .filter(s -> changesNames.isEmpty() || changesNames.contains(s))
                 .collect(Collectors.toSet());
 
-        if (LOGGER.isInfoEnabled() && changesNames != null) {
+        if (LOGGER.isInfoEnabled() && !changesNames.isEmpty()) {
             Set<String> missedChanges = new HashSet<>(changesNames);
             missedChanges.removeAll(adds);
             missedChanges.removeAll(rms);
