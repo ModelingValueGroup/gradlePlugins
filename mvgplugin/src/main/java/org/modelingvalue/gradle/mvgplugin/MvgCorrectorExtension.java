@@ -44,6 +44,7 @@ public class MvgCorrectorExtension {
     private final Map<String, String> headerFileExt;
     private final Set<String>         headerFileExcludes;
     private final Set<String>         eolFileExcludes;
+    private final Set<String>         bashFileExcludes;
 
     public MvgCorrectorExtension(Project project) {
         this.project = project;
@@ -102,7 +103,7 @@ public class MvgCorrectorExtension {
                 "yml", "##"
         ));
         List<String> defaultExcludes = List.of(
-                ".git.*",
+                ".git/.*",
                 ".github/workflows/.*", // github refuses bot pushes of workflows
                 ".idea/.*",
                 ".gradle/.*",
@@ -114,6 +115,7 @@ public class MvgCorrectorExtension {
         );
         headerFileExcludes = new HashSet<>(defaultExcludes);
         eolFileExcludes = new HashSet<>(defaultExcludes);
+        bashFileExcludes = new HashSet<>(defaultExcludes);
     }
 
     public Project getProject() {
@@ -190,5 +192,13 @@ public class MvgCorrectorExtension {
 
     public Set<String> getEolFileExcludes() {
         return eolFileExcludes;
+    }
+
+    public void addBashFileExclude(String pattern) {
+        bashFileExcludes.add(pattern);
+    }
+
+    public Set<String> getBashFileExcludes() {
+        return bashFileExcludes;
     }
 }

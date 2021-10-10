@@ -21,6 +21,7 @@ plugins {
 mvgcorrector {
     addHeaderFileExclude("mvgplugin/src/test/resources/.*")
     addEolFileExclude("mvgplugin/src/test/resources/.*")
+    // addBashFileExclude(".*/bashProduced.*")
 }
 
 // for gradle debugging:

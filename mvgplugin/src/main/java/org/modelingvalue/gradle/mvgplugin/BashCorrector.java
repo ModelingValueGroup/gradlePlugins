@@ -18,49 +18,45 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-public class BashCorrector extends Corrector {
+public class BashCorrector extends TreeCorrector {
     public static final String CORRECTOR_EXT = ".corrector.sh";
 
     public BashCorrector(MvgCorrectorExtension ext) {
-        super("bash");
-    }
-
-    public BashCorrector generate() throws IOException {
-        Files.walk(InfoGradle.getAbsProjectDir())
-                .filter(Files::isRegularFile)
-                .filter(p -> p.getFileName().toString().matches(".*" + Pattern.quote(CORRECTOR_EXT)))
-                .forEach(this::run);
-        return this;
-    }
-
-    private void run(Path script) {
-        String simpleScriptName = script.getFileName().toString();
-        try {
-            LOGGER.info("+ mvg running {}", script);
-            BashRunner bashRunner = new BashRunner(script).waitForExit();
-            if (bashRunner.exitValue() != 0) {
-                LOGGER.error("run of script {} resulted in an error ({})", script, bashRunner.exitValue());
-            } else {
-                List<String> stderr = bashRunner.getStderr();
-                if (!stderr.isEmpty()) {
-                    LOGGER.info("+ mvg: running {} produced messages on stderr:", simpleScriptName);
-                    stderr.forEach(line -> LOGGER.info("+ mvg:     {}", line));
-                }
-                Path outFile = script.getParent().resolve(simpleScriptName.replaceFirst(Pattern.quote(CORRECTOR_EXT) + "$", ""));
-                overwrite(outFile, bashRunner.getStdout());
-            }
-        } catch (IOException e) {
-            LOGGER.error("could not run {}: {} (ignored for now)", simpleScriptName, e.getMessage());
-        }
+        super("bash", InfoGradle.getAbsProjectDir(), ext.getBashFileExcludes());
     }
 
     public Set<Path> getChangedFiles() {
         return super.getChangedFiles(InfoGradle.getAbsProjectDir());
+    }
+
+    public BashCorrector generate() throws IOException {
+        allFiles()
+                .filter(p -> p.getFileName().toString().matches(".*" + Pattern.quote(CORRECTOR_EXT)))
+                .forEach(script -> {
+                    String simpleScriptName = script.getFileName().toString();
+                    try {
+                        LOGGER.info("+ mvg running {}", script);
+                        BashRunner bashRunner = new BashRunner(script).waitForExit();
+                        if (bashRunner.exitValue() != 0) {
+                            LOGGER.error("run of script {} resulted in an error ({})", script, bashRunner.exitValue());
+                        } else {
+                            List<String> stderr = bashRunner.getStderr();
+                            if (!stderr.isEmpty()) {
+                                LOGGER.info("+ mvg: running {} produced messages on stderr:", simpleScriptName);
+                                stderr.forEach(line -> LOGGER.info("+ mvg:     {}", line));
+                            }
+                            Path outFile = script.getParent().resolve(simpleScriptName.replaceFirst(Pattern.quote(CORRECTOR_EXT) + "$", ""));
+                            overwrite(outFile, bashRunner.getStdout());
+                        }
+                    } catch (IOException e) {
+                        LOGGER.error("could not run {}: {} (ignored for now)", simpleScriptName, e.getMessage());
+                    }
+                });
+        return this;
     }
 }

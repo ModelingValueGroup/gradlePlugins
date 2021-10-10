@@ -16,6 +16,7 @@ dependencies {
 }
 `~myMvgCorrectorExtension~` {
     addTextFileExtension("pruuperties")
+    addBashFileExclude("unused")
 }
 `~myMvgUploaderExtension~` {
     pluginId = "DRY"
@@ -25,7 +26,6 @@ publishing {
     publications {
         create<MavenPublication>("test-publication") {
             from(components["java"])
-
         }
     }
 }
