@@ -76,9 +76,10 @@ public class DotProperties {
 
 
     public void setProp(String name, String val) {
+        properties.setProperty(name, val);
         if (valid) {
             List<String> newLines = lines.stream()
-                    .map(l -> l.matches("^" + Pattern.quote(name) + "=.*") ? name + "=" + val : l)
+                    .map(l -> l.matches("^" + Pattern.quote(name) + "\\s*=.*") ? l.replaceFirst("(=\\s*).*$","$1") + val : l)
                     .collect(Collectors.toList());
             lines.clear();
             lines.addAll(newLines);

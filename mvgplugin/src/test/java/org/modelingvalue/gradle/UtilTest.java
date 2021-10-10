@@ -31,6 +31,7 @@ import org.gradle.api.GradleException;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.mvgplugin.BashRunner;
 import org.modelingvalue.gradle.mvgplugin.BranchParameterNames;
+import org.modelingvalue.gradle.mvgplugin.DotProperties;
 import org.modelingvalue.gradle.mvgplugin.Util;
 
 public class UtilTest {
@@ -120,5 +121,32 @@ public class UtilTest {
         assertEquals(0, bashRunner.exitValue());
         assertEquals(List.of(), bashRunner.getStderr());
         assertEquals(List.of("30"), bashRunner.getStdout());
+    }
+
+    @Test
+    public void propTest() throws IOException {
+        Path tempFile = Files.createTempFile("proptest-", ".properties");
+        Files.writeString(tempFile, "xxx=xxx\nyyy\t   =   yyy\nzzz=a=b=c\n");
+
+        DotProperties props = new DotProperties(tempFile);
+
+        assertEquals("xxx", props.getProp("xxx"));
+        assertEquals("yyy", props.getProp("yyy"));
+        assertEquals("a=b=c", props.getProp("zzz"));
+
+        props.setProp("xxx","qqq");
+        props.setProp("yyy","www");
+        props.setProp("zzz","1==2");
+
+        assertEquals("qqq", props.getProp("xxx"));
+        assertEquals("www", props.getProp("yyy"));
+        assertEquals("1==2", props.getProp("zzz"));
+
+        DotProperties props2 = new DotProperties(tempFile);
+        assertEquals("qqq", props2.getProp("xxx"));
+        assertEquals("www", props2.getProp("yyy"));
+        assertEquals("1==2", props2.getProp("zzz"));
+
+        Files.deleteIfExists(tempFile);
     }
 }
