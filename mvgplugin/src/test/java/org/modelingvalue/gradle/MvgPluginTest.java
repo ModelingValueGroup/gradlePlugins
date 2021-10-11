@@ -63,7 +63,7 @@ import org.modelingvalue.gradle.mvgplugin.Info;
 public class MvgPluginTest {
     private static final boolean I_NEED_TO_DEBUG_THIS_TEST = true;
     public static final  String  TEST_WORKSPACE_NAME       = "gradlePlugins";
-    private static final Path    testWorkspaceDir          = Paths.get("build", TEST_WORKSPACE_NAME).toAbsolutePath();
+    private static final Path    testWorkspaceDir          = Paths.get("build", "test-workspace", TEST_WORKSPACE_NAME).toAbsolutePath();
     private static final Path    settingsFile              = Paths.get("settings.gradle");
     private static final Path    bashFile                  = Paths.get("bashProduced.txt.corrector.sh");
     private static final Path    buildFile                 = Paths.get("build.gradle.kts");
