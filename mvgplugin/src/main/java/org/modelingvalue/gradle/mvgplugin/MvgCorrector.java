@@ -20,7 +20,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.CORRECTOR_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MODELING_VALUE_GROUP;
-import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isTestingOrMvgCI;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -105,7 +105,7 @@ class MvgCorrector {
 
             LOGGER.info("+ mvg: changed {} files", changes.size());
 
-            if (!changes.isEmpty() && isTestingOrMvgCI() && ALLREP_TOKEN != null) {
+            if (!changes.isEmpty() && isMvgCI_orTesting() && ALLREP_TOKEN != null) {
                 GitUtil.stageCommitPush(ext.getRoot(), GitUtil.NO_CI_COMMIT_MARKER + " updated by mvgplugin", changes);
             }
         } catch (IOException e) {

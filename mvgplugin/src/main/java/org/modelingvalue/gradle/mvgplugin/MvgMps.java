@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.channels.Channels;
@@ -38,8 +39,8 @@ import org.gradle.api.invocation.Gradle;
 import org.jetbrains.annotations.NotNull;
 
 public class MvgMps {
-    private final static int    MAX_REDIRECTS = 10;
-    private final static Object LOAD_LOCK     = new Object();
+    private final static int    MAX_REDIRECTS      = 10;
+    private final static Object LOAD_LOCK          = new Object();
 
     private final    Gradle            gradle;
     private final    MvgMpsExtension   ext;
@@ -58,7 +59,7 @@ public class MvgMps {
         if (jar == null) {
             throw new GradleException("no jar found for '" + dep + "' in " + ext.getMpsInstallDir());
         }
-        LOGGER.info("+ mvg-mps: dependency     replaced: {} => {}" ,dep, jar);
+        LOGGER.info("+ mvg-mps: dependency     replaced: {} => {}", dep, jar);
         return gradle.getRootProject().files(jar);
     }
 
@@ -139,24 +140,23 @@ public class MvgMps {
     }
 
     private static void downloadAndUnzip(MvgMpsExtension ext) {
-        File mpsDownloadDir = ext.getMpsDownloadDir();
-        File mpsZip         = new File(mpsDownloadDir, "mps.zip");
-        File mpsInstallDir  = ext.getMpsInstallDir();
+        Path mpsDownloadDir = ext.getMpsDownloadDir().toPath();
+        Path mpsZip         = mpsDownloadDir.resolve("mps.zip");
+        Path mpsInstallDir  = ext.getMpsInstallDir().toPath();
 
-        if (!mpsZip.isFile()) {
+        if (!Files.isRegularFile(mpsZip)) {
             downloadMps(ext, mpsZip);
         }
-        if (!mpsInstallDir.isDirectory()) {
+        if (!Files.isDirectory(mpsInstallDir)) {
             unzip(ext, mpsZip, mpsDownloadDir);
         }
     }
 
-    private static void downloadMps(MvgMpsExtension ext, File mpsZip) {
-        long t0 = System.currentTimeMillis();
-        //noinspection ResultOfMethodCallIgnored
-        mpsZip.getParentFile().mkdirs();
+    private static void downloadMps(MvgMpsExtension ext, Path mpsZip) {
+        long   t0  = System.currentTimeMillis();
         String url = ext.getMpsDownloadUrl();
         try {
+            Files.createDirectories(mpsZip.getParent());
             URLConnection urlConnection = new URL(url).openConnection();
             for (int i = 0; i < MAX_REDIRECTS; i++) {
                 String redirect = urlConnection.getHeaderField("Location");
@@ -167,10 +167,9 @@ public class MvgMps {
                 urlConnection = new URL(redirect).openConnection();
             }
             try (InputStream is = urlConnection.getInputStream()) {
-                long len = new FileOutputStream(mpsZip).getChannel().transferFrom(Channels.newChannel(is), 0, Long.MAX_VALUE);
+                long len = new FileOutputStream(mpsZip.toFile()).getChannel().transferFrom(Channels.newChannel(is), 0, Long.MAX_VALUE);
                 if (len == 0) {
-                    //noinspection ResultOfMethodCallIgnored
-                    mpsZip.delete();
+                    Files.deleteIfExists(mpsZip);
                     throw new GradleException("could not download MPS " + ext.getVersion() + " from " + url + " (got empty file)");
                 }
                 LOGGER.info("+ mvg-mps: read {} bytes of zip file", len);
@@ -181,39 +180,35 @@ public class MvgMps {
         LOGGER.info("+ mvg-mps: downloading MPS {} took {} ms", ext.getVersion(), System.currentTimeMillis() - t0);
     }
 
-    private static void unzip(MvgMpsExtension ext, File fileZip, File destDir) {
-        long t0 = System.currentTimeMillis();
-        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(fileZip))) {
+    private static void unzip(MvgMpsExtension ext, Path fileZip, Path destDir) {
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(fileZip.toFile()))) {
+            long   t0     = System.currentTimeMillis();
             byte[] buffer = new byte[1024 * 1024];
             for (ZipEntry zipEntry = zis.getNextEntry(); zipEntry != null; zipEntry = zis.getNextEntry()) {
-                File newFile = new File(destDir, zipEntry.getName());
-                if (!newFile.getCanonicalPath().startsWith(destDir.getCanonicalPath() + File.separator)) {
+                Path newFile = destDir.resolve(zipEntry.getName());
+                if (!newFile.toFile().getCanonicalPath().startsWith(destDir.toFile().getCanonicalPath() + File.separator)) {
                     throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
                 }
                 if (zipEntry.isDirectory()) {
-                    if (!newFile.isDirectory() && !newFile.mkdirs()) {
-                        throw new IOException("Failed to create directory " + newFile);
-                    }
+                    Files.createDirectories(newFile);
                 } else {
                     // fix for Windows-created archives
-                    File parent = newFile.getParentFile();
-                    if (!parent.isDirectory() && !parent.mkdirs()) {
-                        throw new IOException("Failed to create directory " + parent);
-                    }
+                    Files.createDirectories(newFile.getParent());
 
                     // write file content
-                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                    try (OutputStream os = Files.newOutputStream(newFile)) {
                         for (int len; (len = zis.read(buffer)) > 0; ) {
-                            fos.write(buffer, 0, len);
+                            os.write(buffer, 0, len);
                         }
                     }
                 }
             }
             zis.closeEntry();
+            long numFiles = Files.walk(destDir).filter(Files::isRegularFile).count();
+            LOGGER.info("+ mvg-mps: unzipping   MPS {} gave {} files, took {} ms, at {}", ext.getVersion(), numFiles, System.currentTimeMillis() - t0, destDir);
         } catch (IOException e) {
             throw new GradleException("could not unzip MPS zip: " + fileZip, e);
         }
-        LOGGER.info("+ mvg-mps: unzipping   MPS {} took {} ms: {}", ext.getVersion(), System.currentTimeMillis() - t0, destDir);
     }
 
     private static Map<String, File> makeJarIndex(File rootDir) {

@@ -74,12 +74,16 @@ public class InfoGradle {
         return instance().mvgRepoName;
     }
 
-    public static boolean isTestingOrMvgCI() {
-        return Info.TESTING || (Info.CI && getMvgRepoName() != null);
+    public static boolean isMvgCI_orTesting() {
+        return (Info.CI && getMvgRepoName() != null) || Info.TESTING;
     }
 
     public static boolean isMasterBranch() {
-        return getBranch().equals(Info.MASTER_BRANCH);
+        return isMasterBranch(getBranch());
+    }
+
+    public static boolean isMasterBranch(String branch) {
+        return Info.MASTER_BRANCH.equals(branch);
     }
 
     public static boolean isDevelopBranch() {

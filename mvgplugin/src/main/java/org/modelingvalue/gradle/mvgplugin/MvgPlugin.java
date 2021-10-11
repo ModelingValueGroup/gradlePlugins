@@ -25,7 +25,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_JAVA;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isDevelopBranch;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
-import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isTestingOrMvgCI;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
 import java.io.IOException;
@@ -100,7 +100,7 @@ public class MvgPlugin implements Plugin<Project> {
             LOGGER.info("+ mvg: MvgPlugin.apply to project {}", project.getName());
             LOGGER.info("+ mvg: {}={}, {}={} {}={}, {}={}, {}={}",
                     PROP_NAME_CI, CI,
-                    "TEST|CI", isTestingOrMvgCI(),
+                    "TEST|CI", isMvgCI_orTesting(),
                     "master", isMasterBranch(),
                     "develop", isDevelopBranch(),
                     PROP_NAME_ALLREP_TOKEN, Util.hide(ALLREP_TOKEN));

@@ -19,7 +19,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_GROUP;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
-import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isTestingOrMvgCI;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -77,7 +77,7 @@ public class VersionCorrector {
     }
 
     private String adjustVersion(String oldVersion) {
-        if (!isTestingOrMvgCI()) {
+        if (!isMvgCI_orTesting()) {
             LOGGER.info("+ mvg: not on CI (and not TESTING): version not adjusted, version stays {}", oldVersion);
             return oldVersion;
         } else {

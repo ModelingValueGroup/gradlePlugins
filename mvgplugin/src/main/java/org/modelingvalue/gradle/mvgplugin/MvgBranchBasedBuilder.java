@@ -18,17 +18,24 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
-import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isTestingOrMvgCI;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
 
+import java.io.File;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.gradle.BuildAdapter;
 import org.gradle.BuildResult;
 import org.gradle.api.Action;
+import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.component.ComponentSelector;
 import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
@@ -51,15 +58,15 @@ public class MvgBranchBasedBuilder {
     public static final String BRANCH_REASON              = "using Branch Based Building";
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
-    private final    Gradle      gradle;
-    private volatile String      bbbIdCache;
-    private final    Set<String> dependencies = new HashSet<>();
-    private final    Set<String> publications = new HashSet<>();
+    private final Gradle              gradle;
+    private final Map<String, String> bbbIdCache         = new ConcurrentHashMap<>();
+    private final Set<String>         dependenciesToSave = new HashSet<>();
+    private final Set<String>         publications       = new HashSet<>();
 
     public MvgBranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
 
-        LOGGER.info("+ mvg-bbb: creating MvgBranchBasedBuilder (CI={} TEST|CI={} master={})", CI, isTestingOrMvgCI(), isMasterBranch());
+        LOGGER.info("+ mvg-bbb: creating MvgBranchBasedBuilder (CI={} TEST|CI={} master={})", CI, isMvgCI_orTesting(), isMasterBranch());
         TRACE.report(gradle);
 
         adjustDependencies();
@@ -70,7 +77,7 @@ public class MvgBranchBasedBuilder {
             public void buildFinished(BuildResult result) {
                 if (result.getFailure() == null) {
                     DependenciesRepoManager dependencyRepoManager = new DependenciesRepoManager(gradle);
-                    dependencyRepoManager.saveDependencies(dependencies);
+                    dependencyRepoManager.saveDependencies(dependenciesToSave);
                     dependencyRepoManager.trigger(publications);
                 }
             }
@@ -87,22 +94,38 @@ public class MvgBranchBasedBuilder {
                                 conf.resolutionStrategy(strategy ->
                                         strategy.dependencySubstitution(depSubs ->
                                                 depSubs.all(depSub -> {
-                                                            ComponentSelector component = depSub.getRequested();
-                                                            if (!(component instanceof ModuleComponentSelector)) {
-                                                                LOGGER.info("+ mvg-bbb: {} {} can not handle unknown dependency class: {}", projectName, confName, component.getClass());
+                                                            ComponentSelector selector = depSub.getRequested();
+                                                            if (!(selector instanceof ModuleComponentSelector)) {
+                                                                LOGGER.info("+ mvg-bbb: {} {} can not handle unknown dependency class: {}", projectName, confName, selector.getClass());
                                                             } else {
-                                                                ModuleComponentSelector moduleComponent = (ModuleComponentSelector) component;
+                                                                ModuleComponentSelector moduleComponent = (ModuleComponentSelector) selector;
                                                                 if (!moduleComponent.getVersion().endsWith(BRANCH_INDICATOR)) {
-                                                                    LOGGER.info("+ mvg-bbb: {} {} {} no BRANCH dependency: {}", negTestMarker, projectName, confName, component);
+                                                                    LOGGER.info("+ mvg-bbb: {} {} {} no BRANCH dependency: {}", negTestMarker, projectName, confName, selector);
                                                                 } else {
-                                                                    String g           = makeBbbGroup(moduleComponent.getGroup());
-                                                                    String a           = makeBbbArtifact(moduleComponent.getModule());
-                                                                    String v           = makeBbbVersion(moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", ""));
-                                                                    String replacement = g + ":" + a + ":" + v;
-                                                                    LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency, replaced: {} => {}", posTestMarker, projectName, confName, component, replacement);
-                                                                    depSub.useTarget(replacement, BRANCH_REASON);
+                                                                    String       rawGroup    = moduleComponent.getGroup();
+                                                                    String       rawArtifact = moduleComponent.getModule();
+                                                                    String       rawVersion  = moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", "");
+                                                                    List<String> branchesTpTry;
+                                                                    if (InfoGradle.isMasterBranch()) {
+                                                                        branchesTpTry = List.of(InfoGradle.getBranch());
+                                                                    } else if (InfoGradle.isDevelopBranch()) {
+                                                                        branchesTpTry = List.of(InfoGradle.getBranch(), "master");
+                                                                    } else {
+                                                                        branchesTpTry = List.of(InfoGradle.getBranch(), "develop", "master");
+                                                                    }
+                                                                    for (String branch : branchesTpTry) {
+                                                                        String newGAV = makeBbbGAV(branch, rawGroup, rawArtifact, rawVersion);
 
-                                                                    dependencies.add(moduleComponent.getGroup() + "." + moduleComponent.getModule());
+                                                                        if (!branch.equals("master") && !isInAnyMavenRepo(p, newGAV)) {
+                                                                            LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency not found: {} => {} (skipping this branch replacement)", posTestMarker, projectName, confName, selector, newGAV);
+                                                                        } else {
+                                                                            depSub.useTarget(newGAV, BRANCH_REASON);
+                                                                            dependenciesToSave.add(rawGroup + "." + rawArtifact);
+
+                                                                            LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency, replaced: {} => {}", posTestMarker, projectName, confName, selector, newGAV);
+                                                                            break;
+                                                                        }
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -115,6 +138,17 @@ public class MvgBranchBasedBuilder {
         );
     }
 
+    private boolean isInAnyMavenRepo(Project project, String gav) {
+        try {
+            Dependency    dependency    = project.getDependencies().create(gav);
+            Configuration configuration = project.getConfigurations().detachedConfiguration(dependency);
+            Set<File>     resolved      = configuration.resolve();
+            return !resolved.isEmpty();
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
     private void adjustPublications() {
         gradle.afterProject(p -> {
             LOGGER.info("+ mvg-bbb: running adjustPublications on project {}", p.getName());
@@ -124,7 +158,7 @@ public class MvgBranchBasedBuilder {
                     LOGGER.warn("The repository set for project {} is not empty; bbb will not set the proper publish repo (local-maven or github-mvg-packages). Make it empty to activate bbb publishing.", p.getName());
                 }
                 // only publish as-is if not master-CI, otherwise adjust the publications into snapshots
-                if (isTestingOrMvgCI()) {
+                if (isMvgCI_orTesting()) {
                     if (!isMasterBranch()) {
                         makePublicationsBbb(publishing);
                     }
@@ -145,19 +179,21 @@ public class MvgBranchBasedBuilder {
                 String oldGroup    = mpub.getGroupId();
                 String oldArtifact = mpub.getArtifactId();
                 String oldVersion  = mpub.getVersion();
+                String oldGAV      = makeGAV(oldGroup, oldArtifact, oldVersion);
 
-                String newGroup    = makeBbbGroup(oldGroup);
-                String newArtifact = makeBbbArtifact(oldArtifact);
-                String newVersion  = makeBbbVersion(oldVersion);
+                String branch      = InfoGradle.getBranch();
+                String newGroup    = makeBbbGroup(oldGroup, branch);
+                String newArtifact = makeBbbArtifact(oldArtifact, branch);
+                String newVersion  = makeBbbVersion(oldVersion, branch);
+                String newGAV      = makeGAV(newGroup, newArtifact, newVersion);
 
-                //noinspection ConstantConditions
-                if (!oldGroup.equals(newGroup) || !oldArtifact.equals(newArtifact) || !oldVersion.equals(newVersion)) {
-                    LOGGER.info("+ mvg-bbb: changed publication {}: '{}:{}:{}' => '{}:{}:{}'",
-                            mpub.getName(), oldGroup, oldArtifact, oldVersion, newGroup, newArtifact, newVersion);
+                if (!oldGAV.equals(newGAV)) {
+                    LOGGER.info("+ mvg-bbb: changed publication {}: '{}' => '{}'", mpub.getName(), oldGAV, newGAV);
 
                     mpub.setGroupId(newGroup);
                     mpub.setArtifactId(newArtifact);
                     mpub.setVersion(newVersion);
+
                     TRACE.report(publishing);
 
                     publications.add(oldGroup + "." + oldArtifact);
@@ -183,31 +219,33 @@ public class MvgBranchBasedBuilder {
         }
     }
 
-    private String makeBbbGroup(String g) {
-        return (isTestingOrMvgCI() && isMasterBranch()) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
+    private String makeBbbGAV(String branch, String g, String a, String v) {
+        return makeGAV(makeBbbGroup(g, branch), makeBbbArtifact(a, branch), makeBbbVersion(v, branch));
     }
 
-    private String makeBbbArtifact(String a) {
+    private String makeGAV(String g, String a, String v) {
+        return String.format("%s:%s:%s", g, a, v);
+    }
+
+    private String makeBbbGroup(String g, String branch) {
+        return (isMvgCI_orTesting() && isMasterBranch(branch)) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
+    }
+
+    private String makeBbbArtifact(String a, @SuppressWarnings("unused") String branch) {
         return a;
     }
 
-    private String makeBbbVersion(String v) {
-        return (isTestingOrMvgCI() && isMasterBranch()) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST) ? v : cachedBbbId();
-    }
-
-    private String cachedBbbId() {
-        if (bbbIdCache == null) {
-            synchronized (gradle) {
-                if (bbbIdCache == null) {
-                    String branch    = InfoGradle.getBranch();
-                    int    hash      = branch.hashCode();
-                    String sanatized = branch.replaceFirst("@.*", "").replaceAll("\\W", "_");
-                    String part      = sanatized.substring(0, Math.min(sanatized.length(), MAX_BRANCHNAME_PART_LENGTH));
-                    bbbIdCache = String.format("%s-%08x%s", part, hash, SNAPSHOT_VERSION_POST);
-                }
-            }
+    private String makeBbbVersion(String v, String branch) {
+        if ((isMvgCI_orTesting() && isMasterBranch(branch)) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST)) {
+            return v;
+        } else {
+            return bbbIdCache.computeIfAbsent(branch, b -> {
+                int    hash      = b.hashCode();
+                String sanatized = b.replaceFirst("@.*", "").replaceAll("\\W", "_");
+                String part      = sanatized.substring(0, Math.min(sanatized.length(), MAX_BRANCHNAME_PART_LENGTH));
+                return String.format("%s-%08x%s", part, hash, SNAPSHOT_VERSION_POST);
+            });
         }
-        return bbbIdCache;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
