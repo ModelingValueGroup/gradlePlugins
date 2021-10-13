@@ -19,7 +19,6 @@ import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
-import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
 
 import java.io.File;
 import java.util.HashSet;
@@ -69,8 +68,8 @@ public class MvgBranchBasedBuilder {
         LOGGER.info("+ mvg-bbb: creating MvgBranchBasedBuilder (CI={} TEST|CI={} master={})", CI, isMvgCI_orTesting(), isMasterBranch());
         TRACE.report(gradle);
 
-        adjustDependencies();
-        adjustPublications();
+        adjustAllDependencies();
+        adjustAllPublications();
 
         gradle.addListener(new BuildAdapter() {
             @Override
@@ -84,57 +83,53 @@ public class MvgBranchBasedBuilder {
         });
     }
 
-    private void adjustDependencies() {
-        String negTestMarker = getTestMarker("r-");
-        String posTestMarker = getTestMarker("r+");
-        gradle.allprojects(p -> {
-                    String projectName = String.format("%-30s", p.getName());
-                    p.getConfigurations().all(conf -> {
-                                String confName = String.format("%-30s", conf.getName());
-                                conf.resolutionStrategy(strategy ->
-                                        strategy.dependencySubstitution(depSubs ->
-                                                depSubs.all(depSub -> {
-                                                            ComponentSelector selector = depSub.getRequested();
-                                                            if (!(selector instanceof ModuleComponentSelector)) {
-                                                                LOGGER.info("+ mvg-bbb: {} {} can not handle unknown dependency class: {}", projectName, confName, selector.getClass());
-                                                            } else {
-                                                                ModuleComponentSelector moduleComponent = (ModuleComponentSelector) selector;
-                                                                if (!moduleComponent.getVersion().endsWith(BRANCH_INDICATOR)) {
-                                                                    LOGGER.info("+ mvg-bbb: {} {} {} no BRANCH dependency: {}", negTestMarker, projectName, confName, selector);
-                                                                } else {
-                                                                    String       rawGroup    = moduleComponent.getGroup();
-                                                                    String       rawArtifact = moduleComponent.getModule();
-                                                                    String       rawVersion  = moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", "");
-                                                                    List<String> branchesTpTry;
-                                                                    if (InfoGradle.isMasterBranch()) {
-                                                                        branchesTpTry = List.of(InfoGradle.getBranch());
-                                                                    } else if (InfoGradle.isDevelopBranch()) {
-                                                                        branchesTpTry = List.of(InfoGradle.getBranch(), "master");
-                                                                    } else {
-                                                                        branchesTpTry = List.of(InfoGradle.getBranch(), "develop", "master");
-                                                                    }
-                                                                    for (String branch : branchesTpTry) {
-                                                                        String newGAV = makeBbbGAV(branch, rawGroup, rawArtifact, rawVersion);
+    private void adjustAllDependencies() {
+        gradle.allprojects(p -> p.getConfigurations().all(conf -> adjustDependencies(p, conf)));
+    }
 
-                                                                        if (!branch.equals("master") && !isInAnyMavenRepo(p, newGAV)) {
-                                                                            LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency not found: {} => {} (skipping this branch replacement)", posTestMarker, projectName, confName, selector, newGAV);
-                                                                        } else {
-                                                                            depSub.useTarget(newGAV, BRANCH_REASON);
-                                                                            dependenciesToSave.add(rawGroup + "." + rawArtifact);
+    private void adjustDependencies(Project project, Configuration conf) {
+        String projectName   = String.format("%-30s", project.getName());
+        String confName      = String.format("%-30s", conf.getName());
+        conf.resolutionStrategy(strategy ->
+                strategy.dependencySubstitution(depSubs ->
+                        depSubs.all(depSub -> {
+                                    ComponentSelector selector = depSub.getRequested();
+                                    if (!(selector instanceof ModuleComponentSelector)) {
+                                        LOGGER.info("+ mvg-bbb: {} {} can not handle unknown dependency class: {}", projectName, confName, selector.getClass());
+                                    } else {
+                                        ModuleComponentSelector moduleComponent = (ModuleComponentSelector) selector;
+                                        if (!moduleComponent.getVersion().endsWith(BRANCH_INDICATOR)) {
+                                            LOGGER.info("+ mvg-bbb: {} {} {} no BRANCH dependency: {}", Util.TEST_MARKER_REPLACE_NOT_DONE, projectName, confName, selector);
+                                        } else {
+                                            String       rawGroup    = moduleComponent.getGroup();
+                                            String       rawArtifact = moduleComponent.getModule();
+                                            String       rawVersion  = moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", "");
+                                            List<String> branchesTpTry;
+                                            if (InfoGradle.isMasterBranch()) {
+                                                branchesTpTry = List.of(InfoGradle.getBranch());
+                                            } else if (InfoGradle.isDevelopBranch()) {
+                                                branchesTpTry = List.of(InfoGradle.getBranch(), "master");
+                                            } else {
+                                                branchesTpTry = List.of(InfoGradle.getBranch(), "develop", "master");
+                                            }
+                                            for (String branch : branchesTpTry) {
+                                                String newGAV = makeBbbGAV(branch, rawGroup, rawArtifact, rawVersion);
 
-                                                                            LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency, replaced: {} => {}", posTestMarker, projectName, confName, selector, newGAV);
-                                                                            break;
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                )
-                                        )
-                                );
-                            }
-                    );
-                }
+                                                if (!branch.equals("master") && !isInAnyMavenRepo(project, newGAV)) {
+                                                    LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency not found: {} => {} (skipping this branch replacement)", Util.TEST_MARKER_REPLACE_DONE, projectName, confName, selector, newGAV);
+                                                } else {
+                                                    depSub.useTarget(newGAV, BRANCH_REASON);
+                                                    dependenciesToSave.add(rawGroup + "." + rawArtifact);
+
+                                                    LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency, replaced: {} => {}", Util.TEST_MARKER_REPLACE_DONE, projectName, confName, selector, newGAV);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                        )
+                )
         );
     }
 
@@ -142,14 +137,15 @@ public class MvgBranchBasedBuilder {
         try {
             Dependency    dependency    = project.getDependencies().create(gav);
             Configuration configuration = project.getConfigurations().detachedConfiguration(dependency);
-            Set<File>     resolved      = configuration.resolve();
+            adjustDependencies(project, configuration);
+            Set<File> resolved = configuration.resolve();
             return !resolved.isEmpty();
         } catch (Throwable e) {
             return false;
         }
     }
 
-    private void adjustPublications() {
+    private void adjustAllPublications() {
         gradle.afterProject(p -> {
             LOGGER.info("+ mvg-bbb: running adjustPublications on project {}", p.getName());
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");

@@ -18,7 +18,6 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO;
 import static org.modelingvalue.gradle.mvgplugin.Info.MVG_DEPENDENCIES_REPO_NAME;
-import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -74,7 +73,7 @@ import org.jetbrains.annotations.Nullable;
  * </pre>
  */
 public class DependenciesRepoManager {
-    private static final String      TRIGGER_EXT = ".trigger";
+    private static final String TRIGGER_EXT = ".trigger";
     private final        String      repoName;
     private final        String      branch;
     private final        boolean     active;
@@ -125,7 +124,7 @@ public class DependenciesRepoManager {
                 LOGGER.info("+ mvg-bbb: trigger error: {}: {}", json.length(), json);
             }
         } catch (IOException e) {
-            LOGGER.info("+ mvg-bbb: {} could not trigger (repo={} wf={} msg='{}:{}')", getTestMarker("!"), repoName, workflowFilename, e.getClass().getSimpleName(), e.getMessage());
+            LOGGER.info("+ mvg-bbb: {} could not trigger (repo={} wf={} msg='{}:{}')", Util.TEST_MARKER_TRIGGER, repoName, workflowFilename, e.getClass().getSimpleName(), e.getMessage());
             LOGGER.debug("++ mvg-bbb: could not trigger", e);
         }
     }
@@ -350,19 +349,19 @@ public class DependenciesRepoManager {
 
     private void test() {
         try {
-            LOGGER.info("+ mvg: ===TESTING============================================================ <<< {}", getTestMarker("t"));
+            LOGGER.info("+ mvg: ===TESTING============================================================ <<< {}", Util.TEST_MARKER_TESTING);
             saveDependencies("gh-app", Set.of("test.ab.c.lib", "test.qw.e.lib"));
             saveDependencies("gh-lib", Set.of("test.base.lib", "test.qw.e.lib"));
 
             for (String pack : List.of("test.ab.c.lib", "test.qw.e.lib", "test.base.lib")) {
-                getTriggers(pack).forEach(s -> LOGGER.info("+ mvg: test trigger: {}  ==={}===>  {}", pack, getTestMarker("triggers"), s));
+                getTriggers(pack).forEach(s -> LOGGER.info("+ mvg: test trigger: {}  ==={}===>  {}", pack, Util.TEST_MARKER_TRIGGERING, s));
             }
             trigger("sync-proxy", "build.yaml");
             trigger("sync-proxy", "no_wf.yaml");
         } catch (Exception e) {
             throw new Error("TESTING: unable to test DependenciesManager", e);
         } finally {
-            LOGGER.info("+ mvg: ===TESTING============================================================ >>> {}", getTestMarker("t"));
+            LOGGER.info("+ mvg: ===TESTING============================================================ >>> {}", Util.TEST_MARKER_TESTING);
 
         }
     }
