@@ -31,7 +31,11 @@ import static org.modelingvalue.gradle.mvgplugin.Info.PLUGIN_PACKAGE_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_GITHUB_WORKFLOW;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_TESTING;
 import static org.modelingvalue.gradle.mvgplugin.Info.UPLOADER_TASK_NAME;
-import static org.modelingvalue.gradle.mvgplugin.Util.getTestMarker;
+import static org.modelingvalue.gradle.mvgplugin.Util.TEST_MARKER_REPLACE_DONE;
+import static org.modelingvalue.gradle.mvgplugin.Util.TEST_MARKER_REPLACE_NOT_DONE;
+import static org.modelingvalue.gradle.mvgplugin.Util.TEST_MARKER_TESTING;
+import static org.modelingvalue.gradle.mvgplugin.Util.TEST_MARKER_TRIGGER;
+import static org.modelingvalue.gradle.mvgplugin.Util.TEST_MARKER_TRIGGERING;
 import static org.modelingvalue.gradle.mvgplugin.Util.numOccurences;
 
 import java.io.IOException;
@@ -176,8 +180,8 @@ public class MvgPluginTest {
                     () -> assertEquals(7, numOccurences("+ mvg: eols       untouched   : ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: found vacant version: 0.0.4 (was 0.0.1)", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: project 'test-name': version: 0.0.1 => 0.0.4, group: test.group => test.group", out)),
-                    () -> assertEquals(6, numOccurences(getTestMarker("r+"), out)),
-                    () -> assertEquals(41, numOccurences(getTestMarker("r-"), out)),
+                    () -> assertEquals(6, numOccurences(TEST_MARKER_REPLACE_DONE, out)),
+                    () -> assertEquals(47, numOccurences(TEST_MARKER_REPLACE_NOT_DONE, out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding test.useJUnitPlatform", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: increasing test heap from default to 2g", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding junit5 dependencies", out)),
@@ -191,9 +195,9 @@ public class MvgPluginTest {
                     () -> assertEquals(m, numOccurences("+ mvg: tagging this version with 'v0.0.4' because this is the master branch", out)),
                     //
                     () -> assertEquals(1 + m, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": NOT pushing, repo has no remotes", out)),
-                    () -> assertEquals(2 * d, numOccurences(getTestMarker("t"), out)),
-                    () -> assertEquals(4 * d, numOccurences(getTestMarker("triggers"), out)),
-                    () -> assertEquals(d, numOccurences(getTestMarker("!"), out)),
+                    () -> assertEquals(2 * d, numOccurences(TEST_MARKER_TESTING, out)),
+                    () -> assertEquals(4 * d, numOccurences(TEST_MARKER_TRIGGERING, out)),
+                    () -> assertEquals(d, numOccurences(TEST_MARKER_TRIGGER, out)),
                     //
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),

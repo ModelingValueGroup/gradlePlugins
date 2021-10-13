@@ -41,10 +41,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 public class Util {
-    public static final int NUM_CHARS_TO_SHOW_OF_SECRETS = 6;
+    public static final int    NUM_CHARS_TO_SHOW_OF_SECRETS = 6;
+    public static final String TEST_MARKER_REPLACE_DONE     = getTestMarker("r+");
+    public static final String TEST_MARKER_REPLACE_NOT_DONE = getTestMarker("r-");
+    public static final String TEST_MARKER_TRIGGER          = getTestMarker("!");
+    public static final String TEST_MARKER_TESTING          = getTestMarker("TESTING");
+    public static final String TEST_MARKER_TRIGGERING       = getTestMarker("triggering");
 
-    public static String getTestMarker(String m) {
-        return "™" + m + "™";
+    private static String getTestMarker(String m) {
+        return "•" + m + "•";
     }
 
     public static URL getUrl(String url) {
