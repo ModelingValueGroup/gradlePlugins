@@ -59,11 +59,9 @@ public class MvgMps {
         if (jar == null) {
             throw new GradleException("no jar found for '" + dep + "' in " + ext.getMpsInstallDir());
         }
-        //build/test-workspace/gradlePlugins/build/MPS-2020.3/MPS 2020.3/lib/MPS-src.zip
-        Path mpsDownloadDir = ext.getMpsDownloadDir().toPath();
-        Path srcZip         = mpsDownloadDir.resolve("lib").resolve("MPS-src.zip");
-        LOGGER.info("+ mvg-mps: dependency     replaced: {} => {} (and {})", dep, jar, srcZip);
-        return gradle.getRootProject().files(jar, srcZip);
+        //TODO:  build/test-workspace/gradlePlugins/build/MPS-2020.3/MPS 2020.3/lib/MPS-src.zip
+        LOGGER.info("+ mvg-mps: dependency replaced: {} => {}", dep, jar);
+        return gradle.getRootProject().files(jar);
     }
 
     public Properties getMpsBuildProps() {
