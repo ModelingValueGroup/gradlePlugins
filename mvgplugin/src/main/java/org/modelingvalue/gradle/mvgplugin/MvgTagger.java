@@ -29,11 +29,9 @@ import org.gradle.api.tasks.TaskProvider;
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 class MvgTagger {
     private final Gradle             gradle;
-    private final MvgTaggerExtension ext;
 
     public MvgTagger(Gradle gradle) {
         this.gradle = gradle;
-        ext = MvgTaggerExtension.make(gradle);
         TaskProvider<Task> tp = gradle.getRootProject().getTasks().register(TAG_TASK_NAME, this::setup);
 
         // let me depend on all publish tasks...

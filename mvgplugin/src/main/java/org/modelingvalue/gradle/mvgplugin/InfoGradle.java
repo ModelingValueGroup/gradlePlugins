@@ -144,7 +144,9 @@ public class InfoGradle {
 
     private String mvgRepoName() {
         Path configFile = absProjectDir.resolve(Info.GIT_CONFIG_FILE).toAbsolutePath();
-        if (Files.isRegularFile(configFile)) {
+        if (!Files.isRegularFile(configFile)) {
+            LOGGER.warn("could not determine if MVG repo: {} not found (assuming non-github and non-MVG repo)", configFile);
+        } else {
             try {
                 String url = Files.readAllLines(configFile)
                         .stream()
@@ -152,17 +154,15 @@ public class InfoGradle {
                         .map(l -> l.replaceAll(".*=\\s*", ""))
                         .findFirst().orElse(null);
                 if (url == null) {
-                    LOGGER.warn("could not determine if MVG repo: could not find a url in the git config file at {}", configFile);
+                    LOGGER.warn("could not determine if MVG repo: could not find the url in the git config file at {}", configFile);
                 } else if (!url.startsWith(Info.MVG_REPO_BASE_URL)) {
-                    LOGGER.warn("could not determine if MVG repo: the repo at {} is not an MVG repo", configFile);
+                    LOGGER.warn("the repo at {} is not an MVG repo: found {} which does not start with {}", configFile, url, Info.MVG_REPO_BASE_URL);
                 } else {
                     return url.replaceFirst(Pattern.quote(Info.MVG_REPO_BASE_URL), "").replaceFirst("\\.git$", "");
                 }
             } catch (IOException e) {
-                LOGGER.warn("could not determine if MVG repo: could not read " + configFile, e);
+                LOGGER.warn("could not determine if MVG repo: could not read {}", configFile, e);
             }
-        } else {
-            LOGGER.warn("could not determine if MVG repo: {} not found (assuming non-github and non-MVG repo)", configFile);
         }
         return null;
     }

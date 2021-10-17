@@ -39,8 +39,8 @@ import org.gradle.api.invocation.Gradle;
 import org.jetbrains.annotations.NotNull;
 
 public class MvgMps {
-    private final static int    MAX_REDIRECTS      = 10;
-    private final static Object LOAD_LOCK          = new Object();
+    private final static int    MAX_REDIRECTS = 10;
+    private final static Object LOAD_LOCK     = new Object();
 
     private final    Gradle            gradle;
     private final    MvgMpsExtension   ext;
@@ -59,8 +59,11 @@ public class MvgMps {
         if (jar == null) {
             throw new GradleException("no jar found for '" + dep + "' in " + ext.getMpsInstallDir());
         }
-        LOGGER.info("+ mvg-mps: dependency     replaced: {} => {}", dep, jar);
-        return gradle.getRootProject().files(jar);
+        //build/test-workspace/gradlePlugins/build/MPS-2020.3/MPS 2020.3/lib/MPS-src.zip
+        Path mpsDownloadDir = ext.getMpsDownloadDir().toPath();
+        Path srcZip         = mpsDownloadDir.resolve("lib").resolve("MPS-src.zip");
+        LOGGER.info("+ mvg-mps: dependency     replaced: {} => {} (and {})", dep, jar, srcZip);
+        return gradle.getRootProject().files(jar, srcZip);
     }
 
     public Properties getMpsBuildProps() {
