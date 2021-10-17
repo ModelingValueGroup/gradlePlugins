@@ -189,7 +189,7 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg: adding tasks for javadoc & source jars", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (11&11) to 11", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
-                    () -> assertEquals(3, numOccurences("+ mvg-mps: dependency     replaced: ", out)),
+                    () -> assertEquals(3, numOccurences("+ mvg-mps: dependency replaced: ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
                     () -> assertEquals(d, numOccurences("+ mvg: not tagging this version with 'v0.0.4' because this is not the master branch", out)),
                     () -> assertEquals(m, numOccurences("+ mvg: tagging this version with 'v0.0.4' because this is the master branch", out)),
