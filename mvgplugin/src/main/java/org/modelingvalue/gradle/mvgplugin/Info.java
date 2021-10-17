@@ -30,6 +30,7 @@ import org.gradle.api.logging.Logging;
 
 public interface Info {
     String       MODELING_VALUE_GROUP         = "ModelingValueGroup";
+    String       MVG                          = "mvg";
     String       PLUGIN_PACKAGE_NAME          = MvgPlugin.class.getPackageName();
     String       PLUGIN_CLASS_NAME            = MvgPlugin.class.getName();
     String       PLUGIN_NAME                  = MvgPlugin.class.getSimpleName().toLowerCase(Locale.ROOT);
@@ -64,6 +65,7 @@ public interface Info {
     String       GIT_HEAD_FILE_START          = "ref: refs/heads/";
     String       NO_CI_GUARD                  = "!contains(github.event.head_commit.message, '[no-ci]')";
     String       MIN_TEST_HEAP_SIZE           = "2g";
+    String       JAVA_VERSION                 = "11";
     String       JUNIT_VERSION                = "5.8.1";
     String       JUNIT_GROUP_ID               = "org.junit.jupiter";
     List<String> JUNIT_IMPLEMENTATION_DEPS    = List.of(

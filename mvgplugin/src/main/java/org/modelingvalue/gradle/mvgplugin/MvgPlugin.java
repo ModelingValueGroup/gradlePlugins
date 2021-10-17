@@ -19,6 +19,7 @@ import static org.modelingvalue.gradle.mvgplugin.Info.ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MIN_TEST_HEAP_SIZE;
+import static org.modelingvalue.gradle.mvgplugin.Info.MVG;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_ALLREP_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_CI;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_JAVA;
@@ -32,6 +33,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -62,12 +64,29 @@ public class MvgPlugin implements Plugin<Project> {
 
     private boolean               inactiveBecauseNotRootProject;
     private Gradle                gradle;
+    private Extension             ext;
     private MvgCorrector          mvgCorrector;
     private MvgTagger             mvgTagger;
     private MvgBranchBasedBuilder mvgBranchBasedBuilder;
     private MvgMps                mvgMps;
     private MvgUploader           mvgUploader;
     private boolean               traceHeaderDone;
+
+    public static class Extension {
+        public static Extension make(Gradle gradle) {
+            return ((DefaultConvention) gradle.getRootProject().getExtensions()).create(MVG, Extension.class);
+        }
+
+        public boolean verboseTaskExecution     = true;
+        public boolean prepTestsForJunit5       = true;
+        public boolean prepJavacForLint         = true;
+        public boolean prepJavadocForLint       = true;
+        public boolean prepJavacForEncoding     = true;
+        public boolean prepJavadocForEncoding   = true;
+        public boolean makeJavadocAndSources    = true;
+        public boolean agreeToBuildScan         = true;
+        public boolean addMvgGithubRepositories = true;
+    }
 
     public MvgPlugin() {
         singleton = this;
@@ -84,23 +103,13 @@ public class MvgPlugin implements Plugin<Project> {
             LOGGER.error("mvgplugin: the plugin {} can only be applied to the root project ({})", getClass().getSimpleName(), rootProject);
             //throw new GradleException("the plugin " + getClass().getSimpleName() + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
         } else {
-            gradle.addListener(new TaskExecutionListener() {
-                @Override
-                public void beforeExecute(Task task) {
-                    LOGGER.info("+ mvg: >>>>> {}",task.getName());
-                }
-
-                @Override
-                public void afterExecute(Task task, TaskState taskState) {
-                    LOGGER.info("+ mvg: <<<<< {}\n", task.getName());
-                }
-            });
+            ext = Extension.make(gradle);
             BranchParameterNames.init();
 
             LOGGER.info("+ mvg: MvgPlugin.apply to project {}", project.getName());
             LOGGER.info("+ mvg: {}={}, {}={} {}={}, {}={}, {}={}",
                     PROP_NAME_CI, CI,
-                    "TEST|CI", isMvgCI_orTesting(),
+                    "MVGCI|TEST", isMvgCI_orTesting(),
                     "master", isMasterBranch(),
                     "develop", isDevelopBranch(),
                     PROP_NAME_ALLREP_TOKEN, Util.hide(ALLREP_TOKEN));
@@ -110,8 +119,10 @@ public class MvgPlugin implements Plugin<Project> {
 
             trace();
 
+            listenForTaskExecution();
             tuneTesting();
             tuneJavaPlugin();
+            tuneJavacPlugin();
             tuneJavaDocPlugin();
             tuneJavaEncoding();
             agreeToBuildScan();
@@ -127,9 +138,63 @@ public class MvgPlugin implements Plugin<Project> {
 
     @NotNull
     public Object resolveMpsDependency(@NotNull String dep) {
+        // TODO use SelfResolvingDependency
+        //        new SelfResolvingDependency(){
+        //            @Nullable
+        //            @Override
+        //            public String getGroup() {
+        //                return null;
+        //            }
+        //
+        //            @Override
+        //            public String getName() {
+        //                return null;
+        //            }
+        //
+        //            @Nullable
+        //            @Override
+        //            public String getVersion() {
+        //                return null;
+        //            }
+        //
+        //            @Override
+        //            public boolean contentEquals(Dependency dependency) {
+        //                return false;
+        //            }
+        //
+        //            @Override
+        //            public Dependency copy() {
+        //                return null;
+        //            }
+        //
+        //            @Nullable
+        //            @Override
+        //            public String getReason() {
+        //                return null;
+        //            }
+        //
+        //            @Override
+        //            public void because(@Nullable String s) {
+        //
+        //            }
+        //
+        //            @Override
+        //            public TaskDependency getBuildDependencies() {
+        //                return null;
+        //            }
+        //
+        //            @Override
+        //            public Set<File> resolve() {
+        //                return mvgMps.resolveMpsDependency(dep);
+        //            }
+        //
+        //            @Override
+        //            public Set<File> resolve(boolean b) {
+        //                return resolve();
+        //            }
+        //        };
         return mvgMps.resolveMpsDependency(dep);
     }
-
 
     private void checkWorkflowFilesForLoopingDanger() {
         Path workflowsDir = InfoGradle.getWorkflowsDir();
@@ -200,43 +265,77 @@ public class MvgPlugin implements Plugin<Project> {
         }
     }
 
+    private void listenForTaskExecution() {
+        gradle.afterProject(p -> {
+            if (ext.verboseTaskExecution) {
+                gradle.addListener(new TaskExecutionListener() {
+                    @Override
+                    public void beforeExecute(Task task) {
+                        LOGGER.info("+ mvg: >>>>> {}", task.getName());
+                    }
+
+                    @Override
+                    public void afterExecute(Task task, TaskState taskState) {
+                        LOGGER.info("+ mvg: <<<<< {}\n", task.getName());
+                    }
+                });
+            }
+        });
+    }
+
     private void tuneTesting() {
         gradle.afterProject(p -> {
-            Task t = p.getTasks().findByName("test");
-            if (t instanceof Test) {
-                Test test = (Test) t;
+            if (ext.prepTestsForJunit5) {
+                Task t = p.getTasks().findByName("test");
+                if (t instanceof Test) {
+                    Test test = (Test) t;
 
-                LOGGER.info("+ mvg: adding test.useJUnitPlatform");
-                test.useJUnitPlatform();
+                    LOGGER.info("+ mvg: adding test.useJUnitPlatform");
+                    test.useJUnitPlatform();
 
-                if (test.getMaxHeapSize() == null || toBytes(test.getMaxHeapSize()) < toBytes(MIN_TEST_HEAP_SIZE)) {
-                    LOGGER.info("+ mvg: increasing test heap from {} to {}", test.getMaxHeapSize() == null ? "default" : test.getMaxHeapSize(), MIN_TEST_HEAP_SIZE);
-                    test.setMaxHeapSize(MIN_TEST_HEAP_SIZE);
+                    if (test.getMaxHeapSize() == null || toBytes(test.getMaxHeapSize()) < toBytes(MIN_TEST_HEAP_SIZE)) {
+                        LOGGER.info("+ mvg: increasing test heap from {} to {}", test.getMaxHeapSize() == null ? "default" : test.getMaxHeapSize(), MIN_TEST_HEAP_SIZE);
+                        test.setMaxHeapSize(MIN_TEST_HEAP_SIZE);
+                    }
+
+                    Object java = p.getExtensions().findByName("java");
+                    if (java != null) {
+                        LOGGER.info("+ mvg: adding junit5 dependencies");
+                        Info.JUNIT_IMPLEMENTATION_DEPS.forEach(dep -> p.getDependencies().add("testImplementation", dep));
+                        Info.JUNIT_RUNTIMEONLY_DEPS.forEach(dep -> p.getDependencies().add("testRuntimeOnly", dep));
+                    }
+                } else if (t != null) {
+                    LOGGER.info("+ mvg: 'test' task is not of type Test (but of type '{}')", t.getClass().getSimpleName());
                 }
+            }
+        });
+    }
 
-                Object java = p.getExtensions().findByName("java");
-                if (java != null) {
-                    LOGGER.info("+ mvg: adding junit5 dependencies");
-                    Info.JUNIT_IMPLEMENTATION_DEPS.forEach(dep -> p.getDependencies().add("testImplementation", dep));
-                    Info.JUNIT_RUNTIMEONLY_DEPS.forEach(dep -> p.getDependencies().add("testRuntimeOnly", dep));
-                }
-            } else if (t != null) {
-                LOGGER.info("+ mvg: 'test' task is not of type Test (but of type '{}')", t.getClass().getSimpleName());
+    private void tuneJavacPlugin() {
+        gradle.afterProject(p -> {
+            if (ext.prepJavacForLint) {
+                p.getTasks()
+                        .withType(JavaCompile.class)
+                        .stream()
+                        .map(javaCompile -> javaCompile.getOptions().getCompilerArgumentProviders())
+                        .forEach(prov -> prov.add(() -> List.of("-Xlint:unchecked", "-Xlint:deprecation")));
             }
         });
     }
 
     private void tuneJavaPlugin() {
-        String javaVersionInProps = getGradleDotProperties().getProp(PROP_NAME_VERSION_JAVA, "11");
+        String javaVersionInProps = getGradleDotProperties().getProp(PROP_NAME_VERSION_JAVA, Info.JAVA_VERSION);
         if (javaVersionInProps == null) {
             LOGGER.info("+ mvg: java version not adjusted because there is no {} property in {}", PROP_NAME_VERSION_JAVA, getGradleDotProperties().getFile());
         }
         gradle.afterProject(p -> {
-            JavaPluginExtension java = (JavaPluginExtension) p.getExtensions().findByName("java");
-            if (java != null) {
-                LOGGER.info("+ mvg: adding tasks for javadoc & source jars");
-                java.withJavadocJar();
-                java.withSourcesJar();
+            JavaPluginExtension javaExt = (JavaPluginExtension) p.getExtensions().findByName("java");
+            if (javaExt != null) {
+                if (ext.makeJavadocAndSources) {
+                    LOGGER.info("+ mvg: adding tasks for javadoc & source jars");
+                    javaExt.withJavadocJar();
+                    javaExt.withSourcesJar();
+                }
 
                 if (javaVersionInProps != null) {
                     JavaVersion current   = JavaVersion.current();
@@ -244,9 +343,9 @@ public class MvgPlugin implements Plugin<Project> {
                     if (!current.isCompatibleWith(requested)) {
                         LOGGER.error("mvgplugin: the requested java version ({} in gradle.properties = {}) is not compatible with the running java version ({}). continuing with {}", PROP_NAME_VERSION_JAVA, requested, current, current);
                     } else {
-                        LOGGER.info("+ mvg: setting java source&target compatibility from ({}&{}) to {}", java.getSourceCompatibility(), java.getTargetCompatibility(), requested);
-                        java.setSourceCompatibility(requested);
-                        java.setTargetCompatibility(requested);
+                        LOGGER.info("+ mvg: setting java source&target compatibility from ({}&{}) to {}", javaExt.getSourceCompatibility(), javaExt.getTargetCompatibility(), requested);
+                        javaExt.setSourceCompatibility(requested);
+                        javaExt.setTargetCompatibility(requested);
                     }
                 }
             }
@@ -255,59 +354,71 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneJavaDocPlugin() {
         gradle.afterProject(p -> {
-            TaskCollection<Javadoc> javadocTasks = p.getTasks().withType(Javadoc.class);
-            javadocTasks.forEach(jd -> jd.options(opt -> {
-                if (opt instanceof StandardJavadocDocletOptions) {
-                    LOGGER.info("+ mvg: adding javadoc option to ignore warnings");
-                    ((StandardJavadocDocletOptions) opt).addStringOption("Xdoclint:none", "-quiet");
-                }
-            }));
+            if (ext.prepJavadocForLint) {
+                TaskCollection<Javadoc> javadocTasks = p.getTasks().withType(Javadoc.class);
+                javadocTasks.forEach(jd -> jd.options(opt -> {
+                    if (opt instanceof StandardJavadocDocletOptions) {
+                        LOGGER.info("+ mvg: adding javadoc option to ignore warnings");
+                        ((StandardJavadocDocletOptions) opt).addStringOption("Xdoclint:none", "-quiet");
+                    }
+                }));
+            }
         });
     }
 
     private void tuneJavaEncoding() {
         String utf8 = StandardCharsets.UTF_8.name();
         gradle.afterProject(p -> {
-            TaskCollection<JavaCompile> javacomileTasks = p.getTasks().withType(JavaCompile.class);
-            javacomileTasks.forEach(t -> {
-                CompileOptions options = t.getOptions();
-                if (!utf8.equals(options.getEncoding())) {
-                    LOGGER.info("+ mvg: setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
-                    options.setEncoding(utf8);
-                }
-            });
-            TaskCollection<Javadoc> javadocTasks = p.getTasks().withType(Javadoc.class);
-            javadocTasks.forEach(t -> {
-                MinimalJavadocOptions options = t.getOptions();
-                if (!utf8.equals(options.getEncoding())) {
-                    LOGGER.info("+ mvg: setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
-                    options.setEncoding(utf8);
-                }
-            });
+            if (ext.prepJavacForEncoding) {
+                p.getTasks()
+                        .withType(JavaCompile.class)
+                        .forEach(javac -> {
+                            CompileOptions options = javac.getOptions();
+                            if (!utf8.equals(options.getEncoding())) {
+                                LOGGER.info("+ mvg: setting {} encoding from {} to {}", javac.getName(), options.getEncoding(), utf8);
+                                options.setEncoding(utf8);
+                            }
+                        });
+            }
+            if (ext.prepJavadocForEncoding) {
+                p.getTasks()
+                        .withType(Javadoc.class)
+                        .forEach(t -> {
+                            MinimalJavadocOptions options = t.getOptions();
+                            if (!utf8.equals(options.getEncoding())) {
+                                LOGGER.info("+ mvg: setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
+                                options.setEncoding(utf8);
+                            }
+                        });
+            }
         });
     }
 
     private void agreeToBuildScan() {
         gradle.afterProject(p -> {
-            BuildScanExtension buildScan = (BuildScanExtension) p.getExtensions().findByName("buildScan");
-            if (buildScan != null) {
-                LOGGER.info("+ mvg: agreeing to buildScan");
-                buildScan.setTermsOfServiceAgree("yes");
-                buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
+            if (ext.agreeToBuildScan) {
+                BuildScanExtension buildScan = (BuildScanExtension) p.getExtensions().findByName("buildScan");
+                if (buildScan != null) {
+                    LOGGER.info("+ mvg: agreeing to buildScan");
+                    buildScan.setTermsOfServiceAgree("yes");
+                    buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
+                }
             }
         });
     }
 
     private void addMVGRepositories() {
         gradle.allprojects(p -> {
-            LOGGER.info("+ mvg: adding MVG repositories to project {}", p.getName());
+            if (ext.addMvgGithubRepositories) {
+                LOGGER.info("+ mvg: adding MVG repositories to project {}", p.getName());
 
-            p.getRepositories().mavenCentral();
-            p.getRepositories().mavenLocal();
-            p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(true));
-            p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(false));
+                p.getRepositories().mavenCentral();
+                p.getRepositories().mavenLocal();
+                p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(true));
+                p.getRepositories().maven(InfoGradle.getGithubMavenRepoMaker(false));
 
-            p.getRepositories().forEach(r -> LOGGER.info("+ mvg:   - {}", r.getName()));
+                p.getRepositories().forEach(r -> LOGGER.info("+ mvg:   - {}", r.getName()));
+            }
         });
     }
 }

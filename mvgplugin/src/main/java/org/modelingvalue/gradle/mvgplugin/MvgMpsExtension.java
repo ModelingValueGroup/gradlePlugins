@@ -15,11 +15,11 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
-import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
 import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.NOW_STAMP;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_MPS;
+import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.selectMasterDevelopElse;
 
 import java.io.File;
@@ -39,14 +39,20 @@ public class MvgMpsExtension {
         return ((DefaultConvention) gradle.getRootProject().getExtensions()).create(MPS_TASK_NAME, MvgMpsExtension.class, gradle);
     }
 
-    private final Gradle gradle;
+    private final Gradle  gradle;
+    private       boolean mpsVersionSet;
+    private       String  mpsVersion;
 
     public MvgMpsExtension(Gradle gradle) {
         this.gradle = gradle;
     }
 
-    public String getVersion() {
-        return getGradleDotProperties().getProp(PROP_NAME_VERSION_MPS, "0.0.1");
+    public synchronized String getVersion() {
+        if (!mpsVersionSet) {
+            mpsVersionSet = true;
+            mpsVersion = getGradleDotProperties().getProp(PROP_NAME_VERSION_MPS, "0.0.1");
+        }
+        return mpsVersion;
     }
 
     public String getVersionExtra() {
@@ -71,9 +77,9 @@ public class MvgMpsExtension {
 
     @NotNull
     private String getMajorMpsVersion() {
-        String version = getGradleDotProperties().getProp(PROP_NAME_VERSION_MPS, "0.0.1");
+        String version = getVersion();
         if (version == null) {
-            throw new GradleException("you need to set the MPS version in " + GRADLE_PROPERTIES_FILE + ": " + PROP_NAME_VERSION_MPS + "=2020.3");
+            throw new GradleException("you need to set the MPS version in " + GRADLE_PROPERTIES_FILE + ": example: " + PROP_NAME_VERSION_MPS + "=2020.3");
         }
         return version.replaceAll("([0-9]+[.][0-9]+).*", "$1");
     }
