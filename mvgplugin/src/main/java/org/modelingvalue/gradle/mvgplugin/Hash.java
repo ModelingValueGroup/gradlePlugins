@@ -37,6 +37,9 @@ public enum Hash {
     }
 
     public String checksum(Path input) {
+        if (!Files.isRegularFile(input)) {
+            return "";
+        }
         try (InputStream in = Files.newInputStream(input)) {
             MessageDigest digest = MessageDigest.getInstance(getName());
             byte[]        block  = new byte[16 * 1024];
@@ -45,7 +48,7 @@ public enum Hash {
             }
             return bytesToHex(digest.digest());
         } catch (Exception e) {
-            throw new Error("unexpected exception during " + name + " calculation of " + input);
+            throw new Error("unexpected exception during " + name + " calculation of " + input, e);
         }
     }
 
