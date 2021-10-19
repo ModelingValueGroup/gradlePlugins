@@ -174,6 +174,7 @@ public class MvgPluginTest {
             // Verify the result
             assertAll(
                     () -> assertEquals("0.0.4", instance.getProp(Info.PROP_NAME_VERSION)),
+                    () -> assertEquals("2020.3", instance.getProp(Info.PROP_NAME_VERSION_MPS)),
                     //
                     () -> assertEquals(6, numOccurences("+ mvg: header     regenerated : ", out)),
                     () -> assertEquals(2, numOccurences("+ mvg: eols       regenerated : ", out)),
