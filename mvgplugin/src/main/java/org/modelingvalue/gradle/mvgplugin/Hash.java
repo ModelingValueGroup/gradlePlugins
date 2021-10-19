@@ -13,35 +13,51 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-defaultTasks("mvgCorrector", "test", "publishPlugins", "mvgTagger")
+package org.modelingvalue.gradle.mvgplugin;
 
-plugins {
-    id("org.modelingvalue.gradle.mvgplugin") version ("1.0.4")
-}
-mvgcorrector {
-    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
-    addEolFileExclude("mvgplugin/src/test/resources/.*")
-    addBashFileExclude(".*/bashProduced.*")
-}
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
 
-// for gradle debugging:
-tasks.register("task-tree") {
-    doLast {
-        getAllTasks(true).forEach {
-            System.err.println("  > " + it.key)
-            it.value.forEach {
-                System.err.println("       = " + it)
+public enum Hash {
+    MD5("MD5"),
+    SHA1("SHA1"),
+    SHA256("SHA-256"),
+    SHA512("SHA-512");
 
-                it.dependsOn.forEach {
-                    if (it is TaskDependency) {
-                        it.getDependencies(tasks.named("task-tree").get()).forEach {
-                            System.err.println("                                - " + it)
-                        }
-                    } else {
-                        System.err.println("                                - " + it)
-                    }
-                }
+    private final String name;
+
+    Hash(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String checksum(Path input) {
+        try (InputStream in = Files.newInputStream(input)) {
+            MessageDigest digest = MessageDigest.getInstance(getName());
+            byte[]        block  = new byte[16 * 1024];
+            for (int length; (length = in.read(block)) > 0; ) {
+                digest.update(block, 0, length);
             }
+            return bytesToHex(digest.digest());
+        } catch (Exception e) {
+            throw new Error("unexpected exception during " + name + " calculation of " + input);
         }
+    }
+
+    private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+        return new String(hexChars);
     }
 }

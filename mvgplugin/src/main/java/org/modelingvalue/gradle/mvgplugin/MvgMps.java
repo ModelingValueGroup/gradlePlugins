@@ -220,9 +220,18 @@ public class MvgMps {
                     .filter(p -> p.getFileName().toString().endsWith(".jar"))
                     .forEach(p -> {
                         File asFile = p.toFile();
-                        index.put(rootPath.relativize(p).toString(), asFile);
-                        index.put(p.getFileName().toString(), asFile);
-                        index.put(p.getFileName().toString().replaceAll("[.]jar$", ""), asFile);
+
+                        String pathName = rootPath.relativize(p).toString();
+                        String fileName = p.getFileName().toString();
+                        String coreName = fileName.replaceAll("[.]jar$", "");
+
+                        index.put(pathName, asFile);
+                        if (!index.containsKey(fileName) || (p.getParent().getFileName().toString().equals("lib") && p.getParent().getParent().equals(rootPath))) {
+                            index.put(fileName, asFile);
+                            index.put(coreName, asFile);
+                        } else {
+                            LOGGER.info("+ mvg-mps: multiple jars named {} found, ignoring {}", fileName, p);
+                        }
                     });
         } catch (IOException e) {
             throw new GradleException("could not index the MPS install dir at " + rootDir, e);

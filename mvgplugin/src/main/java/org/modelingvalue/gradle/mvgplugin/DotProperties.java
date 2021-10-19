@@ -31,6 +31,7 @@ import org.gradle.api.GradleException;
 public class DotProperties {
     private final DotProperties parent;
     private final Path          file;
+    private       String        crc;
     private final boolean       valid;
     private final Properties    properties;
     private final List<String>  lines;
@@ -40,15 +41,17 @@ public class DotProperties {
         this.file = file;
         valid = Files.isRegularFile(file);
         if (valid) {
+            crc = Hash.MD5.checksum(file);
             properties = Util.loadProperties(file);
-            LOGGER.debug("++ mvg: prop read from: {}", file);
-            properties.forEach((k, v) -> LOGGER.debug("++ mvg: prop read: [{}] = {}", k, v));
+            LOGGER.debug("++ mvg: properties from {}: read {} properties", file, properties.size());
+            properties.forEach((name, value) -> LOGGER.debug("++ mvg: prop read: [{}] = {}", name, value == null ? null : Util.hide(value.toString())));
             try {
                 lines = Files.readAllLines(file);
             } catch (IOException e) {
                 throw new GradleException("properties file could not be read: " + file.toAbsolutePath(), e);
             }
         } else {
+            crc = "";
             properties = new Properties();
             lines = new ArrayList<>();
             LOGGER.debug("++ mvg: properties file {}: no file, no values", file);
@@ -72,25 +75,41 @@ public class DotProperties {
     }
 
     public String getProp(String name, String def) {
+        trackFileChange();
         Object o = properties.get(name);
-        LOGGER.debug("++ mvg: getProp raw get on {}: [{}] = {}", file, name, o);
+        LOGGER.debug("++ mvg: getProp raw get on {}: [{}] = {}", file, name, o == null ? o : Util.hide(o.toString()));
         String value = o != null ? o.toString() : parent != null ? parent.getProp(name, def) : def;
         LOGGER.info("+ mvg: getProp          : {} => {}   (from {}{})", name, Util.hide(value), file.toAbsolutePath(), valid ? "" : " - INVALID");
         return value;
     }
 
+    private void trackFileChange() {
+        String newCrc = Hash.MD5.checksum(file);
+        if (!newCrc.equals(crc)) {
+            Properties newProps = Util.loadProperties(file);
+            if (newProps.equals(properties)) {
+                LOGGER.info("+ mvg: FILE CHANGED: {} ({}!={}) but same properties so updating crc", file, crc, newCrc);
+                crc = newCrc;
+            } else {
+                LOGGER.info("+ mvg: FILE CHANGED: {} ({}!={})", file, crc, newCrc);
+                throw new Error("consistency problem: the file " + file + " has changed in mid air ('gradle --stop' might solve this)");
+            }
+        }
+    }
 
-    public void setProp(String name, String val) {
-        LOGGER.debug("++ mvg: setProp on {}: [{}] = {}", file, name, val);
-        properties.setProperty(name, val);
+    public void setProp(String name, String value) {
+        LOGGER.debug("++ mvg: setProp on {}: [{}] = {}", file, name, Util.hide(value));
+        trackFileChange();
+        properties.setProperty(name, value);
         if (valid) {
             List<String> newLines = lines.stream()
-                    .map(l -> l.matches("^" + Pattern.quote(name) + "\\s*=.*") ? l.replaceFirst("(=\\s*).*$", "$1") + val : l)
+                    .map(l -> l.matches("^" + Pattern.quote(name) + "\\s*=.*") ? l.replaceFirst("(=\\s*).*$", "$1") + value : l)
                     .collect(Collectors.toList());
             lines.clear();
             lines.addAll(newLines);
             try {
                 Files.write(file, lines);
+                crc = Hash.MD5.checksum(file);
             } catch (IOException e) {
                 throw new GradleException("properties file could not be written: " + file.toAbsolutePath(), e);
             }
