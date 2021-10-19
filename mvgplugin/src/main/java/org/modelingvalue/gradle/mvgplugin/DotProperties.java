@@ -35,24 +35,28 @@ public class DotProperties {
     private final Properties    properties;
     private final List<String>  lines;
 
-    public DotProperties(DotProperties parent, Path file) {
+    public DotProperties(Path file, DotProperties parent) {
         this.parent = parent;
         this.file = file;
         valid = Files.isRegularFile(file);
-        properties = valid ? Util.loadProperties(file) : new Properties();
         if (valid) {
+            properties = Util.loadProperties(file);
+            LOGGER.debug("++ mvg: prop read from: {}", file);
+            properties.forEach((k, v) -> LOGGER.debug("++ mvg: prop read: [{}] = {}", k, v));
             try {
                 lines = Files.readAllLines(file);
             } catch (IOException e) {
                 throw new GradleException("properties file could not be read: " + file.toAbsolutePath(), e);
             }
         } else {
+            properties = new Properties();
             lines = new ArrayList<>();
+            LOGGER.debug("++ mvg: properties file {}: no file, no values", file);
         }
     }
 
     public DotProperties(Path file) {
-        this(null, file);
+        this(file, null);
     }
 
     public Path getFile() {
@@ -68,7 +72,8 @@ public class DotProperties {
     }
 
     public String getProp(String name, String def) {
-        Object o     = properties.get(name);
+        Object o = properties.get(name);
+        LOGGER.debug("++ mvg: getProp raw get on {}: [{}] = {}", file, name, o);
         String value = o != null ? o.toString() : parent != null ? parent.getProp(name, def) : def;
         LOGGER.info("+ mvg: getProp          : {} => {}   (from {}{})", name, Util.hide(value), file.toAbsolutePath(), valid ? "" : " - INVALID");
         return value;
@@ -76,10 +81,11 @@ public class DotProperties {
 
 
     public void setProp(String name, String val) {
+        LOGGER.debug("++ mvg: setProp on {}: [{}] = {}", file, name, val);
         properties.setProperty(name, val);
         if (valid) {
             List<String> newLines = lines.stream()
-                    .map(l -> l.matches("^" + Pattern.quote(name) + "\\s*=.*") ? l.replaceFirst("(=\\s*).*$","$1") + val : l)
+                    .map(l -> l.matches("^" + Pattern.quote(name) + "\\s*=.*") ? l.replaceFirst("(=\\s*).*$", "$1") + val : l)
                     .collect(Collectors.toList());
             lines.clear();
             lines.addAll(newLines);
