@@ -28,9 +28,12 @@ import java.net.URLConnection;
 import java.nio.channels.Channels;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -42,12 +45,14 @@ public class MvgMps {
     private final static int    MAX_REDIRECTS = 10;
     private final static Object LOAD_LOCK     = new Object();
 
-    private final    Gradle            gradle;
-    private final    MvgMpsExtension   ext;
-    private          boolean           mpsHasBeenLoaded;
-    private volatile Map<String, File> jarIndex;
-    private          Properties        mpsBuildProps;
-    private          Version           mpsBuildNumber;
+    private final Gradle                  gradle;
+    private final MvgMpsExtension         ext;
+    private       boolean                 mpsHasBeenLoaded;
+    private       Path                    rootPath;
+    private final Map<String, Path>       jarIndex       = new HashMap<>();
+    private final Map<String, List<Path>> ambiguousIndex = new HashMap<>();
+    private       Properties              mpsBuildProps;
+    private       Version                 mpsBuildNumber;
 
     public MvgMps(Gradle gradle) {
         this.gradle = gradle;
@@ -55,13 +60,18 @@ public class MvgMps {
     }
 
     public Object resolveMpsDependency(String dep) {
-        File jar = getJarIndex().get(dep);
+        Path jar = getJarIndex().get(dep);
         if (jar == null) {
-            throw new GradleException("no jar found for '" + dep + "' in " + ext.getMpsInstallDir());
+            List<Path> candidates = ambiguousIndex.get(dep);
+            if (candidates != null) {
+                throw new GradleException("no jar found for '" + dep + "' in " + ext.getMpsInstallDir() + " (do you mean one of these: " + candidates + "?)");
+            } else {
+                throw new GradleException("no jar found for '" + dep + "' in " + ext.getMpsInstallDir());
+            }
         }
         //TODO:  build/test-workspace/gradlePlugins/build/MPS-2020.3/MPS 2020.3/lib/MPS-src.zip
         LOGGER.info("+ mvg-mps: dependency replaced: {} => {}", dep, jar);
-        return gradle.getRootProject().files(jar);
+        return gradle.getRootProject().files(jar.toFile());
     }
 
     public Properties getMpsBuildProps() {
@@ -74,7 +84,7 @@ public class MvgMps {
         return mpsBuildNumber;
     }
 
-    private Map<String, File> getJarIndex() {
+    private Map<String, Path> getJarIndex() {
         loadMps();
         return jarIndex;
     }
@@ -82,22 +92,24 @@ public class MvgMps {
     private void loadMps() {
         synchronized (LOAD_LOCK) { // we will be careful, you never know if gradle will call us at the same time in multiple Threads
             if (!mpsHasBeenLoaded) {
-                assert jarIndex == null;
+                assert jarIndex.isEmpty();
+                assert ambiguousIndex.isEmpty();
                 assert mpsBuildProps == null;
                 assert mpsBuildNumber == null;
 
                 downloadAndUnzip(ext);
 
-                jarIndex = makeJarIndex(ext.getMpsInstallDir());
+                rootPath = ext.getMpsInstallDir().toPath();
+                makeJarIndex();
                 mpsBuildProps = readMpsBuildProps();
                 mpsBuildNumber = getBuildNumber();
                 checkAntFilesAgainstMpsBuildNumber();
 
-                LOGGER.info("+ mvg: indexed {} jars in MPS dir {}", jarIndex.size(), ext.getMpsInstallDir());
-                LOGGER.info("+ mvg: loaded MPS properties, mps.build.number={}", mpsBuildNumber);
+                LOGGER.info("+ mvg-mps: indexed {} jars in MPS dir {}", jarIndex.size(), ext.getMpsInstallDir());
+                LOGGER.info("+ mvg-mps: loaded MPS properties, mps.build.number={}", mpsBuildNumber);
 
                 mpsHasBeenLoaded = true;
-                assert jarIndex != null;
+                assert !jarIndex.isEmpty();
                 assert mpsBuildProps != null;
             }
         }
@@ -212,30 +224,54 @@ public class MvgMps {
         }
     }
 
-    private static Map<String, File> makeJarIndex(File rootDir) {
-        Map<String, File> index = new HashMap<>();
+    private void makeJarIndex() {
         try {
-            Path rootPath = rootDir.toPath();
-            Files.walk(rootPath)
+            // determine the jars and index them by their code name:
+            Map<String, List<Path>> coreNameToPathMap = Files.walk(rootPath)
                     .filter(p -> p.getFileName().toString().endsWith(".jar"))
-                    .forEach(p -> {
-                        File asFile = p.toFile();
+                    .collect(Collectors.groupingBy(p -> p.getFileName().toString().replaceAll("[.]jar$", "")));
 
-                        String pathName = rootPath.relativize(p).toString();
-                        String fileName = p.getFileName().toString();
-                        String coreName = fileName.replaceAll("[.]jar$", "");
-
-                        index.put(pathName, asFile);
-                        if (!index.containsKey(fileName) || (p.getParent().getFileName().toString().equals("lib") && p.getParent().getParent().equals(rootPath))) {
-                            index.put(fileName, asFile);
-                            index.put(coreName, asFile);
-                        } else {
-                            LOGGER.info("+ mvg-mps: multiple jars named {} found, ignoring {}", fileName, p);
+            // find coreNames that have just one entry under 'lib', replace them unambigously when found:
+            new ArrayList<>(coreNameToPathMap.keySet()).forEach(coreName -> {
+                List<Path> paths = coreNameToPathMap.get(coreName);
+                if (paths.size() > 1) {
+                    Map<String, List<Path>> subtreeMap = paths.stream().collect(Collectors.groupingBy(path -> rel(path).getName(0).toString()));
+                    List<Path>              inLibs     = subtreeMap.get("lib");
+                    if (inLibs != null && inLibs.size() == 1) {
+                        if (LOGGER.isInfoEnabled()) {
+                            Path       inLibRel  = rel(inLibs.get(0));
+                            List<Path> othersRel = paths.stream().map(this::rel).filter(p -> !p.equals(inLibRel)).collect(Collectors.toList());
+                            LOGGER.info("+ mvg-mps: ambiguous jar-name resolved: [{}]={} (ignoring: {})", coreName, inLibRel, othersRel);
                         }
-                    });
+                        // overrule this one with just the lib entry:
+                        coreNameToPathMap.put(coreName, inLibs);
+                    }
+                }
+            });
+
+            // fill the 'jarIndex' and 'ambiguousIndex' index mapss according to what we found:
+            coreNameToPathMap.forEach((coreName, paths) -> {
+                boolean ambigous = 1 < paths.size();
+                paths.forEach(path -> {
+                    jarIndex.put(rel(path).toString(), path);
+                    if (!ambigous) {
+                        jarIndex.put(coreName, path);
+                        jarIndex.put(coreName + ".jar", path);
+                    }
+                });
+                if (ambigous) {
+                    LOGGER.info("+ mvg-mps: ambiguous jar-names found: {}", paths);
+                    ambiguousIndex.put(coreName, paths);
+                    ambiguousIndex.put(coreName + ".jar", paths);
+                }
+            });
         } catch (IOException e) {
-            throw new GradleException("could not index the MPS install dir at " + rootDir, e);
+            throw new GradleException("could not index the MPS install dir at " + rootPath, e);
         }
-        return index;
+    }
+
+    @NotNull
+    private Path rel(Path path) {
+        return rootPath.relativize(path);
     }
 }
