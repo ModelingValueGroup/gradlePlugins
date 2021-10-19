@@ -114,7 +114,7 @@ public class InfoGradle {
         this.absProjectDir = absProjectDir;
         this.projectName = projectName;
 
-        gradleDotProperties = new DotProperties(USER_HOME_PROPS, absProjectDir.resolve(GRADLE_PROPERTIES_FILE));
+        gradleDotProperties = new DotProperties(absProjectDir.resolve(GRADLE_PROPERTIES_FILE), USER_HOME_PROPS);
         workflowsDir = workflowsDir();
         mvgRepoName = mvgRepoName();
         branch = branch();

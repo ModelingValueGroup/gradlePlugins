@@ -146,6 +146,7 @@ public class MvgBranchBasedBuilder {
     }
 
     private void adjustAllPublications() {
+        // TODO disable all publicatons when: github.actor == "dependabot[bot]"
         gradle.afterProject(p -> {
             LOGGER.info("+ mvg-bbb: running adjustPublications on project {}", p.getName());
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
