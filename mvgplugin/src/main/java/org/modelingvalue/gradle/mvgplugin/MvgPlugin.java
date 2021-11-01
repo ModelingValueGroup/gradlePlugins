@@ -54,6 +54,7 @@ import org.gradle.api.tasks.testing.Test;
 import org.gradle.external.javadoc.MinimalJavadocOptions;
 import org.gradle.external.javadoc.StandardJavadocDocletOptions;
 import org.gradle.internal.extensibility.DefaultConvention;
+import org.gradle.process.CommandLineArgumentProvider;
 import org.jetbrains.annotations.NotNull;
 
 import com.gradle.scan.plugin.BuildScanExtension;
@@ -314,11 +315,18 @@ public class MvgPlugin implements Plugin<Project> {
     private void tuneJavacPlugin() {
         gradle.afterProject(p -> {
             if (ext.prepJavacForLint) {
+                @SuppressWarnings("Convert2Lambda") // keep this, grdale does not like java lambdas here 8- see: https://docs.gradle.org/7.2/userguide/validation_problems.html#implementation_unknown
+                CommandLineArgumentProvider adder = new CommandLineArgumentProvider() {
+                    @Override
+                    public Iterable<String> asArguments() {
+                        return List.of("-Xlint:unchecked", "-Xlint:deprecation");
+                    }
+                };
                 p.getTasks()
                         .withType(JavaCompile.class)
                         .stream()
                         .map(javaCompile -> javaCompile.getOptions().getCompilerArgumentProviders())
-                        .forEach(prov -> prov.add(() -> List.of("-Xlint:unchecked", "-Xlint:deprecation")));
+                        .forEach(prov -> prov.add(adder));
             }
         });
     }
