@@ -178,7 +178,7 @@ public class MvgPluginTest {
                     //
                     () -> assertEquals(7, numOccurences("+ mvg: header     regenerated : ", out)),
                     () -> assertEquals(2, numOccurences("+ mvg: eols       regenerated : ", out)),
-                    () -> assertEquals(7, numOccurences("+ mvg: eols       untouched   : ", out)),
+                    () -> assertEquals(9, numOccurences("+ mvg: eols       untouched   : ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: found vacant version: 0.0.4 (was 0.0.1)", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: project 'test-name': version: 0.0.1 => 0.0.4, group: test.group => test.group", out)),
                     () -> assertEquals(6, numOccurences(TEST_MARKER_REPLACE_DONE, out)),
@@ -191,7 +191,7 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (11&11) to 11", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ mvg-mps: dependency replaced: ", out)),
-                    () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=8 rms=0; branch=", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
                     () -> assertEquals(d, numOccurences("+ mvg: not tagging this version with 'v0.0.4' because this is not the master branch", out)),
                     () -> assertEquals(m, numOccurences("+ mvg: tagging this version with 'v0.0.4' because this is the master branch", out)),
                     //
