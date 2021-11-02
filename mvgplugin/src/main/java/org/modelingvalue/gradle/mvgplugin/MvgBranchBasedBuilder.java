@@ -99,29 +99,28 @@ public class MvgBranchBasedBuilder {
                                     } else {
                                         ModuleComponentSelector moduleComponent = (ModuleComponentSelector) selector;
                                         if (!moduleComponent.getVersion().endsWith(BRANCH_INDICATOR)) {
-                                            LOGGER.info("+ mvg-bbb: {} {} {} no BRANCH dependency: {}", Util.TEST_MARKER_REPLACE_NOT_DONE, projectName, confName, selector);
+                                            LOGGER.info("+ mvg-bbb: {} {} {} no {} dependency: {}", Util.TEST_MARKER_REPLACE_NOT_DONE, projectName, confName, BRANCH_INDICATOR, selector);
                                         } else {
                                             String       rawGroup    = moduleComponent.getGroup();
                                             String       rawArtifact = moduleComponent.getModule();
                                             String       rawVersion  = moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", "");
-                                            List<String> branchesTpTry;
+                                            List<String> branchesToTry;
                                             if (InfoGradle.isMasterBranch()) {
-                                                branchesTpTry = List.of(InfoGradle.getBranch());
+                                                branchesToTry = List.of(InfoGradle.getBranch());
                                             } else if (InfoGradle.isDevelopBranch()) {
-                                                branchesTpTry = List.of(InfoGradle.getBranch(), "master");
+                                                branchesToTry = List.of(InfoGradle.getBranch(), "master");
                                             } else {
-                                                branchesTpTry = List.of(InfoGradle.getBranch(), "develop", "master");
+                                                branchesToTry = List.of(InfoGradle.getBranch(), "develop", "master");
                                             }
-                                            for (String branch : branchesTpTry) {
+                                            for (String branch : branchesToTry) {
                                                 String newGAV = makeBbbGAV(branch, rawGroup, rawArtifact, rawVersion);
 
                                                 if (!branch.equals("master") && !isInAnyMavenRepo(project, newGAV)) {
-                                                    LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency not found: {} => {} (skipping this branch replacement)", Util.TEST_MARKER_REPLACE_DONE, projectName, confName, selector, newGAV);
+                                                    LOGGER.info("+ mvg-bbb: {} {} {} {} dependency not found in branch {}, skipped : {} => {}", Util.TEST_MARKER_REPLACE_DONE, projectName, confName, BRANCH_INDICATOR, branch, selector, newGAV);
                                                 } else {
+                                                    LOGGER.info("+ mvg-bbb: {} {} {} {} dependency     found in branch {}, replaced: {} => {}", Util.TEST_MARKER_REPLACE_DONE, projectName, confName, BRANCH_INDICATOR, branch, selector, newGAV);
                                                     depSub.useTarget(newGAV, BRANCH_REASON);
                                                     dependenciesToSave.add(rawGroup + "." + rawArtifact);
-
-                                                    LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency, replaced: {} => {}", Util.TEST_MARKER_REPLACE_DONE, projectName, confName, selector, newGAV);
                                                     break;
                                                 }
                                             }
@@ -135,12 +134,16 @@ public class MvgBranchBasedBuilder {
 
     private boolean isInAnyMavenRepo(Project project, String gav) {
         try {
+            LOGGER.info("+ mvg-bbb: checking if in any repo: {}", gav);
             Dependency    dependency    = project.getDependencies().create(gav);
             Configuration configuration = project.getConfigurations().detachedConfiguration(dependency);
             adjustDependencies(project, configuration);
             Set<File> resolved = configuration.resolve();
-            return !resolved.isEmpty();
+            boolean   found    = !resolved.isEmpty();
+            LOGGER.info("+ mvg-bbb: for {} I found: {}", gav, resolved);
+            return found;
         } catch (Throwable e) {
+            LOGGER.error("problem trying to find '" + gav + "' in any repo", e);
             return false;
         }
     }
