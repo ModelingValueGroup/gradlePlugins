@@ -19,10 +19,12 @@ import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -210,4 +212,16 @@ public class Util {
         }
     }
 
+    public static boolean isWindows() {
+        String prop = System.getProperty("os.name");
+        return prop == null || prop.toLowerCase().startsWith("windows");
+    }
+
+    public static String getHostname() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            return "UNKNOWN_HOSTNAME";
+        }
+    }
 }

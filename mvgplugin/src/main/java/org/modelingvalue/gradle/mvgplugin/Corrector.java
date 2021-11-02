@@ -32,7 +32,7 @@ public abstract class Corrector {
 
     public Corrector(String name) {
         this.name = name;
-        nameField = String.format("%-10s",name);
+        nameField = String.format("%-10s", name);
     }
 
     protected void overwrite(Path file, List<String> lines) {

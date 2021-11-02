@@ -97,11 +97,11 @@ class MvgCorrector {
         try {
             Set<Path> changes = new HashSet<>();
 
+            changes.addAll(new DependabotCorrector(ext).generate().getChangedFiles());
+            changes.addAll(new BashCorrector(ext).generate().getChangedFiles());
             changes.addAll(new EolCorrector(ext).generate().getChangedFiles());
             changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
             changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
-            changes.addAll(new DependabotCorrector(ext).generate().getChangedFiles());
-            changes.addAll(new BashCorrector(ext).generate().getChangedFiles());
 
             LOGGER.info("+ mvg: changed {} files", changes.size());
 

@@ -21,32 +21,31 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.Set;
 
 public class EolCorrector extends TreeCorrector {
-    private final Set<String> textExtensions;
-    private final Set<String> noTextExtensions;
-    private final Set<String> textFiles;
-    private final Set<String> noTextFiles;
+    private final MvgCorrectorExtension ext;
 
     public EolCorrector(MvgCorrectorExtension ext) {
         super("eols", ext.getRoot(), ext.getEolFileExcludes());
-        textExtensions = ext.getTextFileExtensions();
-        noTextExtensions = ext.getNoTextFileExtensions();
-        textFiles = ext.getTextFiles();
-        noTextFiles = ext.getNoTextFiles();
+        this.ext = ext;
         if (LOGGER.isDebugEnabled()) {
-            textExtensions/*  */.forEach(x -> LOGGER.debug("++ mvg: # eols   textExtensions  : " + x));
-            noTextExtensions/**/.forEach(x -> LOGGER.debug("++ mvg: # eols   noTextExtensions: " + x));
-            textFiles/*       */.forEach(x -> LOGGER.debug("++ mvg: # eols   textFiles       : " + x));
-            noTextFiles/*     */.forEach(x -> LOGGER.debug("++ mvg: # eols   noTextFiles     : " + x));
+            ext.getTextFileExtensions()/*  */.forEach(x -> LOGGER.debug("++ mvg: # eols   textExtensions  : " + x));
+            ext.getNoTextFileExtensions()/**/.forEach(x -> LOGGER.debug("++ mvg: # eols   noTextExtensions: " + x));
+            ext.getTextFiles()/*           */.forEach(x -> LOGGER.debug("++ mvg: # eols   textFiles       : " + x));
+            ext.getNoTextFiles()/*         */.forEach(x -> LOGGER.debug("++ mvg: # eols   noTextFiles     : " + x));
         }
     }
 
     public EolCorrector generate() throws IOException {
-        allFiles()
-                .filter(this::isTextType)
-                .forEach(this::correctCRLF);
+        // only do this for CI
+        // This saves time on dev machines and the CI will push the corrected files anyway
+        if (!Info.CI && !ext.forceEolCorrection) {
+            LOGGER.info("+ mvg: NOT correcting EOLs (CI={}, force={})", Info.CI, ext.forceEolCorrection);
+        } else {
+            allFiles()
+                    .filter(this::isTextType)
+                    .forEach(this::correctCRLF);
+        }
         return this;
     }
 
@@ -60,23 +59,23 @@ public class EolCorrector extends TreeCorrector {
 
     private boolean isTextType(Path f) {
         String           filename = f.getFileName().toString();
-        Optional<String> ext      = Util.getExtension(filename);
+        Optional<String> fileExt  = Util.getExtension(filename);
         if (size(f) == 0L) {
             return false;
         }
-        if (textFiles.contains(filename)) {
+        if (ext.getTextFiles().contains(filename)) {
             return true;
         }
-        if (noTextFiles.contains(filename)) {
+        if (ext.getNoTextFiles().contains(filename)) {
             return false;
         }
-        if (ext.isEmpty()) {
+        if (fileExt.isEmpty()) {
             return false;
         }
-        if (textExtensions.contains(ext.get())) {
+        if (ext.getTextFileExtensions().contains(fileExt.get())) {
             return true;
         }
-        if (noTextExtensions.contains(ext.get())) {
+        if (ext.getNoTextFileExtensions().contains(fileExt.get())) {
             return false;
         }
         LOGGER.info("+ mvg: unknown file type (not correcting EOLs): {}", f);

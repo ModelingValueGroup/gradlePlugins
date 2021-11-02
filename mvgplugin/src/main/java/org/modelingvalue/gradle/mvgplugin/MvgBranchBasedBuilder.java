@@ -88,8 +88,8 @@ public class MvgBranchBasedBuilder {
     }
 
     private void adjustDependencies(Project project, Configuration conf) {
-        String projectName   = String.format("%-30s", project.getName());
-        String confName      = String.format("%-30s", conf.getName());
+        String projectName = String.format("%-30s", project.getName());
+        String confName    = String.format("%-30s", conf.getName());
         conf.resolutionStrategy(strategy ->
                 strategy.dependencySubstitution(depSubs ->
                         depSubs.all(depSub -> {
