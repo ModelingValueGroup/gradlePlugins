@@ -176,7 +176,7 @@ public class MvgPluginTest {
                     () -> assertEquals("0.0.4", instance.getProp(Info.PROP_NAME_VERSION)),
                     () -> assertEquals("2020.3", instance.getProp(Info.PROP_NAME_VERSION_MPS)),
                     //
-                    () -> assertEquals(6, numOccurences("+ mvg: header     regenerated : ", out)),
+                    () -> assertEquals(7, numOccurences("+ mvg: header     regenerated : ", out)),
                     () -> assertEquals(2, numOccurences("+ mvg: eols       regenerated : ", out)),
                     () -> assertEquals(7, numOccurences("+ mvg: eols       untouched   : ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: found vacant version: 0.0.4 (was 0.0.1)", out)),
@@ -191,7 +191,7 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (11&11) to 11", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ mvg-mps: dependency replaced: ", out)),
-                    () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=8 rms=0; branch=", out)),
                     () -> assertEquals(d, numOccurences("+ mvg: not tagging this version with 'v0.0.4' because this is not the master branch", out)),
                     () -> assertEquals(m, numOccurences("+ mvg: tagging this version with 'v0.0.4' because this is the master branch", out)),
                     //
@@ -214,7 +214,7 @@ public class MvgPluginTest {
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
                     //
-                    () -> assertEquals(264, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
+                    () -> assertEquals(1959, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
                     //
                     () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\r]", "").length()),
                     () -> assertEquals(17, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\n]", "").length()),
