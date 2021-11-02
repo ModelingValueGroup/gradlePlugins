@@ -73,7 +73,7 @@ import org.jetbrains.annotations.Nullable;
  * </pre>
  */
 public class DependenciesRepoManager {
-    private static final String TRIGGER_EXT = ".trigger";
+    private static final String      TRIGGER_EXT = ".trigger";
     private final        String      repoName;
     private final        String      branch;
     private final        boolean     active;

@@ -176,9 +176,9 @@ public class MvgPluginTest {
                     () -> assertEquals("0.0.4", instance.getProp(Info.PROP_NAME_VERSION)),
                     () -> assertEquals("2020.3", instance.getProp(Info.PROP_NAME_VERSION_MPS)),
                     //
-                    () -> assertEquals(6, numOccurences("+ mvg: header     regenerated : ", out)),
+                    () -> assertEquals(7, numOccurences("+ mvg: header     regenerated : ", out)),
                     () -> assertEquals(2, numOccurences("+ mvg: eols       regenerated : ", out)),
-                    () -> assertEquals(7, numOccurences("+ mvg: eols       untouched   : ", out)),
+                    () -> assertEquals(9, numOccurences("+ mvg: eols       untouched   : ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: found vacant version: 0.0.4 (was 0.0.1)", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: project 'test-name': version: 0.0.1 => 0.0.4, group: test.group => test.group", out)),
                     () -> assertEquals(6, numOccurences(TEST_MARKER_REPLACE_DONE, out)),
@@ -214,7 +214,7 @@ public class MvgPluginTest {
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
                     //
-                    () -> assertEquals(264, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
+                    () -> assertEquals(1959, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
                     //
                     () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\r]", "").length()),
                     () -> assertEquals(17, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\n]", "").length()),

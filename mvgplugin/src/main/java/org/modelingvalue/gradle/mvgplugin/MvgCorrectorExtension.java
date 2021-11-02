@@ -45,6 +45,7 @@ public class MvgCorrectorExtension {
     private final Set<String>         headerFileExcludes;
     private final Set<String>         eolFileExcludes;
     private final Set<String>         bashFileExcludes;
+    public        boolean             forceEolCorrection;
 
     public MvgCorrectorExtension(Project project) {
         this.project = project;

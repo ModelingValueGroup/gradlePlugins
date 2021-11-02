@@ -17,6 +17,7 @@ dependencies {
 `~myMvgCorrectorExtension~` {
     addTextFileExtension("pruuperties")
     addBashFileExclude("unused")
+    forceEolCorrection = true
 }
 `~myMvgUploaderExtension~` {
     pluginId = "DRY"

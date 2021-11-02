@@ -39,22 +39,26 @@ public class BashCorrector extends TreeCorrector {
                 .filter(p -> p.getFileName().toString().matches(".*" + Pattern.quote(CORRECTOR_EXT)))
                 .forEach(script -> {
                     String simpleScriptName = script.getFileName().toString();
-                    try {
-                        LOGGER.info("+ mvg running {}", script);
-                        BashRunner bashRunner = new BashRunner(script).waitForExit();
-                        if (bashRunner.exitValue() != 0) {
-                            LOGGER.error("run of script {} resulted in an error ({})", script, bashRunner.exitValue());
-                        } else {
-                            List<String> stderr = bashRunner.getStderr();
-                            if (!stderr.isEmpty()) {
-                                LOGGER.info("+ mvg: running {} produced messages on stderr:", simpleScriptName);
-                                stderr.forEach(line -> LOGGER.info("+ mvg:     {}", line));
+                    if (Util.isWindows()) {
+                        LOGGER.info("+ mvg: NOT running bash corrector {} on windows for obvious reasons", simpleScriptName);
+                    } else {
+                        try {
+                            LOGGER.info("+ mvg: running {}", script);
+                            BashRunner bashRunner = new BashRunner(script).waitForExit();
+                            if (bashRunner.exitValue() != 0) {
+                                LOGGER.error("run of script {} resulted in an error ({})", script, bashRunner.exitValue());
+                            } else {
+                                List<String> stderr = bashRunner.getStderr();
+                                if (!stderr.isEmpty()) {
+                                    LOGGER.info("+ mvg: running {} produced messages on stderr:", simpleScriptName);
+                                    stderr.forEach(line -> LOGGER.info("+ mvg:     {}", line));
+                                }
+                                Path outFile = script.getParent().resolve(simpleScriptName.replaceFirst(Pattern.quote(CORRECTOR_EXT) + "$", ""));
+                                overwrite(outFile, bashRunner.getStdout());
                             }
-                            Path outFile = script.getParent().resolve(simpleScriptName.replaceFirst(Pattern.quote(CORRECTOR_EXT) + "$", ""));
-                            overwrite(outFile, bashRunner.getStdout());
+                        } catch (IOException e) {
+                            LOGGER.error("could not run {}: {} (ignored for now)", simpleScriptName, e.getMessage());
                         }
-                    } catch (IOException e) {
-                        LOGGER.error("could not run {}: {} (ignored for now)", simpleScriptName, e.getMessage());
                     }
                 });
         return this;

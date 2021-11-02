@@ -18,8 +18,6 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.modelingvalue.gradle.mvgplugin.Util.envOrProp;
 import static org.modelingvalue.gradle.mvgplugin.Util.envOrPropBoolean;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -84,14 +82,8 @@ public interface Info {
     String       MVG_DEPENDENCIES_REPO_NAME   = "dependencies";
     String       PACKAGES_SNAPSHOTS_REPO      = MVG_REPO_BASE_URL + PACKAGES_SNAPSHOTS_REPO_NAME + ".git";
     String       MVG_DEPENDENCIES_REPO        = MVG_REPO_BASE_URL + MVG_DEPENDENCIES_REPO_NAME + ".git";
-    String       HOSTNAME                     = getHostname();
+    String       HOSTNAME                     = Util.getHostname();
+    boolean      IS_WINDOWS                   = Util.isWindows();
 
-    static private String getHostname() {
-        try {
-            return InetAddress.getLocalHost().getHostName();
-        } catch (UnknownHostException e) {
-            return "UNKNOWN_HOSTNAME";
-        }
-    }
 }
 

@@ -17,8 +17,8 @@ package org.modelingvalue.gradle.mvgplugin;
 
 import static java.util.regex.Pattern.quote;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
-import static org.modelingvalue.gradle.mvgplugin.Info.TAG_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.MODELING_VALUE_GROUP;
+import static org.modelingvalue.gradle.mvgplugin.Info.TAG_TASK_NAME;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Task;
@@ -28,7 +28,7 @@ import org.gradle.api.tasks.TaskProvider;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 class MvgTagger {
-    private final Gradle             gradle;
+    private final Gradle gradle;
 
     public MvgTagger(Gradle gradle) {
         this.gradle = gradle;
