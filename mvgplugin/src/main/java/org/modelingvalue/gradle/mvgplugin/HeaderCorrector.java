@@ -62,23 +62,27 @@ public class HeaderCorrector extends TreeCorrector {
     }
 
     private void replaceHeader(Path f) {
-        if (needsHeader(f)) {
-            String       ext        = Util.getExtension(f).orElseThrow();
-            List<String> header     = ext2header.computeIfAbsent(ext, e -> border(extensions.get(e)));
-            List<String> lines      = Util.readAllLines(f);
-            boolean      isHashBang = !lines.isEmpty() && lines.get(0).startsWith("#!");
-            int          baseIndex  = isHashBang ? 1 : 0;
-            while (baseIndex < lines.size() && isHeaderLine(lines.get(baseIndex), ext)) {
-                lines.remove(baseIndex);
+        try {
+            if (needsHeader(f)) {
+                String       ext        = Util.getExtension(f).orElseThrow();
+                List<String> header     = ext2header.computeIfAbsent(ext, e -> border(extensions.get(e)));
+                List<String> lines      = Util.readAllLines(f);
+                boolean      isHashBang = !lines.isEmpty() && lines.get(0).startsWith("#!");
+                int          baseIndex  = isHashBang ? 1 : 0;
+                while (baseIndex < lines.size() && isHeaderLine(lines.get(baseIndex), ext)) {
+                    lines.remove(baseIndex);
+                }
+                isHashBang = !lines.isEmpty() && lines.get(0).startsWith("#!");
+                baseIndex = isHashBang ? 1 : 0;
+                lines.addAll(baseIndex, header);
+                overwrite(f, lines);
             }
-            isHashBang = !lines.isEmpty() && lines.get(0).startsWith("#!");
-            baseIndex = isHashBang ? 1 : 0;
-            lines.addAll(baseIndex, header);
-            overwrite(f, lines);
+        } catch (IOException e) {
+            LOGGER.error("inserting a header in {} impossible: an exception occured, file skipped",f,e);
         }
     }
 
-    private boolean needsHeader(Path f) {
+    private boolean needsHeader(Path f) throws IOException {
         Optional<String> ext = Util.getExtension(f);
         return ext.isPresent() && Util.getFileSize(f) != 0 && extensions.containsKey(ext.get());
     }
