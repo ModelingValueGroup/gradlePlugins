@@ -43,7 +43,7 @@ dependencies {
     implementation("org.apache.httpcomponents:httpmime:4.5.13")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
 
 gradlePlugin {
