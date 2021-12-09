@@ -268,7 +268,7 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void listenForTaskExecution() {
         gradle.afterProject(p -> {
-            if (ext.verboseTaskExecution) {
+            if (ext.verboseTaskExecution && p == gradle.getRootProject()) {
                 gradle.addListener(new TaskExecutionListener() {
                     @Override
                     public void beforeExecute(Task task) {
