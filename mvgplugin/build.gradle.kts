@@ -39,7 +39,7 @@ dependencies {
     implementation("org.eclipse.jgit:org.eclipse.jgit:6.0.0.202111291000-r")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0")
-    implementation("com.gradle:gradle-enterprise-gradle-plugin:3.7.2")
+    implementation("com.gradle:gradle-enterprise-gradle-plugin:3.8")
     implementation("org.apache.httpcomponents:httpmime:4.5.13")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2") // when you change this version: also bump it in Info.java!
