@@ -25,6 +25,10 @@ jobs:
           distribution: zulu
 
       ################################################################################
+      - name: "if master: publish gradle plugin"
+        if  : github.ref == 'refs/heads/master'
+        run : sed -i 's/-BRANCHED//' mvgplugin/build.gradle.kts' # would otherwise cause a bogus plugin dependency
+
       - name: "build gradle plugin"
         run : |
           ./gradlew --scan --info test
