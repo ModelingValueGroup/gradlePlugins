@@ -16,5 +16,5 @@
 include("mvgplugin")
 
 plugins {
-    id("com.gradle.enterprise") version ("3.5")
+    id("com.gradle.enterprise") version ("3.8.1")
 }
