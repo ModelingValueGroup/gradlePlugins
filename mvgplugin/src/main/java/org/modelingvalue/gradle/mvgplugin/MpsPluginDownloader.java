@@ -15,7 +15,9 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static org.modelingvalue.gradle.mvgplugin.Info.DEVELOP_CHANNEL;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.Info.MASTER_CHANNEL;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -48,10 +50,8 @@ public class MpsPluginDownloader {
 
 
     public MpsPluginDownloader() {
-        branchToChannelMap.put("master", "");
-        branchToChannelMap.put("develop", "eap");
-        branchToChannelMap.put("stable", "");
-        branchToChannelMap.put("eap", "eap");
+        branchToChannelMap.put("master", MASTER_CHANNEL);
+        branchToChannelMap.put("develop", DEVELOP_CHANNEL);
     }
 
     public Stream<Path> downloadAllPlugins(Path mpsInstallDir, String pluginList, String mpsBuildNumber, String channel) {
@@ -84,19 +84,22 @@ public class MpsPluginDownloader {
     private UpdateId findUpdateId(String detail, String mpsBuildNumber, PluginXmlId pluginXmlId, PluginId pluginId, String channel) {
         UpdateId updateId;
         if (detail == null) {
-            updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, "stable");
+            updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, "");
             if (updateId != null) {
-                LOGGER.info("+ mvg-mps: plugin '{}' found (updateId={} channel='stable')", pluginXmlId, updateId);
+                LOGGER.info("+ mvg-mps: plugin '{}' found (updateId={} channel='')", pluginXmlId, updateId);
                 return updateId;
             }
-            LOGGER.info("+ mvg-mps: plugin '{}' not found (channel='stable')", updateId);
+            LOGGER.info("+ mvg-mps: plugin '{}' not found (channel='')", updateId);
             return null;
         }
         if (detail.equals("BRANCHED")) {
-            boolean isStable = channel == null || channel.isBlank() || "stable".equals(channel);
-            boolean isEap    = "eap".equals(channel);
+            if (channel == null) {
+                channel = MASTER_CHANNEL;
+            }
+            boolean isMain = MASTER_CHANNEL.equals(channel);
+            boolean isEap  = DEVELOP_CHANNEL.equals(channel);
 
-            if (!isStable && !isEap) {
+            if (!isMain && !isEap) {
                 updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, channel);
                 if (updateId != null) {
                     LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={})", pluginXmlId, updateId, channel);
@@ -104,20 +107,20 @@ public class MpsPluginDownloader {
                 }
                 LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={})", pluginXmlId, channel);
             }
-            if (!isStable) {
-                updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, "eap");
+            if (!isMain) {
+                updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, DEVELOP_CHANNEL);
                 if (updateId != null) {
-                    LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={}})", pluginXmlId, updateId, "eap");
+                    LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={}})", pluginXmlId, updateId, DEVELOP_CHANNEL);
                     return updateId;
                 }
-                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={})", pluginXmlId, "eap");
+                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={})", pluginXmlId, DEVELOP_CHANNEL);
             }
-            updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, "stable");
+            updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, MASTER_CHANNEL);
             if (updateId != null) {
-                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={}})", pluginXmlId, updateId, "stable");
+                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={}})", pluginXmlId, updateId, MASTER_CHANNEL);
                 return updateId;
             }
-            LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={}})", pluginXmlId, "stable");
+            LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={}})", pluginXmlId, MASTER_CHANNEL);
             return updateId;
         } else {
             updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, detail);

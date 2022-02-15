@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.Info;
 import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi;
 import org.modelingvalue.gradle.mvgplugin.MpsPluginDownloader;
 import org.modelingvalue.gradle.mvgplugin.Util;
@@ -40,7 +41,7 @@ class MpsPluginDownloaderTest {
     private static final String PLUGIN_MPS = join(PLUGIN_MAIN_SEP, List.of(
             join(PLUGIN_SUB_SEP, List.of("jetbrains.mps.baseLanguage.extensions")),   // simple id      => latest stable release for the used MPS version                        => error if not found
             join(PLUGIN_SUB_SEP, List.of("org.jetbrains.IdeaVim-EasyMotion", "1.3")), // id and version => just the exact version                                                => error if not found
-            join(PLUGIN_SUB_SEP, List.of("aws.toolkit", "eap")),                      // id and channel => latest channel release for the used MPS version                       => try latest release version if not found
+            join(PLUGIN_SUB_SEP, List.of("aws.toolkit", Info.DEVELOP_CHANNEL)),       // id and channel => latest channel release for the used MPS version                       => try latest release version if not found
             join(PLUGIN_SUB_SEP, List.of("DclareForMPS", "BRANCHED"))                 // id BRANCHED    => use the branch name as the channel name and find the latest version   => try eap and then stable release
     ));
 
@@ -77,7 +78,7 @@ class MpsPluginDownloaderTest {
 
         MpsPluginDownloader mpsPluginDownloader = new MpsPluginDownloader();
         for (String mpsBuildNumber : List.of("MPS-202.6397", "MPS-193.1223")) {
-            for (String channel : List.of("", "eap", "xyzzy")) {
+            for (String channel : List.of(Info.MASTER_CHANNEL, Info.DEVELOP_CHANNEL, "xyzzy")) {
                 Path tmp = TMP_DIR.resolve(mpsBuildNumber).resolve(channel);
                 System.err.println();
                 //noinspection ResultOfMethodCallIgnored
