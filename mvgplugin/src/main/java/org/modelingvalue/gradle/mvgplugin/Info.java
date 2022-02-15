@@ -56,6 +56,9 @@ public interface Info {
     String       ALLREP_TOKEN                 = envOrProp(PROP_NAME_ALLREP_TOKEN, "notset");
     String       JETBRAINS_TOKEN              = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "notset");
     String       GITHUB_WORKFLOW              = envOrProp(PROP_NAME_GITHUB_WORKFLOW, null);
+    String       MASTER_CHANNEL               = "";
+    String       DEVELOP_CHANNEL              = "eap";
+    String       OTHER_CHANNEL                = "dev";
     String       MASTER_BRANCH                = "master";
     String       DEVELOP_BRANCH               = "develop";
     String       DEFAULT_BRANCH               = "can-not-determine-branch";

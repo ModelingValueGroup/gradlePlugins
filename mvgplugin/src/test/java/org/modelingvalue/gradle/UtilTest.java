@@ -134,9 +134,9 @@ public class UtilTest {
         assertEquals("yyy", props.getProp("yyy"));
         assertEquals("a=b=c", props.getProp("zzz"));
 
-        props.setProp("xxx","qqq");
-        props.setProp("yyy","www");
-        props.setProp("zzz","1==2");
+        props.setProp("xxx", "qqq");
+        props.setProp("yyy", "www");
+        props.setProp("zzz", "1==2");
 
         assertEquals("qqq", props.getProp("xxx"));
         assertEquals("www", props.getProp("yyy"));

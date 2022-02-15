@@ -78,7 +78,7 @@ public class HeaderCorrector extends TreeCorrector {
                 overwrite(f, lines);
             }
         } catch (IOException e) {
-            LOGGER.error("inserting a header in {} impossible: an exception occured, file skipped",f,e);
+            LOGGER.error("inserting a header in {} impossible: an exception occured, file skipped", f, e);
         }
     }
 

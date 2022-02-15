@@ -16,6 +16,7 @@
 package org.modelingvalue.gradle;
 
 import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.Info;
 import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi;
 import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginBean;
 import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginId;
@@ -25,18 +26,18 @@ import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginXmlId
 public class JetBrainsPluginRepoTest {
     @Test
     void listDclarePluginVersions() {
-        JetBrainsPluginRepoRestApi j = new JetBrainsPluginRepoRestApi();
-        PluginBean                 p = j.getPluginByXmlId(new PluginXmlId("DclareForMPS"));
+        JetBrainsPluginRepoRestApi j  = new JetBrainsPluginRepoRestApi();
+        PluginBean                 p  = j.getPluginByXmlId(new PluginXmlId("DclareForMPS"));
         PluginId                   id = p.id;
 
-        PluginRepository           rep1 = j.listPlugins(null, null, id);
+        PluginRepository rep1 = j.listPlugins(null, Info.MASTER_CHANNEL, id);
         rep1.categories.stream()
-                .flatMap(c->c.plugins.stream())
-                .forEach(pp-> System.err.printf("- %-20s  %-20s ... %s\n",pp.version,pp.ideaVersion.sinceBuild,pp.ideaVersion.untilBuild));
+                .flatMap(c -> c.plugins.stream())
+                .forEach(pp -> System.err.printf("- %-20s  %-20s ... %s\n", pp.version, pp.ideaVersion.sinceBuild, pp.ideaVersion.untilBuild));
 
-        PluginRepository           rep2 = j.listPlugins(null, "eap", id);
+        PluginRepository rep2 = j.listPlugins(null, Info.DEVELOP_CHANNEL, id);
         rep2.categories.stream()
-                .flatMap(c->c.plugins.stream())
-                .forEach(pp-> System.err.printf("- %-20s  %-20s ... %s\n",pp.version,pp.ideaVersion.sinceBuild,pp.ideaVersion.untilBuild));
+                .flatMap(c -> c.plugins.stream())
+                .forEach(pp -> System.err.printf("- %-20s  %-20s ... %s\n", pp.version, pp.ideaVersion.sinceBuild, pp.ideaVersion.untilBuild));
     }
 }

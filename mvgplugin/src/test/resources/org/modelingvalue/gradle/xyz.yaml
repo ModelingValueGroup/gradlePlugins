@@ -1,15 +1,15 @@
 name: build
 
-on: [ push, workflow_dispatch ]
+on  : [ push, workflow_dispatch ]
 
 jobs:
   build:
     runs-on: ubuntu-20.04
-    if: "!contains(github.event.head_commit.message, '[no-ci]')"
-    env:
+    if     : "!contains(github.event.head_commit.message, '[no-ci]')"
+    env    :
       A: "AAA"
 
-    steps:
+    steps  :
       - uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0

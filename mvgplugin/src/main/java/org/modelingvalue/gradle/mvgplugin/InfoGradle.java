@@ -15,8 +15,10 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import static org.modelingvalue.gradle.mvgplugin.Info.DEVELOP_CHANNEL;
 import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.Info.MASTER_CHANNEL;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -99,7 +101,7 @@ public class InfoGradle {
     }
 
     public static String getChannel() {
-        return selectMasterDevelopElse("stable", "eap", BranchWithProperties.get("channel", "dev"));
+        return selectMasterDevelopElse(MASTER_CHANNEL, DEVELOP_CHANNEL, BranchWithProperties.get("channel", Info.OTHER_CHANNEL));
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
