@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -26,18 +26,26 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.gradle.api.GradleException;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -62,20 +70,12 @@ public class Util {
         }
     }
 
-    public static List<String> readAllLines(Path f) {
-        try {
-            return Files.readAllLines(f);
-        } catch (IOException e) {
-            throw new GradleException("could not read lines: " + f, e);
-        }
+    public static List<String> readAllLines(Path f) throws IOException {
+        return Files.readAllLines(f);
     }
 
-    public static long getFileSize(Path f) {
-        try {
-            return Files.size(f);
-        } catch (IOException e) {
-            throw new GradleException("file size failed", e);
-        }
+    public static long getFileSize(Path f) throws IOException {
+        return Files.size(f);
     }
 
     public static List<String> download(URL url) {
@@ -164,9 +164,9 @@ public class Util {
 
     public static long toBytes(String in) {
         in = in.trim();
-        if (in.matches("[0-9][0-9]*")) {
+        if (in.matches("[0-9]+")) {
             return Long.parseLong(in);
-        } else if (in.matches("[0-9][0-9]*[kKmMgGtT]?")) {
+        } else if (in.matches("[0-9]+[kKmMgGtT]?")) {
             long l = Long.parseLong(in, 0, in.length() - 1, 10);
             switch (Character.toLowerCase(in.charAt(in.length() - 1))) {
             case 'k':
@@ -222,6 +222,96 @@ public class Util {
             return InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
             return "UNKNOWN_HOSTNAME";
+        }
+    }
+
+    public static Stream<Node> childStream(Node node) {
+        return asStream(node.getChildNodes());
+    }
+
+    public static List<Node> asList(NodeList nodeList) {
+        return asStream(nodeList).collect(Collectors.toList());
+    }
+
+    public static Stream<Node> asStream(NodeList nodeList) {
+        return StreamSupport.stream(asIterable(nodeList).spliterator(), false);
+    }
+
+    public static Iterable<Node> asIterable(NodeList nodeList) {
+        return () -> new Iterator<>() {
+            private int index;
+
+            @Override
+            public boolean hasNext() {
+                return index < nodeList.getLength();
+            }
+
+            @Override
+            public Node next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                return nodeList.item(index++);
+            }
+        };
+    }
+
+    public static String getAttributeText(Node node, String name) {
+        Node namedItem = node.getAttributes().getNamedItem(name);
+        return namedItem == null ? null : namedItem.getNodeValue();
+    }
+
+    public static List<String> getMultiChildText(Node node, String name) {
+        return childStream(node)
+                .filter(c -> c.getNodeName().equals(name))
+                .map(n -> n.getChildNodes().item(0).getTextContent())
+                .collect(Collectors.toList());
+    }
+
+    public static String getSingleChildText(Node node, String name) {
+        //        long count = childStream(node).filter(c -> c.getNodeName().equals(name)).count();
+        //        if (1 < count) {
+        //            System.err.println("WARNING: there are " + count + " children named " + name);
+        //        }
+        return childStream(node)
+                .filter(c -> c.getNodeName().equals(name))
+                .filter(n -> n.getChildNodes().getLength() == 1)
+                .map(n -> n.getChildNodes().item(0).getTextContent())
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static Node getSingleChildNode(Node node, String name) {
+        //        long count = childStream(node).filter(c -> c.getNodeName().equals(name)).count();
+        //        if (1 < count) {
+        //            System.err.println("WARNING: there are " + count + " children named " + name);
+        //        }
+        return childStream(node)
+                .filter(c -> c.getNodeName().equals(name))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static String makeSplitterPattern(String sep) {
+        return "(" + Pattern.quote(sep) + ")+";
+    }
+
+    public static void removeTmpDir(Path d) throws IOException {
+        if (!d.toAbsolutePath().toString().contains("/tmp/")) {
+            throw new Error("not allowed to completely remove tmp dir (no /tmp/ in the name: " + d.toAbsolutePath());
+        }
+        for (int i = 0; Files.isDirectory(d) && i < 10; i++) {
+            Files.find(d, 3, (p, a) -> true)
+                    //.peek(p -> System.out.println("DEL " + p.toAbsolutePath()))
+                    .forEach(p -> {
+                        try {
+                            Files.deleteIfExists(p);
+                        } catch (DirectoryNotEmptyException e) {
+                            // ignore
+                        } catch (IOException e) {
+                            throw new Error(e);
+                        }
+                    });
         }
     }
 }

@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -29,6 +29,7 @@ import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -43,6 +44,7 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.execution.TaskExecutionListener;
+import org.gradle.api.file.RegularFile;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.TaskCollection;
@@ -105,7 +107,7 @@ public class MvgPlugin implements Plugin<Project> {
             //throw new GradleException("the plugin " + getClass().getSimpleName() + " can only be applied to the root project (" + gradle.getRootProject().getName() + ")");
         } else {
             ext = Extension.make(gradle);
-            BranchParameterNames.init();
+            BranchWithProperties.init();
 
             LOGGER.info("+ mvg: MvgPlugin.apply to project {}", project.getName());
             LOGGER.info("+ mvg: {}={}, {}={} {}={}, {}={}, {}={}",
@@ -137,64 +139,22 @@ public class MvgPlugin implements Plugin<Project> {
         }
     }
 
+    public static class MyRegularFile implements RegularFile {
+        RegularFile del;
+
+        public MyRegularFile(RegularFile del) {
+            this.del = del;
+        }
+
+        @Override
+        public File getAsFile() {
+            return del.getAsFile();
+        }
+    }
+
     @NotNull
-    public Object resolveMpsDependency(@NotNull String dep) {
-        // TODO use SelfResolvingDependency
-        //        new SelfResolvingDependency(){
-        //            @Nullable
-        //            @Override
-        //            public String getGroup() {
-        //                return null;
-        //            }
-        //
-        //            @Override
-        //            public String getName() {
-        //                return null;
-        //            }
-        //
-        //            @Nullable
-        //            @Override
-        //            public String getVersion() {
-        //                return null;
-        //            }
-        //
-        //            @Override
-        //            public boolean contentEquals(Dependency dependency) {
-        //                return false;
-        //            }
-        //
-        //            @Override
-        //            public Dependency copy() {
-        //                return null;
-        //            }
-        //
-        //            @Nullable
-        //            @Override
-        //            public String getReason() {
-        //                return null;
-        //            }
-        //
-        //            @Override
-        //            public void because(@Nullable String s) {
-        //
-        //            }
-        //
-        //            @Override
-        //            public TaskDependency getBuildDependencies() {
-        //                return null;
-        //            }
-        //
-        //            @Override
-        //            public Set<File> resolve() {
-        //                return mvgMps.resolveMpsDependency(dep);
-        //            }
-        //
-        //            @Override
-        //            public Set<File> resolve(boolean b) {
-        //                return resolve();
-        //            }
-        //        };
-        return mvgMps.resolveMpsDependency(dep);
+    public MpsDependency makeMpsDependency(@NotNull String dep) {
+        return new MpsDependency(mvgMps, dep);
     }
 
     private void checkWorkflowFilesForLoopingDanger() {
@@ -266,9 +226,10 @@ public class MvgPlugin implements Plugin<Project> {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private void listenForTaskExecution() {
         gradle.afterProject(p -> {
-            if (ext.verboseTaskExecution) {
+            if (ext.verboseTaskExecution && p == gradle.getRootProject()) {
                 gradle.addListener(new TaskExecutionListener() {
                     @Override
                     public void beforeExecute(Task task) {

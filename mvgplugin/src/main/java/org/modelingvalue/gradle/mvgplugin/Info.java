@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -42,6 +42,7 @@ public interface Info {
     String       PROP_NAME_GROUP              = "group";
     String       PROP_NAME_VERSION_JAVA       = "version_java";
     String       PROP_NAME_VERSION_MPS        = "version_mps";
+    String       PROP_NAME_PLUGINS_MPS        = "plugins_mps";
     String       PROP_NAME_ALLREP_TOKEN       = "ALLREP_TOKEN";
     String       PROP_NAME_JETBRAINS_TOKEN    = "JETBRAINS_PUBLISH_TOKEN";
     String       PROP_NAME_GITHUB_WORKFLOW    = "GITHUB_WORKFLOW";
@@ -64,7 +65,7 @@ public interface Info {
     String       NO_CI_GUARD                  = "!contains(github.event.head_commit.message, '[no-ci]')";
     String       MIN_TEST_HEAP_SIZE           = "2g";
     String       JAVA_VERSION                 = "11";
-    String       JUNIT_VERSION                = "5.8.1";
+    String       JUNIT_VERSION                = "5.8.2";
     String       JUNIT_GROUP_ID               = "org.junit.jupiter";
     List<String> JUNIT_IMPLEMENTATION_DEPS    = List.of(
             JUNIT_GROUP_ID + ":junit-jupiter-api:" + JUNIT_VERSION,
@@ -84,6 +85,5 @@ public interface Info {
     String       MVG_DEPENDENCIES_REPO        = MVG_REPO_BASE_URL + MVG_DEPENDENCIES_REPO_NAME + ".git";
     String       HOSTNAME                     = Util.getHostname();
     boolean      IS_WINDOWS                   = Util.isWindows();
-
 }
 

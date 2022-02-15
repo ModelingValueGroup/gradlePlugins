@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -18,15 +18,18 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.modelingvalue.gradle.mvgplugin.Info.GRADLE_PROPERTIES_FILE;
 import static org.modelingvalue.gradle.mvgplugin.Info.MPS_TASK_NAME;
 import static org.modelingvalue.gradle.mvgplugin.Info.NOW_STAMP;
+import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_PLUGINS_MPS;
 import static org.modelingvalue.gradle.mvgplugin.Info.PROP_NAME_VERSION_MPS;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperties;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.selectMasterDevelopElse;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.internal.extensibility.DefaultConvention;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
@@ -36,12 +39,14 @@ public class MvgMpsExtension {
     private final static String MPS_DOWNLOAD_DIR_TEMPLATE = "MPS-%s";
 
     public static MvgMpsExtension make(Gradle gradle) {
-        return ((DefaultConvention) gradle.getRootProject().getExtensions()).create(MPS_TASK_NAME, MvgMpsExtension.class, gradle);
+        return gradle.getRootProject().getExtensions().create(MPS_TASK_NAME, MvgMpsExtension.class, gradle);
     }
 
     private final Gradle  gradle;
     private       boolean mpsVersionSet;
     private       String  mpsVersion;
+    private       boolean mpsPluginsSet;
+    private       String  mpsPlugins;
 
     public MvgMpsExtension(Gradle gradle) {
         this.gradle = gradle;
@@ -50,9 +55,17 @@ public class MvgMpsExtension {
     public synchronized String getVersion() {
         if (!mpsVersionSet) {
             mpsVersionSet = true;
-            mpsVersion = getGradleDotProperties().getProp(PROP_NAME_VERSION_MPS, "0.0.1");
+            mpsVersion = getGradleDotProperties().getProp(PROP_NAME_VERSION_MPS);
         }
         return mpsVersion;
+    }
+
+    public synchronized String getPlugins() {
+        if (!mpsPluginsSet) {
+            mpsPluginsSet = true;
+            mpsPlugins = getGradleDotProperties().getProp(PROP_NAME_PLUGINS_MPS);
+        }
+        return mpsPlugins;
     }
 
     public String getVersionExtra() {
@@ -63,16 +76,25 @@ public class MvgMpsExtension {
         return selectMasterDevelopElse("", NOW_STAMP, NOW_STAMP);
     }
 
-    public File getMpsDownloadDir() {
-        return new File(gradle.getRootProject().getBuildDir(), String.format(MPS_DOWNLOAD_DIR_TEMPLATE, getVersion()));
-    }
-
     public String getMpsDownloadUrl() {
         return String.format(MPS_DOWNLOAD_URL_TEMPLATE, getMajorMpsVersion(), getVersion());
     }
 
+    public Path getMpsDownloadDir() {
+        Path downloadDir = Path.of(System.getProperty("java.io.tmpdir")).resolve("gradle-mvg-plugin-MPS-downloads-cache");
+        try {
+            return Files.createDirectories(downloadDir);
+        } catch (IOException e) {
+            throw new Error("can not create tmp dir at " + downloadDir, e);
+        }
+    }
+
     public File getMpsInstallDir() {
-        return new File(getMpsDownloadDir(), String.format(MPS_ROOT_DIR_TEMPLATE, getMajorMpsVersion()));
+        return new File(new File(
+                gradle.getRootProject().getBuildDir(),
+                String.format(MPS_DOWNLOAD_DIR_TEMPLATE, getVersion())),
+                String.format(MPS_ROOT_DIR_TEMPLATE, getMajorMpsVersion()
+                ));
     }
 
     @NotNull

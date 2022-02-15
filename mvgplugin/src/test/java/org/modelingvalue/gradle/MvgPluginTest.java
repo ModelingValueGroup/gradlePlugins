@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -40,11 +40,11 @@ import static org.modelingvalue.gradle.mvgplugin.Util.numOccurences;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +58,7 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.util.FileUtils;
 import org.gradle.testkit.runner.GradleRunner;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.mvgplugin.DotProperties;
 import org.modelingvalue.gradle.mvgplugin.GitManager;
@@ -132,10 +133,8 @@ public class MvgPluginTest {
         env.put(PROP_NAME_GITHUB_WORKFLOW, System.getProperty(PROP_NAME_GITHUB_WORKFLOW));
 
         // Run the build
-        StringWriter outWriter = new StringWriter();
-        StringWriter errWriter = new StringWriter();
-        String       out;
-        String       err;
+        StringWriter outWriter = new SavingAndForwardingWriter(System.out);
+        StringWriter errWriter = new SavingAndForwardingWriter(System.err);
         try {
             GradleRunner gradleRunner = GradleRunner.create();
             if (I_NEED_TO_DEBUG_THIS_TEST) {
@@ -151,30 +150,19 @@ public class MvgPluginTest {
                     .withArguments("--scan", "--info", "--stacktrace", "check", "publish")
                     .build();
         } finally {
-            out = outWriter.toString();
-            err = errWriter.toString();
-
-            System.out.println("/================================= out ====================================");
-            if (0 < out.length()) {
-                Arrays.stream(out.replace('\r', '\n').split("\n")).forEach(l -> System.out.println("| " + l));
-            }
-            System.out.println("+================================= err ====================================");
-            if (0 < err.length()) {
-                Arrays.stream(err.replace('\r', '\n').split("\n")).forEach(l -> System.out.println("| " + l));
-            }
-            System.out.println("\\==========================================================================");
-
             GitUtil.untag(testWorkspaceDir, "v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4");
 
+            String out = outWriter.toString();
+            String err = errWriter.toString();
 
-            DotProperties instance = new DotProperties(testWorkspaceDir.resolve(GRADLE_PROPERTIES_FILE));
             int           m        = 0 < numOccurences("master=true", out) ? 1 : 0;
             int           d        = 1 - m;
+            DotProperties instance = new DotProperties(testWorkspaceDir.resolve(GRADLE_PROPERTIES_FILE));
 
             // Verify the result
             assertAll(
                     () -> assertEquals("0.0.4", instance.getProp(Info.PROP_NAME_VERSION)),
-                    () -> assertEquals("2020.3", instance.getProp(Info.PROP_NAME_VERSION_MPS)),
+                    () -> assertEquals("2020.2", instance.getProp(Info.PROP_NAME_VERSION_MPS)),
                     //
                     () -> assertEquals(7, numOccurences("+ mvg: header     regenerated : ", out)),
                     () -> assertEquals(2, numOccurences("+ mvg: eols       regenerated : ", out)),
@@ -189,7 +177,7 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg: agreeing to buildScan", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding tasks for javadoc & source jars", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (11&11) to 11", out)),
-                    () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 202.6397.948 of MPS 2020.2 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ mvg-mps: dependency replaced: ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
                     () -> assertEquals(d, numOccurences("+ mvg: not tagging this version with 'v0.0.4' because this is not the master branch", out)),
@@ -224,6 +212,7 @@ public class MvgPluginTest {
                     () -> assertEquals(1, Files.readString(testWorkspaceDir.resolve(pruupFile)).replaceAll("[^\n]", "").length()),
                     () -> assertEquals(2, Files.readAllLines(testWorkspaceDir.resolve(pruupFile)).size())
             );
+            assertEquals("", err);
         }
     }
 
@@ -277,6 +266,66 @@ public class MvgPluginTest {
                     Files.writeString(inTmp, content);
                 }
             }
+        }
+    }
+
+    private static class SavingAndForwardingWriter extends StringWriter {
+        private final PrintStream stream;
+
+        public SavingAndForwardingWriter(PrintStream stream) {
+            this.stream = stream;
+        }
+
+        @Override
+        public void write(@NotNull char[] cbuf, int off, int len) {
+            super.write(cbuf, off, len);
+            stream.print(new String(cbuf, off, len));
+        }
+
+        @Override
+        public void flush() {
+            super.flush();
+        }
+
+        @Override
+        public void close() throws IOException {
+            stream.flush();
+            super.close();
+        }
+
+        @Override
+        public void write(int c) {
+            throw new Error("unexpected call in SavingAndForwardingWriter: write(int c)");
+        }
+
+        @Override
+        public void write(@NotNull String str) {
+            throw new Error("unexpected call in SavingAndForwardingWriter: write(@NotNull String str)");
+        }
+
+        @Override
+        public void write(@NotNull String str, int off, int len) {
+            throw new Error("unexpected call in SavingAndForwardingWriter: write(@NotNull String str, int off, int len)");
+        }
+
+        @Override
+        public StringWriter append(CharSequence csq) {
+            throw new Error("unexpected call in SavingAndForwardingWriter: append(CharSequence csq)");
+        }
+
+        @Override
+        public StringWriter append(CharSequence csq, int start, int end) {
+            throw new Error("unexpected call in SavingAndForwardingWriter: append(CharSequence csq, int start, int end)");
+        }
+
+        @Override
+        public StringWriter append(char c) {
+            throw new Error("unexpected call in SavingAndForwardingWriter: append(char c)");
+        }
+
+        @Override
+        public void write(@NotNull char[] cbuf) throws IOException {
+            throw new Error("unexpected call in SavingAndForwardingWriter: write(@NotNull char[] cbuf)");
         }
     }
 }

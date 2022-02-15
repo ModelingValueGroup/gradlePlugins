@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -22,7 +22,7 @@ val mvgplugin_displayname: String by project
 plugins {
     `java-gradle-plugin`
     `kotlin-dsl`
-    id("com.gradle.plugin-publish") version "0.16.0"
+    id("com.gradle.plugin-publish") version "0.20.0"
 }
 
 repositories {
@@ -36,14 +36,18 @@ tasks.test {
 }
 
 dependencies {
-    implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.0")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0")
-    implementation("com.gradle:gradle-enterprise-gradle-plugin:3.7.1")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.1")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.1")
+    implementation("com.gradle:gradle-enterprise-gradle-plugin:3.8")
+    implementation("com.thoughtworks.xstream:xstream:1.4.18")
     implementation("org.apache.httpcomponents:httpmime:4.5.13")
+    implementation("org.codehaus.jettison:jettison:1.4.1")
+    implementation("org.eclipse.jgit:org.eclipse.jgit:6.0.0.202111291000-r")
+    implementation("org.jetbrains.intellij:plugin-repository-rest-client:2.0.20")
+    implementation("org.modelingvalue:mvg-json:1.6.3-BRANCHED")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2") // when you change this version: also bump it in Info.java!
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
 
 gradlePlugin {

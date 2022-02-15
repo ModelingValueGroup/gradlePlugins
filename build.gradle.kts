@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -16,7 +16,7 @@
 defaultTasks("mvgCorrector", "test", "publishPlugins", "mvgTagger")
 
 plugins {
-    id("org.modelingvalue.gradle.mvgplugin") version ("1.0.7")
+    id("org.modelingvalue.gradle.mvgplugin") version ("1.0.8")
 }
 mvgcorrector {
     addHeaderFileExclude("mvgplugin/src/test/resources/.*")
@@ -33,12 +33,24 @@ tasks.register("task-tree") {
                 System.err.println("       = " + it)
 
                 it.dependsOn.forEach {
-                    if (it is TaskDependency) {
+                    if (it is Task) {
+                        System.err.println("                                T- " + it)
+                    } else if (it is Buildable) {
+                        System.err.println("                                B- " + it)
+                    } else if (it is TaskDependency) {
                         it.getDependencies(tasks.named("task-tree").get()).forEach {
-                            System.err.println("                                - " + it)
+                            System.err.println("                                D- " + it)
                         }
+                    } else if (it is TaskProvider<*>) {
+                        System.err.println("                                P- " + it.get())
+                    } else if (it is Named) {
+                        System.err.println("                                N- " + it.name + "  [" + it.javaClass + "]")
+                    } else if (it is String) {
+                        System.err.println("                                S- " + it)
+                    } else if (it is Callable<*>) {
+                        System.err.println("                                C- " + it.call())
                     } else {
-                        System.err.println("                                - " + it)
+                        System.err.println("                                ?- " + it + " (" + it.javaClass)
                     }
                 }
             }

@@ -13,8 +13,30 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-include("mvgplugin")
+package org.modelingvalue.gradle;
 
-plugins {
-    id("com.gradle.enterprise") version ("3.5")
+import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginBean;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginId;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginRepository;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginXmlId;
+
+public class JetBrainsPluginRepoTest {
+    @Test
+    void listDclarePluginVersions() {
+        JetBrainsPluginRepoRestApi j = new JetBrainsPluginRepoRestApi();
+        PluginBean                 p = j.getPluginByXmlId(new PluginXmlId("DclareForMPS"));
+        PluginId                   id = p.id;
+
+        PluginRepository           rep1 = j.listPlugins(null, null, id);
+        rep1.categories.stream()
+                .flatMap(c->c.plugins.stream())
+                .forEach(pp-> System.err.printf("- %-20s  %-20s ... %s\n",pp.version,pp.ideaVersion.sinceBuild,pp.ideaVersion.untilBuild));
+
+        PluginRepository           rep2 = j.listPlugins(null, "eap", id);
+        rep2.categories.stream()
+                .flatMap(c->c.plugins.stream())
+                .forEach(pp-> System.err.printf("- %-20s  %-20s ... %s\n",pp.version,pp.ideaVersion.sinceBuild,pp.ideaVersion.untilBuild));
+    }
 }
