@@ -93,44 +93,46 @@ public class MpsPluginDownloader {
             return null;
         }
         if (detail.equals("BRANCHED")) {
-            updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, channel);
-            if (updateId != null) {
-                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={})", pluginXmlId, updateId, channel);
-                return updateId;
-            }
-            if (channel == null || channel.isBlank() || channel.equals("stable")) {
-                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={})", pluginXmlId, channel);
-                return null;
-            }
-            if (channel.equals("eap")) {
-                updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, "stable");
+            boolean isStable = channel == null || channel.isBlank() || "stable".equals(channel);
+            boolean isEap    = "eap".equals(channel);
+
+            if (!isStable && !isEap) {
+                updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, channel);
                 if (updateId != null) {
-                    LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel=stable)", pluginXmlId, updateId);
+                    LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={})", pluginXmlId, updateId, channel);
                     return updateId;
                 }
-                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel=stable)", pluginXmlId);
-                return null;
+                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={})", pluginXmlId, channel);
             }
-            updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, "eap");
+            if (!isStable) {
+                updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, "eap");
+                if (updateId != null) {
+                    LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={}})", pluginXmlId, updateId, "eap");
+                    return updateId;
+                }
+                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={})", pluginXmlId, "eap");
+            }
+            updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, "stable");
             if (updateId != null) {
-                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel=eap)", pluginXmlId, updateId);
+                LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' found (updateId={} channel={}})", pluginXmlId, updateId, "stable");
                 return updateId;
             }
-            LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel=eap)", pluginXmlId);
+            LOGGER.info("+ mvg-mps: BRANCHED plugin '{}' not found (channel={}})", pluginXmlId, "stable");
             return updateId;
+        } else {
+            updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, detail);
+            if (updateId != null) {
+                LOGGER.info("+ mvg-mps: plugin '{}' found (updateId={} channel={}) (detail as channel)", pluginXmlId, updateId, detail);
+                return updateId;
+            }
+            updateId = getUpdateIdFromXmlIdAndVersion(pluginId, detail);
+            if (updateId != null) {
+                LOGGER.info("+ mvg-mps: plugin '{}' found (updateId={} version={}) (detail as version)", pluginXmlId, updateId, detail);
+                return updateId;
+            }
+            LOGGER.info("+ mvg-mps: plugin '{}' not found (version={} or channel={})", pluginXmlId, detail, detail);
+            return null;
         }
-        updateId = getUpdateFromXmlIdAndChannel(mpsBuildNumber, pluginId, pluginXmlId, detail);
-        if (updateId != null) {
-            LOGGER.info("+ mvg-mps: plugin '{}' found (updateId={} channel={}) (detail as channel)", pluginXmlId, updateId, detail);
-            return updateId;
-        }
-        updateId = getUpdateIdFromXmlIdAndVersion(pluginId, detail);
-        if (updateId != null) {
-            LOGGER.info("+ mvg-mps: plugin '{}' found (updateId={} version={}) (detail as version)", pluginXmlId, updateId, detail);
-            return updateId;
-        }
-        LOGGER.info("+ mvg-mps: plugin '{}' not found (version={} or channel={})", pluginXmlId, detail, detail);
-        return null;
     }
 
     private Stream<Path> actualDownload(Path mpsInstallDir, PluginXmlId pluginXmlId, PluginId pluginId, UpdateId updateId) {

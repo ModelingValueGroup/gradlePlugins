@@ -13,7 +13,7 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-package org.modelingvalue.gradle.mvgplugin;
+package org.modelingvalue.gradle;
 
 import static java.lang.String.join;
 import static org.gradle.internal.impldep.org.junit.Assert.assertEquals;
@@ -28,10 +28,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi;
+import org.modelingvalue.gradle.mvgplugin.MpsPluginDownloader;
+import org.modelingvalue.gradle.mvgplugin.Util;
 
 class MpsPluginDownloaderTest {
     static {
-        System.setProperty("ALL_TO_STDERR", "true"); // so we get logging from Info.LOGGER in stderr
+        //System.setProperty("ALL_TO_STDERR", "true"); // so we get logging from Info.LOGGER in stderr
     }
 
     private static final String PLUGIN_MPS = join(PLUGIN_MAIN_SEP, List.of(
@@ -73,9 +76,10 @@ class MpsPluginDownloaderTest {
         Util.removeTmpDir(TMP_DIR);
 
         MpsPluginDownloader mpsPluginDownloader = new MpsPluginDownloader();
-        for (String mpsBuildNumber : List.of("MPS-212.5284.1281", "MPS-193.1223")) {
+        for (String mpsBuildNumber : List.of("MPS-202.6397", "MPS-193.1223")) {
             for (String channel : List.of("", "eap", "xyzzy")) {
                 Path tmp = TMP_DIR.resolve(mpsBuildNumber).resolve(channel);
+                System.err.println();
                 //noinspection ResultOfMethodCallIgnored
                 mpsPluginDownloader.downloadAllPlugins(tmp, PLUGIN_MPS, mpsBuildNumber, channel).collect(Collectors.toList());
             }
@@ -88,7 +92,7 @@ class MpsPluginDownloaderTest {
         long distictSizes = zips.stream().mapToLong(this::filesSize).distinct().count();
 
         // actual downloads is moving target, so only check some numbers:
-        assertEquals(22, zips.size());
+        assertEquals(24, zips.size());
         assertEquals(4, distictNames);
         assertEquals(7, distictSizes);
     }
