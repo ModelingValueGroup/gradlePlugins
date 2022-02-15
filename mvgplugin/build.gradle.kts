@@ -38,8 +38,8 @@ tasks.test {
 dependencies {
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.1")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.1")
-    implementation("com.gradle:gradle-enterprise-gradle-plugin:3.8")
-    implementation("com.thoughtworks.xstream:xstream:1.4.18")
+    implementation("com.gradle:gradle-enterprise-gradle-plugin:3.8.1")
+    implementation("com.thoughtworks.xstream:xstream:1.4.19")
     implementation("org.apache.httpcomponents:httpmime:4.5.13")
     implementation("org.codehaus.jettison:jettison:1.4.1")
     implementation("org.eclipse.jgit:org.eclipse.jgit:6.0.0.202111291000-r")

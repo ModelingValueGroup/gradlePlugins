@@ -188,7 +188,7 @@ public class MvgPluginTest {
                     () -> assertEquals(4 * d, numOccurences(TEST_MARKER_TRIGGERING, out)),
                     () -> assertEquals(d, numOccurences(TEST_MARKER_TRIGGER, out)),
                     //
-                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.4\n")),
+                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).replaceAll(" ","").contains("\nversion=0.0.4\n")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright")),
