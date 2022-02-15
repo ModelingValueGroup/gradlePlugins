@@ -72,6 +72,7 @@ public class MvgBranchBasedBuilder {
         adjustAllPublications();
 
         gradle.addListener(new BuildAdapter() {
+            @SuppressWarnings("deprecation")
             @Override
             public void buildFinished(BuildResult result) {
                 if (result.getFailure() == null) {

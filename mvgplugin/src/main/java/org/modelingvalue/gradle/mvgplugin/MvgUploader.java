@@ -20,7 +20,6 @@ import static org.modelingvalue.gradle.mvgplugin.Info.JETBRAINS_TOKEN;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 import static org.modelingvalue.gradle.mvgplugin.Info.MODELING_VALUE_GROUP;
 import static org.modelingvalue.gradle.mvgplugin.Info.UPLOADER_TASK_NAME;
-import static org.modelingvalue.gradle.mvgplugin.InfoGradle.selectMasterDevelopElse;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -68,13 +67,9 @@ public class MvgUploader {
 
         public Extension(Gradle gradle) {
             this.gradle = gradle;
-            channel = getDefaultChannel();
+            channel = InfoGradle.getChannel();
             hubToken = JETBRAINS_TOKEN;
-            LOGGER.info("+ mvg: default channel selected by uploader: {}", channel);
-        }
-
-        public String getDefaultChannel() {
-            return selectMasterDevelopElse("stable", "EAP", BranchParameterNames.get("channel", "DEV"));
+            LOGGER.info("+ mvg: channel selected by uploader: {}", channel);
         }
 
         public Path getZipFile() {

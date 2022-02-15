@@ -30,7 +30,7 @@ import java.util.List;
 import org.gradle.api.GradleException;
 import org.junit.jupiter.api.Test;
 import org.modelingvalue.gradle.mvgplugin.BashRunner;
-import org.modelingvalue.gradle.mvgplugin.BranchParameterNames;
+import org.modelingvalue.gradle.mvgplugin.BranchWithProperties;
 import org.modelingvalue.gradle.mvgplugin.DotProperties;
 import org.modelingvalue.gradle.mvgplugin.Util;
 
@@ -55,35 +55,35 @@ public class UtilTest {
 
     @Test
     public void branchParametersTest() {
-        BranchParameterNames.init("no_parameters");
-        assertEquals("default", BranchParameterNames.get("xyzzy", "default"));
-        assertEquals("default", BranchParameterNames.get("arg", "default"));
-        assertEquals("default", BranchParameterNames.get("zurch", "default"));
+        BranchWithProperties.init("no_parameters");
+        assertEquals("default", BranchWithProperties.get("xyzzy", "default"));
+        assertEquals("default", BranchWithProperties.get("arg", "default"));
+        assertEquals("default", BranchWithProperties.get("zurch", "default"));
 
-        BranchParameterNames.init("no_parameters@");
-        assertEquals("default", BranchParameterNames.get("xyzzy", "default"));
-        assertEquals("default", BranchParameterNames.get("arg", "default"));
-        assertEquals("default", BranchParameterNames.get("zurch", "default"));
+        BranchWithProperties.init("no_parameters@");
+        assertEquals("default", BranchWithProperties.get("xyzzy", "default"));
+        assertEquals("default", BranchWithProperties.get("arg", "default"));
+        assertEquals("default", BranchWithProperties.get("zurch", "default"));
 
-        BranchParameterNames.init("zurg@xyzzy=plugh");
-        assertEquals("plugh", BranchParameterNames.get("xyzzy", "default"));
-        assertEquals("default", BranchParameterNames.get("arg", "default"));
-        assertEquals("default", BranchParameterNames.get("zurch", "default"));
+        BranchWithProperties.init("zurg@xyzzy=plugh");
+        assertEquals("plugh", BranchWithProperties.get("xyzzy", "default"));
+        assertEquals("default", BranchWithProperties.get("arg", "default"));
+        assertEquals("default", BranchWithProperties.get("zurch", "default"));
 
-        BranchParameterNames.init("zurg@xyzzy=plugh;arg=42");
-        assertEquals("plugh", BranchParameterNames.get("xyzzy", "default"));
-        assertEquals("42", BranchParameterNames.get("arg", "default"));
-        assertEquals("default", BranchParameterNames.get("zurch", "default"));
+        BranchWithProperties.init("zurg@xyzzy=plugh;arg=42");
+        assertEquals("plugh", BranchWithProperties.get("xyzzy", "default"));
+        assertEquals("42", BranchWithProperties.get("arg", "default"));
+        assertEquals("default", BranchWithProperties.get("zurch", "default"));
 
-        BranchParameterNames.init("zurg@xyzzy=plugh;;arg=42;;;");
-        assertEquals("plugh", BranchParameterNames.get("xyzzy", "default"));
-        assertEquals("42", BranchParameterNames.get("arg", "default"));
-        assertEquals("default", BranchParameterNames.get("zurch", "default"));
+        BranchWithProperties.init("zurg@xyzzy=plugh;;arg=42;;;");
+        assertEquals("plugh", BranchWithProperties.get("xyzzy", "default"));
+        assertEquals("42", BranchWithProperties.get("arg", "default"));
+        assertEquals("default", BranchWithProperties.get("zurch", "default"));
 
-        BranchParameterNames.init("zurg@xyzzy=plugh;;arg=42;;zurch;");
-        assertEquals("plugh", BranchParameterNames.get("xyzzy", "default"));
-        assertEquals("42", BranchParameterNames.get("arg", "default"));
-        assertEquals("", BranchParameterNames.get("zurch", "default"));
+        BranchWithProperties.init("zurg@xyzzy=plugh;;arg=42;;zurch;");
+        assertEquals("plugh", BranchWithProperties.get("xyzzy", "default"));
+        assertEquals("42", BranchWithProperties.get("arg", "default"));
+        assertEquals("", BranchWithProperties.get("zurch", "default"));
     }
 
     @Test

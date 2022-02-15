@@ -24,8 +24,9 @@ import org.slf4j.helpers.MessageFormatter;
 
 @SuppressWarnings({"RedundantCast", "unused"})
 public class TimedLogger implements Logger {
-    private final Logger delegate;
-    private final long   t0 = System.currentTimeMillis();
+    private final static boolean ALL_TO_STDERR = Boolean.getBoolean("ALL_TO_STDERR");
+    private final        Logger  delegate;
+    private final        long    t0            = System.currentTimeMillis();
 
     public TimedLogger(Logger delegate) {
         this.delegate = delegate;
@@ -48,64 +49,68 @@ public class TimedLogger implements Logger {
     }
 
     protected void log(LogLevel logLevel, Throwable throwable, String message) {
-        this.delegate.log(logLevel, String.format("%,12d ", System.currentTimeMillis() - t0) + message, throwable);
+        String timedMessage = String.format("%,12d ", System.currentTimeMillis() - t0) + message;
+        this.delegate.log(logLevel, timedMessage, throwable);
+        if (ALL_TO_STDERR) {
+            System.err.println(timedMessage);
+        }
     }
 
     ////////////////////////////////////////////////////////
-    public boolean isLifecycleEnabled() {
-        return this.delegate.isLifecycleEnabled();
-    }
-
-    public boolean isQuietEnabled() {
-        return this.delegate.isQuietEnabled();
-    }
-
-    public boolean isEnabled(LogLevel level) {
-        return this.delegate.isEnabled(level);
-    }
-
     public String getName() {
         return this.delegate.getName();
     }
 
+    public boolean isLifecycleEnabled() {
+        return ALL_TO_STDERR || this.delegate.isLifecycleEnabled();
+    }
+
+    public boolean isQuietEnabled() {
+        return ALL_TO_STDERR || this.delegate.isQuietEnabled();
+    }
+
+    public boolean isEnabled(LogLevel level) {
+        return ALL_TO_STDERR || this.delegate.isEnabled(level);
+    }
+
     public boolean isTraceEnabled() {
-        return this.delegate.isTraceEnabled();
+        return ALL_TO_STDERR || this.delegate.isTraceEnabled();
     }
 
     public boolean isTraceEnabled(Marker marker) {
-        return this.delegate.isTraceEnabled(marker);
+        return ALL_TO_STDERR || this.delegate.isTraceEnabled(marker);
     }
 
     public boolean isDebugEnabled() {
-        return this.delegate.isDebugEnabled();
+        return ALL_TO_STDERR || this.delegate.isDebugEnabled();
     }
 
     public boolean isDebugEnabled(Marker marker) {
-        return this.delegate.isDebugEnabled(marker);
+        return ALL_TO_STDERR || this.delegate.isDebugEnabled(marker);
     }
 
     public boolean isInfoEnabled() {
-        return this.delegate.isInfoEnabled();
+        return ALL_TO_STDERR || this.delegate.isInfoEnabled();
     }
 
     public boolean isInfoEnabled(Marker marker) {
-        return this.delegate.isInfoEnabled(marker);
+        return ALL_TO_STDERR || this.delegate.isInfoEnabled(marker);
     }
 
     public boolean isWarnEnabled() {
-        return this.delegate.isWarnEnabled();
+        return ALL_TO_STDERR || this.delegate.isWarnEnabled();
     }
 
     public boolean isWarnEnabled(Marker marker) {
-        return this.delegate.isWarnEnabled(marker);
+        return ALL_TO_STDERR || this.delegate.isWarnEnabled(marker);
     }
 
     public boolean isErrorEnabled() {
-        return this.delegate.isErrorEnabled();
+        return ALL_TO_STDERR || this.delegate.isErrorEnabled();
     }
 
     public boolean isErrorEnabled(Marker marker) {
-        return this.delegate.isErrorEnabled(marker);
+        return ALL_TO_STDERR || this.delegate.isErrorEnabled(marker);
     }
 
     public void trace(String msg) {

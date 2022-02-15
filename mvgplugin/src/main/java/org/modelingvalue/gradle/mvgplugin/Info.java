@@ -42,6 +42,7 @@ public interface Info {
     String       PROP_NAME_GROUP              = "group";
     String       PROP_NAME_VERSION_JAVA       = "version_java";
     String       PROP_NAME_VERSION_MPS        = "version_mps";
+    String       PROP_NAME_PLUGINS_MPS        = "plugins_mps";
     String       PROP_NAME_ALLREP_TOKEN       = "ALLREP_TOKEN";
     String       PROP_NAME_JETBRAINS_TOKEN    = "JETBRAINS_PUBLISH_TOKEN";
     String       PROP_NAME_GITHUB_WORKFLOW    = "GITHUB_WORKFLOW";
@@ -84,6 +85,5 @@ public interface Info {
     String       MVG_DEPENDENCIES_REPO        = MVG_REPO_BASE_URL + MVG_DEPENDENCIES_REPO_NAME + ".git";
     String       HOSTNAME                     = Util.getHostname();
     boolean      IS_WINDOWS                   = Util.isWindows();
-
 }
 

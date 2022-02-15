@@ -13,49 +13,30 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-package org.modelingvalue.gradle.mvgplugin;
+package org.modelingvalue.gradle;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginBean;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginId;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginRepository;
+import org.modelingvalue.gradle.mvgplugin.JetBrainsPluginRepoRestApi.PluginXmlId;
 
-import org.gradle.api.GradleException;
+public class JetBrainsPluginRepoTest {
+    @Test
+    void listDclarePluginVersions() {
+        JetBrainsPluginRepoRestApi j = new JetBrainsPluginRepoRestApi();
+        PluginBean                 p = j.getPluginByXmlId(new PluginXmlId("DclareForMPS"));
+        PluginId                   id = p.id;
 
-public class BranchParameterNames {
-    //
-    // inner DSL for branch name:
-    //      some_text@a=aaa;b=bbb;c=ccc
-    //
-    private static BranchParameterNames instance;
+        PluginRepository           rep1 = j.listPlugins(null, null, id);
+        rep1.categories.stream()
+                .flatMap(c->c.plugins.stream())
+                .forEach(pp-> System.err.printf("- %-20s  %-20s ... %s\n",pp.version,pp.ideaVersion.sinceBuild,pp.ideaVersion.untilBuild));
 
-    public static void init() {
-        init(InfoGradle.getBranch());
-    }
-
-    public static void init(String branchName) { // separated out for testing purposes
-        instance = new BranchParameterNames(branchName);
-    }
-
-    public static String get(String name, String def) {
-        if (instance == null) {
-            throw new GradleException("BranchParameterNames not yet inited while trying to get '" + name + "'");
-        }
-        return instance.get_(name, def);
-    }
-
-    private final Map<String, String> mapping = new HashMap<>();
-
-    private BranchParameterNames(String branch) {
-        if (branch.contains("@")) {
-            for (String kv : branch.replaceAll("[^@]*@", "").split(";")) {
-                String k = kv.replaceFirst("=.*", "");
-                String v = kv.replaceFirst("[^=]*=?", "");
-                mapping.putIfAbsent(k, v);
-            }
-        }
-    }
-
-    private String get_(String name, String def) {
-        String s = mapping.get(name);
-        return s == null ? def : s;
+        PluginRepository           rep2 = j.listPlugins(null, "eap", id);
+        rep2.categories.stream()
+                .flatMap(c->c.plugins.stream())
+                .forEach(pp-> System.err.printf("- %-20s  %-20s ... %s\n",pp.version,pp.ideaVersion.sinceBuild,pp.ideaVersion.untilBuild));
     }
 }

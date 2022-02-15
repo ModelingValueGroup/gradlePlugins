@@ -13,9 +13,49 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import org.gradle.kotlin.dsl.DependencyHandlerScope
-import org.modelingvalue.gradle.mvgplugin.MvgPlugin
+package org.modelingvalue.gradle.mvgplugin;
 
-fun DependencyHandlerScope.mpsJar(dep: String): Any {
-    return MvgPlugin.singleton.makeMpsDependency(dep)
+import java.util.HashMap;
+import java.util.Map;
+
+import org.gradle.api.GradleException;
+
+public class BranchWithProperties {
+    //
+    // inner DSL for branch name:
+    //      some_text@a=aaa;b=bbb;c=ccc
+    //
+    private static BranchWithProperties instance;
+
+    public static void init() {
+        init(InfoGradle.getBranch());
+    }
+
+    public static void init(String branchName) { // separated out for testing purposes
+        instance = new BranchWithProperties(branchName);
+    }
+
+    public static String get(String name, String def) {
+        if (instance == null) {
+            throw new GradleException("BranchWithProperties not yet inited while trying to get '" + name + "'");
+        }
+        return instance.get_(name, def);
+    }
+
+    private final Map<String, String> mapping = new HashMap<>();
+
+    private BranchWithProperties(String branch) {
+        if (branch.contains("@")) {
+            for (String kv : branch.replaceAll("[^@]*@", "").split(";")) {
+                String k = kv.replaceFirst("=.*", "");
+                String v = kv.replaceFirst("[^=]*=?", "");
+                mapping.putIfAbsent(k, v);
+            }
+        }
+    }
+
+    private String get_(String name, String def) {
+        String s = mapping.get(name);
+        return s == null ? def : s;
+    }
 }
