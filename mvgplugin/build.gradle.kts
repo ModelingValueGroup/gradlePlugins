@@ -42,7 +42,7 @@ dependencies {
     implementation("com.thoughtworks.xstream:xstream:1.4.19")
     implementation("org.apache.httpcomponents:httpmime:4.5.13")
     implementation("org.codehaus.jettison:jettison:1.4.1")
-    implementation("org.eclipse.jgit:org.eclipse.jgit:6.0.0.202111291000-r")
+    implementation("org.eclipse.jgit:org.eclipse.jgit:6.1.0.202203080745-r")
     implementation("org.jetbrains.intellij:plugin-repository-rest-client:2.0.20")
     implementation("org.modelingvalue:mvg-json:1.6.3-BRANCHED")
 
