@@ -19,6 +19,9 @@ dependencies {
     addBashFileExclude("unused")
     forceEolCorrection = true
     forceHeaderCorrection = true
+    forceDependabotCorrection = true
+    forceBashCorrection = true
+    forceVersionCorrection = true
 }
 `~myMvgUploaderExtension~` {
     pluginId = "DRY"

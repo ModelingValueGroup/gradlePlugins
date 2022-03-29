@@ -47,6 +47,9 @@ public class MvgCorrectorExtension {
     private final Set<String>         bashFileExcludes;
     public        boolean             forceEolCorrection;
     public        boolean             forceHeaderCorrection;
+    public        boolean             forceDependabotCorrection;
+    public        boolean             forceBashCorrection;
+    public        boolean             forceVersionCorrection;
 
     public MvgCorrectorExtension(Project project) {
         this.project = project;

@@ -97,11 +97,21 @@ class MvgCorrector {
         try {
             Set<Path> changes = new HashSet<>();
 
-            changes.addAll(new DependabotCorrector(ext).generate().getChangedFiles());
-            changes.addAll(new BashCorrector(ext).generate().getChangedFiles());
-            changes.addAll(new EolCorrector(ext).generate().getChangedFiles());
-            changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
-            changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
+            if (doCorrector(ext.forceDependabotCorrection, "Dependabot file")) {
+                changes.addAll(new DependabotCorrector(ext).generate().getChangedFiles());
+            }
+            if (doCorrector(ext.forceBashCorrection, "with bash scripts")) {
+                changes.addAll(new BashCorrector(ext).generate().getChangedFiles());
+            }
+            if (doCorrector(ext.forceEolCorrection, "EOLs")) {
+                changes.addAll(new EolCorrector(ext).generate().getChangedFiles());
+            }
+            if (doCorrector(ext.forceHeaderCorrection, "headers")) {
+                changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
+            }
+            if (doCorrector(ext.forceVersionCorrection, "version")) {
+                changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
+            }
 
             LOGGER.info("+ mvg: changed {} files", changes.size());
 
@@ -111,5 +121,13 @@ class MvgCorrector {
         } catch (IOException e) {
             throw new Error("could not correct files", e);
         }
+    }
+
+    private boolean doCorrector(boolean force, String name) {
+        boolean b = Info.CI || force;
+        if (!b) {
+            LOGGER.info("+ mvg: NOT correcting {} (CI={}, force={})", name, Info.CI, force);
+        }
+        return b;
     }
 }
