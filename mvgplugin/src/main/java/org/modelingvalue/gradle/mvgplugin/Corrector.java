@@ -16,6 +16,7 @@
 package org.modelingvalue.gradle.mvgplugin;
 
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
+import static org.modelingvalue.gradle.mvgplugin.Info.TESTING;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -57,6 +58,15 @@ public abstract class Corrector {
                     changedFiles.add(file);
                 } else {
                     LOGGER.info("+ mvg: {} untouched   : {}", nameField, file);
+                }
+            }
+            if (TESTING) {
+                List<String> reread = Files.readAllLines(file);
+                if (!reread.equals(lines)) {
+                    System.err.println("+ mvg: reread of corrected file yielded different file (" + file.toAbsolutePath() + ")");
+                    lines.forEach(l -> System.err.println("+ mvg: lines  | " + l));
+                    reread.forEach(l -> System.err.println("+ mvg: reread | " + l));
+                    throw new Error("the reread of " + file.toAbsolutePath() + " in " + name + " did not yield the correct contents");
                 }
             }
         } catch (IOException e) {
