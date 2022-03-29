@@ -7,7 +7,7 @@ plugins {
     `maven-publish`
 }
 dependencies {
-    implementation("demo-lib:lib:3.1.14-BRANCHED")
+    implementation("demo-lib:lib:3.1.15-BRANCHED")
     implementation("org.modelingvalue:sync-proxy:2.0.2-BRANCHED")
 
     implementation(mpsJar("mps-core"))
@@ -18,6 +18,7 @@ dependencies {
     addTextFileExtension("pruuperties")
     addBashFileExclude("unused")
     forceEolCorrection = true
+    forceHeaderCorrection = true
 }
 `~myMvgUploaderExtension~` {
     pluginId = "DRY"

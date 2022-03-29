@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -39,12 +39,12 @@ public class EolCorrector extends TreeCorrector {
     public EolCorrector generate() throws IOException {
         // only do this for CI
         // This saves time on dev machines and the CI will push the corrected files anyway
-        if (!Info.CI && !ext.forceEolCorrection) {
-            LOGGER.info("+ mvg: NOT correcting EOLs (CI={}, force={})", Info.CI, ext.forceEolCorrection);
-        } else {
+        if (Info.CI || ext.forceEolCorrection) {
             allFiles()
                     .filter(this::isTextType)
                     .forEach(this::correctCRLF);
+        } else {
+            LOGGER.info("+ mvg: NOT correcting EOLs (CI={}, force={})", Info.CI, ext.forceEolCorrection);
         }
         return this;
     }

@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -18,6 +18,7 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -49,15 +50,17 @@ public abstract class Corrector {
                 }
                 if (!req.equals(was)) {
                     LOGGER.info("+ mvg: {} regenerated : {}", nameField, file);
-                    LOGGER.debug("++ mvg: ====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
-                    Files.write(file, req.getBytes());
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("++ mvg: ====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
+                    }
+                    Files.write(file, req.getBytes(StandardCharsets.UTF_8));
                     changedFiles.add(file);
                 } else {
                     LOGGER.info("+ mvg: {} untouched   : {}", nameField, file);
                 }
             }
         } catch (IOException e) {
-            throw new Error("could not overwrite file for " + name + " : " + file, e);
+            throw new Error("could not overwrite file for " + name + "(" + e.getMessage() + "): " + file, e);
         }
     }
 

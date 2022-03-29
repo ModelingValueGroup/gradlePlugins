@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2021 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
+// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
 //                                                                                                                     ~
 // Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
 // compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
@@ -29,12 +29,14 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class HeaderCorrector extends TreeCorrector {
+    private final MvgCorrectorExtension     ext;
     private final Map<String, String>       extensions;
     private final List<String>              headerLines;
     private final Map<String, List<String>> ext2header = new HashMap<>();
 
     public HeaderCorrector(MvgCorrectorExtension ext) {
         super("header", ext.getRoot(), ext.getHeaderFileExcludes());
+        this.ext = ext;
         extensions = ext.getHeaderFileExtensions();
         URL          headerUrl = ext.getHeaderUrl();
         List<String> raw       = Util.download(headerUrl);
@@ -55,8 +57,14 @@ public class HeaderCorrector extends TreeCorrector {
     }
 
     public HeaderCorrector generate() throws IOException {
-        if (headerLines != null) {
-            allFiles().forEach(this::replaceHeader);
+        // only do this for CI
+        // This saves time on dev machines and the CI will push the corrected files anyway
+        if (Info.CI || ext.forceHeaderCorrection) {
+            if (headerLines != null) {
+                allFiles().forEach(this::replaceHeader);
+            }
+        } else {
+            LOGGER.info("+ mvg: NOT correcting Headers (CI={}, force={})", Info.CI, ext.forceHeaderCorrection);
         }
         return this;
     }
