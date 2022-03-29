@@ -58,7 +58,7 @@ public class Util {
         try {
             return new URL(url);
         } catch (MalformedURLException e) {
-            throw new GradleException("not a valid url in header: " + url, e);
+            throw new GradleException("not a valid url in header (" + e.getMessage() + "): " + url, e);
         }
     }
 
@@ -66,7 +66,7 @@ public class Util {
         try {
             return Files.readAllLines(f);
         } catch (IOException e) {
-            throw new GradleException("could not read lines: " + f, e);
+            throw new GradleException("could not read lines (" + e.getMessage() + "): " + f, e);
         }
     }
 
@@ -74,7 +74,7 @@ public class Util {
         try {
             return Files.size(f);
         } catch (IOException e) {
-            throw new GradleException("file size failed", e);
+            throw new GradleException("file size failed (" + e.getMessage() + ")", e);
         }
     }
 

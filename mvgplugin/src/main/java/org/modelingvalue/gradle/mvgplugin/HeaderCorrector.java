@@ -29,12 +29,14 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class HeaderCorrector extends TreeCorrector {
+    private final MvgCorrectorExtension     ext;
     private final Map<String, String>       extensions;
     private final List<String>              headerLines;
     private final Map<String, List<String>> ext2header = new HashMap<>();
 
     public HeaderCorrector(MvgCorrectorExtension ext) {
         super("header", ext.getRoot(), ext.getHeaderFileExcludes());
+        this.ext = ext;
         extensions = ext.getHeaderFileExtensions();
         URL          headerUrl = ext.getHeaderUrl();
         List<String> raw       = Util.download(headerUrl);
@@ -55,8 +57,14 @@ public class HeaderCorrector extends TreeCorrector {
     }
 
     public HeaderCorrector generate() throws IOException {
-        if (headerLines != null) {
-            allFiles().forEach(this::replaceHeader);
+        // only do this for CI
+        // This saves time on dev machines and the CI will push the corrected files anyway
+        if (Info.CI || ext.forceHeaderCorrection) {
+            if (headerLines != null) {
+                allFiles().forEach(this::replaceHeader);
+            }
+        } else {
+            LOGGER.info("+ mvg: NOT correcting Headers (CI={}, force={})", Info.CI, ext.forceHeaderCorrection);
         }
         return this;
     }

@@ -18,6 +18,7 @@ package org.modelingvalue.gradle.mvgplugin;
 import static org.modelingvalue.gradle.mvgplugin.Info.LOGGER;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -49,15 +50,17 @@ public abstract class Corrector {
                 }
                 if (!req.equals(was)) {
                     LOGGER.info("+ mvg: {} regenerated : {}", nameField, file);
-                    LOGGER.debug("++ mvg: ====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
-                    Files.write(file, req.getBytes());
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("++ mvg: ====\n" + was.replaceAll("\r", "•") + "====\n" + req + "====\n");
+                    }
+                    Files.write(file, req.getBytes(StandardCharsets.UTF_8));
                     changedFiles.add(file);
                 } else {
                     LOGGER.info("+ mvg: {} untouched   : {}", nameField, file);
                 }
             }
         } catch (IOException e) {
-            throw new Error("could not overwrite file for " + name + " : " + file, e);
+            throw new Error("could not overwrite file for " + name + "(" + e.getMessage() + "): " + file, e);
         }
     }
 

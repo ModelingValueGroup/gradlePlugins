@@ -39,12 +39,12 @@ public class EolCorrector extends TreeCorrector {
     public EolCorrector generate() throws IOException {
         // only do this for CI
         // This saves time on dev machines and the CI will push the corrected files anyway
-        if (!Info.CI && !ext.forceEolCorrection) {
-            LOGGER.info("+ mvg: NOT correcting EOLs (CI={}, force={})", Info.CI, ext.forceEolCorrection);
-        } else {
+        if (Info.CI || ext.forceEolCorrection) {
             allFiles()
                     .filter(this::isTextType)
                     .forEach(this::correctCRLF);
+        } else {
+            LOGGER.info("+ mvg: NOT correcting EOLs (CI={}, force={})", Info.CI, ext.forceEolCorrection);
         }
         return this;
     }
