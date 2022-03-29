@@ -57,14 +57,8 @@ public class HeaderCorrector extends TreeCorrector {
     }
 
     public HeaderCorrector generate() throws IOException {
-        // only do this for CI
-        // This saves time on dev machines and the CI will push the corrected files anyway
-        if (Info.CI || ext.forceHeaderCorrection) {
-            if (headerLines != null) {
-                allFiles().forEach(this::replaceHeader);
-            }
-        } else {
-            LOGGER.info("+ mvg: NOT correcting Headers (CI={}, force={})", Info.CI, ext.forceHeaderCorrection);
+        if (headerLines != null) {
+            allFiles().forEach(this::replaceHeader);
         }
         return this;
     }
