@@ -22,8 +22,11 @@ import java.util.List;
 import java.util.Set;
 
 public class DependabotCorrector extends Corrector {
+    private final MvgCorrectorExtension ext;
+
     public DependabotCorrector(MvgCorrectorExtension ext) {
         super("dependabot");
+        this.ext = ext;
     }
 
     public DependabotCorrector generate() throws IOException {

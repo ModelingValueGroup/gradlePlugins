@@ -66,16 +66,24 @@ public class Util {
         try {
             return new URL(url);
         } catch (MalformedURLException e) {
-            throw new GradleException("not a valid url in header: " + url, e);
+            throw new GradleException("not a valid url in header (" + e.getMessage() + "): " + url, e);
         }
     }
 
-    public static List<String> readAllLines(Path f) throws IOException {
-        return Files.readAllLines(f);
+    public static List<String> readAllLines(Path f) {
+        try {
+            return Files.readAllLines(f);
+        } catch (IOException e) {
+            throw new GradleException("could not read lines (" + e.getMessage() + "): " + f, e);
+        }
     }
 
-    public static long getFileSize(Path f) throws IOException {
-        return Files.size(f);
+    public static long getFileSize(Path f) {
+        try {
+            return Files.size(f);
+        } catch (IOException e) {
+            throw new GradleException("file size failed (" + e.getMessage() + ")", e);
+        }
     }
 
     public static List<String> download(URL url) {
