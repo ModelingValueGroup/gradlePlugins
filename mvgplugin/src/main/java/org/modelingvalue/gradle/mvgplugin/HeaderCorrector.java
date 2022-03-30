@@ -41,7 +41,7 @@ public class HeaderCorrector extends TreeCorrector {
         URL          headerUrl = ext.getHeaderUrl();
         List<String> raw       = Util.download(headerUrl);
         if (raw == null) {
-            LOGGER.warn("headers are not updated because {} could not be read", headerUrl);
+            LOGGER.warn("+ mvg: headers are not updated because {} could not be read", headerUrl);
             headerLines = null;
         } else {
             headerLines = Util.replaceVars(getVarMapping(), raw);

@@ -111,7 +111,7 @@ public class DependenciesRepoManager {
             try {
                 getTriggers(publications).forEach(tr -> tr.workflows.forEach(workflowFilename -> trigger(tr.repoName, workflowFilename)));
             } catch (IOException e) {
-                LOGGER.warn("triggers could not be retrieved", e);
+                LOGGER.warn("+ mvg: triggers could not be retrieved", e);
             }
         }
     }

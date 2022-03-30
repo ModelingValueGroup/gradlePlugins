@@ -208,7 +208,7 @@ public class MvgPlugin implements Plugin<Project> {
                             try {
                                 Map<?, ?> jobs = (Map<?, ?>) Util.readYaml(f).get("jobs");
                                 if (jobs == null) {
-                                    LOGGER.warn("mvgplugin: RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
+                                    LOGGER.warn("+ mvg: RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
                                 } else {
                                     jobs.keySet().forEach(jobName -> {
                                         Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);

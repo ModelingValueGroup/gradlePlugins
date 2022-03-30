@@ -58,14 +58,17 @@ public class MvgBranchBasedBuilder {
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
     private final Gradle              gradle;
-    private final Map<String, String> bbbIdCache         = new ConcurrentHashMap<>();
-    private final Set<String>         dependenciesToSave = new HashSet<>();
-    private final Set<String>         publications       = new HashSet<>();
+    private final Map<String, String> bbbPublishingIdCache = new ConcurrentHashMap<>();
+    private final Map<String, String> bbbDependencyIdCache = new ConcurrentHashMap<>();
+    private final Set<String>         dependenciesToSave   = new HashSet<>();
+    private final Set<String>         publications         = new HashSet<>();
+    private final boolean             isCI;
 
     public MvgBranchBasedBuilder(Gradle gradle) {
         this.gradle = gradle;
 
-        LOGGER.info("+ mvg-bbb: creating MvgBranchBasedBuilder (CI={} TEST|CI={} master={})", CI, isMvgCI_orTesting(), isMasterBranch());
+        isCI = isMvgCI_orTesting();
+        LOGGER.info("+ mvg-bbb: creating MvgBranchBasedBuilder (CI={} TEST|CI={} master={})", CI, isCI, isMasterBranch());
         TRACE.report(gradle);
 
         adjustAllDependencies();
@@ -152,16 +155,15 @@ public class MvgBranchBasedBuilder {
             PublishingExtension publishing = (PublishingExtension) p.getExtensions().findByName("publishing");
             if (publishing != null) {
                 if (!publishing.getRepositories().isEmpty()) {
-                    LOGGER.warn("The repository set for project {} is not empty; bbb will not set the proper publish repo (local-maven or github-mvg-packages). Make it empty to activate bbb publishing.", p.getName());
+                    LOGGER.warn("+ mvg-bbb: The repository set for project {} is not empty; bbb will not set the proper publish repo (local-maven or github-mvg-packages). Make it empty to activate bbb publishing.", p.getName());
                 }
-                // only publish as-is if not master-CI, otherwise adjust the publications into snapshots
-                if (isMvgCI_orTesting()) {
-                    if (!isMasterBranch()) {
-                        makePublicationsBbb(publishing);
-                    }
+                // only publish as-is if (master on CI), otherwise adjust the publications into snapshot
+                if (!(isMasterBranch() && isCI)) {
+                    makePublicationsBbb(publishing);
+                }
+                if (isCI) {
                     publishToGitHub(publishing);
                 } else {
-                    makePublicationsBbb(publishing);
                     publishToMavenLocal(publishing);
                 }
             }
@@ -181,7 +183,7 @@ public class MvgBranchBasedBuilder {
                 String branch      = InfoGradle.getBranch();
                 String newGroup    = makeBbbGroup(oldGroup, branch);
                 String newArtifact = makeBbbArtifact(oldArtifact, branch);
-                String newVersion  = makeBbbVersion(oldVersion, branch);
+                String newVersion  = makeBbbVersion(oldVersion, branch, true);
                 String newGAV      = makeGAV(newGroup, newArtifact, newVersion);
 
                 if (!oldGAV.equals(newGAV)) {
@@ -199,14 +201,6 @@ public class MvgBranchBasedBuilder {
         });
     }
 
-    private void publishToMavenLocal(PublishingExtension publishing) {
-        if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
-            LOGGER.info("+ mvg-bbb: adding mavenLocal publishing repo...");
-            publishing.getRepositories().mavenLocal();
-            TRACE.report(publishing);
-        }
-    }
-
     private void publishToGitHub(PublishingExtension publishing) {
         if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
             LOGGER.info("+ mvg-bbb: adding github publishing repo: {}", isMasterBranch() ? "master" : "snapshots");
@@ -216,8 +210,16 @@ public class MvgBranchBasedBuilder {
         }
     }
 
+    private void publishToMavenLocal(PublishingExtension publishing) {
+        if (publishing.getRepositories().isEmpty() && !publishing.getPublications().isEmpty()) {
+            LOGGER.info("+ mvg-bbb: adding mavenLocal publishing repo...");
+            publishing.getRepositories().mavenLocal();
+            TRACE.report(publishing);
+        }
+    }
+
     private String makeBbbGAV(String branch, String g, String a, String v) {
-        return makeGAV(makeBbbGroup(g, branch), makeBbbArtifact(a, branch), makeBbbVersion(v, branch));
+        return makeGAV(makeBbbGroup(g, branch), makeBbbArtifact(a, branch), makeBbbVersion(v, branch, false));
     }
 
     private String makeGAV(String g, String a, String v) {
@@ -225,22 +227,26 @@ public class MvgBranchBasedBuilder {
     }
 
     private String makeBbbGroup(String g, String branch) {
-        return (isMvgCI_orTesting() && isMasterBranch(branch)) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
+        return (isCI && isMasterBranch(branch)) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
     }
 
     private String makeBbbArtifact(String a, @SuppressWarnings("unused") String branch) {
         return a;
     }
 
-    private String makeBbbVersion(String v, String branch) {
-        if ((isMvgCI_orTesting() && isMasterBranch(branch)) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST)) {
+    private String makeBbbVersion(String v, String branch, boolean forPublication) {
+        if ((isCI && isMasterBranch(branch)) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST)) {
             return v;
         } else {
-            return bbbIdCache.computeIfAbsent(branch, b -> {
+            return (forPublication ? bbbPublishingIdCache : bbbDependencyIdCache).computeIfAbsent(branch, b -> {
                 int    hash      = b.hashCode();
                 String sanatized = b.replaceFirst("@.*", "").replaceAll("\\W", "_");
                 String part      = sanatized.substring(0, Math.min(sanatized.length(), MAX_BRANCHNAME_PART_LENGTH));
-                return String.format("%s-%08x%s", part, hash, SNAPSHOT_VERSION_POST);
+                if (forPublication) {
+                    return String.format("%s-%08x-%s%s", part, hash, Info.NOW_STAMP, SNAPSHOT_VERSION_POST);
+                } else {
+                    return String.format("%s-%08x+", part, hash);
+                }
             });
         }
     }
