@@ -48,7 +48,7 @@ public interface Info {
     String       PROP_NAME_CI                 = "CI";
     String       PROP_NAME_TESTING            = "TESTING";
     //
-    String       NOW_STAMP                    = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmss_n"));
+    String       NOW_STAMP                    = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmss_nnnnnnnnn"));
     //
     boolean      CI                           = envOrPropBoolean(PROP_NAME_CI);
     boolean      TESTING                      = envOrPropBoolean(PROP_NAME_TESTING);
