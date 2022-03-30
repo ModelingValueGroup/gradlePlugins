@@ -135,17 +135,17 @@ public class InfoGradle {
                     return lines.get(0).replaceFirst("^" + Pattern.quote(Info.GIT_HEAD_FILE_START), "");
                 }
             } catch (IOException e) {
-                LOGGER.warn("could not read " + headFile + " to determine git-branch", e);
+                LOGGER.warn("+ mvg: could not read " + headFile + " to determine git-branch", e);
             }
         }
-        LOGGER.warn("could not determine git branch (because {} not found), assuming branch '{}'", headFile, Info.DEFAULT_BRANCH);
+        LOGGER.warn("+ mvg: could not determine git branch (because {} not found), assuming branch '{}'", headFile, Info.DEFAULT_BRANCH);
         return Info.DEFAULT_BRANCH;
     }
 
     private String mvgRepoName() {
         Path configFile = absProjectDir.resolve(Info.GIT_CONFIG_FILE).toAbsolutePath();
         if (!Files.isRegularFile(configFile)) {
-            LOGGER.warn("could not determine if MVG repo: {} not found (assuming non-github and non-MVG repo)", configFile);
+            LOGGER.warn("+ mvg: could not determine if MVG repo: {} not found (assuming non-github and non-MVG repo)", configFile);
         } else {
             try {
                 String url = Files.readAllLines(configFile)
@@ -154,14 +154,14 @@ public class InfoGradle {
                         .map(l -> l.replaceAll(".*=\\s*", ""))
                         .findFirst().orElse(null);
                 if (url == null) {
-                    LOGGER.warn("could not determine if MVG repo: could not find the url in the git config file at {}", configFile);
+                    LOGGER.warn("+ mvg: could not determine if MVG repo: could not find the url in the git config file at {}", configFile);
                 } else if (!url.startsWith(Info.MVG_REPO_BASE_URL)) {
-                    LOGGER.warn("the repo at {} is not an MVG repo: found {} which does not start with {}", configFile, url, Info.MVG_REPO_BASE_URL);
+                    LOGGER.warn("+ mvg: the repo at {} is not an MVG repo: found {} which does not start with {}", configFile, url, Info.MVG_REPO_BASE_URL);
                 } else {
                     return url.replaceFirst(Pattern.quote(Info.MVG_REPO_BASE_URL), "").replaceFirst("\\.git$", "");
                 }
             } catch (IOException e) {
-                LOGGER.warn("could not determine if MVG repo: could not read {}", configFile, e);
+                LOGGER.warn("+ mvg: could not determine if MVG repo: could not read {}", configFile, e);
             }
         }
         return null;

@@ -124,9 +124,9 @@ public class MvgMps {
                     .filter(AntFileMpsVersionsExtractor::hasRange)
                     .forEach(a -> {
                         if (a.getSince() != null && mpsBuildNumber.compareTo(a.getSince()) < 0) {
-                            LOGGER.warn("the MPS build number {} of MPS {} is below the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
+                            LOGGER.warn("+ mvg-mps: the MPS build number {} of MPS {} is below the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
                         } else if (a.getUntil() != null && 0 < mpsBuildNumber.compareTo(a.getUntil())) {
-                            LOGGER.warn("the MPS build number {} of MPS {} is above the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
+                            LOGGER.warn("+ mvg-mps: the MPS build number {} of MPS {} is above the range [{}...{}] mentioned in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
                         } else {
                             LOGGER.info("+ mvg-mps: the MPS build number {} of MPS {} is in range [{}...{}] of the requested in ant file: {}", mpsBuildNumber, ext.getVersion(), a.getSince(), a.getUntil(), a.getFile());
                         }
@@ -139,7 +139,7 @@ public class MvgMps {
     private Properties readMpsBuildProps() {
         Path propFile = ext.getMpsInstallDir().toPath().resolve("build.properties");
         if (!Files.isRegularFile(propFile)) {
-            LOGGER.warn("could not read the MPS properties file at {}", propFile.toAbsolutePath());
+            LOGGER.warn("+ mvg-mps: could not read the MPS properties file at {}", propFile.toAbsolutePath());
             return new Properties();
         } else {
             return Util.loadProperties(propFile);
