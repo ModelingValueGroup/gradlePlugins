@@ -38,7 +38,7 @@ tasks.test {
 dependencies {
     implementation("org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.0")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.1")
     implementation("com.gradle:gradle-enterprise-gradle-plugin:3.7.1")
     implementation("org.apache.httpcomponents:httpmime:4.5.13")
 
