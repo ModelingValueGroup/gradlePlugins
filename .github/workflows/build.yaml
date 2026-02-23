@@ -4,6 +4,9 @@ on  :
   push:
     branches: [ "*" ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,3 +40,15 @@ jobs:
               --info \
               -Pgradle.publish.key=$GRADLE_KEY \
               -Pgradle.publish.secret=$GRADLE_SECRET
+
+      - name: "if master: publish to GitHub Pages"
+        if  : github.ref == 'refs/heads/master'
+        run : |
+          ./gradlew publishAllPublicationsToGitHubPagesRepository
+          cd mvgplugin/build/github-pages-repo
+          git init -b gh-pages
+          git add .
+          git commit -m "Publish Maven repository"
+          git push -f https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git gh-pages
+        env :
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

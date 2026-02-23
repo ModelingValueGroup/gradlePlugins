@@ -68,6 +68,15 @@ tasks.withType<Javadoc> {
     options.encoding = "UTF-8"
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
 }
+publishing {
+    repositories {
+        maven {
+            name = "gitHubPages"
+            url = uri(layout.buildDirectory.dir("github-pages-repo"))
+        }
+    }
+}
+
 tasks.named("publishPlugins") {
     enabled = "true" == System.getenv("CI")
 }
