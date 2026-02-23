@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
+import org.gradle.api.GradleException;
+
 public class BashRunner {
     private final Path           scriptFile;
     private final Process        process;
@@ -50,7 +52,7 @@ public class BashRunner {
             errSucker.join();
             return this;
         } catch (InterruptedException | ExecutionException e) {
-            throw new Error("bash script " + scriptFile + " returned abnormally", e);
+            throw new GradleException("bash script " + scriptFile + " returned abnormally", e);
         }
     }
 

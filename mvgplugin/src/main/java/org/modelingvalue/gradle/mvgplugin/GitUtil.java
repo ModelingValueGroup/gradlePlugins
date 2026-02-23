@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.gradle.api.GradleException;
+
 import org.eclipse.jgit.api.AddCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RmCommand;
@@ -70,7 +72,7 @@ public class GitUtil {
                     .map(ref -> ref.getName().replaceAll("^refs/tags/", ""))
                     .collect(Collectors.toList());
         } catch (GitAPIException e) {
-            throw new Error("could not list tags", e);
+            throw new GradleException("could not list tags", e);
         }
     }
 
@@ -85,7 +87,7 @@ public class GitUtil {
             push(git, true);
             LOGGER.info("+ mvg-git:{}: added tag '{}' => {}", describe(git), tag, ref.getObjectId());
         } catch (GitAPIException e) {
-            throw new Error("could not add tag " + tag + " to git " + describe(git), e);
+            throw new GradleException("could not add tag " + tag + " to git " + describe(git), e);
         }
     }
 
@@ -99,7 +101,7 @@ public class GitUtil {
             LOGGER.info("+ mvg-git:{}: deleted tags {} => result={}", describe(git), Arrays.asList(tags), l);
             push(git, true);
         } catch (GitAPIException e) {
-            throw new Error("could not delete tag " + Arrays.asList(tags) + " from git " + describe(git), e);
+            throw new GradleException("could not delete tag " + Arrays.asList(tags) + " from git " + describe(git), e);
         }
     }
 
@@ -108,7 +110,7 @@ public class GitUtil {
         try {
             return git.getRepository().getBranch();
         } catch (IOException e) {
-            throw new Error("could not get branch from git " + describe(git), e);
+            throw new GradleException("could not get branch from git " + describe(git), e);
         }
     }
 
@@ -124,7 +126,7 @@ public class GitUtil {
                 push(git, false);
             }
         } catch (GitAPIException | IOException e) {
-            throw new Error("could not stage-commit-push on git " + describe(git), e);
+            throw new GradleException("could not stage-commit-push on git " + describe(git), e);
         }
     }
 

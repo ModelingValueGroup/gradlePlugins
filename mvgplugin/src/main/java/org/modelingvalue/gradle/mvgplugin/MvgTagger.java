@@ -35,7 +35,7 @@ class MvgTagger {
         TaskProvider<Task> tp = gradle.getRootProject().getTasks().register(TAG_TASK_NAME, this::setup);
 
         // let me depend on all publish tasks...
-        gradle.allprojects(p -> p.getTasks().all(t -> {
+        gradle.allprojects(p -> p.getTasks().configureEach(t -> {
             LOGGER.debug("++ mvg: checking if task '{}' should be before '{}'", tp.getName(), t.getName());
             if (t.getName().matches(quote(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) + ".*")) {
                 LOGGER.info("+ mvg: adding task dependency: {} after {}", tp.getName(), t.getName());

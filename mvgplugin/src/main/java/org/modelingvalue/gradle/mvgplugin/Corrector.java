@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.gradle.api.GradleException;
+
 public abstract class Corrector {
     protected final String    name;
     protected final String    nameField;
@@ -66,11 +68,11 @@ public abstract class Corrector {
                     System.err.println("+ mvg: reread of corrected file yielded different file (" + file.toAbsolutePath() + ")");
                     lines.forEach(l -> System.err.println("+ mvg: lines  | " + l));
                     reread.forEach(l -> System.err.println("+ mvg: reread | " + l));
-                    throw new Error("the reread of " + file.toAbsolutePath() + " in " + name + " did not yield the correct contents");
+                    throw new GradleException("the reread of " + file.toAbsolutePath() + " in " + name + " did not yield the correct contents");
                 }
             }
         } catch (IOException e) {
-            throw new Error("could not overwrite file for " + name + "(" + e.getMessage() + "): " + file, e);
+            throw new GradleException("could not overwrite file for " + name + "(" + e.getMessage() + "): " + file, e);
         }
     }
 

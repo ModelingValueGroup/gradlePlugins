@@ -34,6 +34,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.gradle.api.GradleException;
+
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand.ListMode;
@@ -252,7 +254,7 @@ public class DependenciesRepoManager {
                     .map(Trigger::new)
                     .filter(tr -> tr.workflows != null);
         } catch (IOException e) {
-            throw new Error("could not list directory " + path, e);
+            throw new GradleException("could not list directory " + path, e);
         }
     }
 
@@ -358,7 +360,7 @@ public class DependenciesRepoManager {
             trigger("sync-proxy", "build.yaml");
             trigger("sync-proxy", "no_wf.yaml");
         } catch (Exception e) {
-            throw new Error("TESTING: unable to test DependenciesManager", e);
+            throw new GradleException("TESTING: unable to test DependenciesManager", e);
         } finally {
             LOGGER.info("+ mvg: ===TESTING============================================================ >>> {}", Util.TEST_MARKER_TESTING);
 

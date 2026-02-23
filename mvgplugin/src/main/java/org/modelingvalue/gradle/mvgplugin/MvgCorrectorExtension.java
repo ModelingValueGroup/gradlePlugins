@@ -27,11 +27,18 @@ import java.util.Set;
 
 import org.gradle.api.Project;
 import org.gradle.api.invocation.Gradle;
+import org.gradle.api.provider.Property;
 
-public class MvgCorrectorExtension {
+public abstract class MvgCorrectorExtension {
     public static MvgCorrectorExtension make(Gradle gradle) {
         Project project = gradle.getRootProject();
-        return project.getExtensions().create(CORRECTOR_TASK_NAME, MvgCorrectorExtension.class, project);
+        MvgCorrectorExtension ext = project.getExtensions().create(CORRECTOR_TASK_NAME, MvgCorrectorExtension.class, project);
+        ext.getForceEolCorrection().convention(false);
+        ext.getForceHeaderCorrection().convention(false);
+        ext.getForceDependabotCorrection().convention(false);
+        ext.getForceBashCorrection().convention(false);
+        ext.getForceVersionCorrection().convention(false);
+        return ext;
     }
 
     private final Project             project;
@@ -44,11 +51,12 @@ public class MvgCorrectorExtension {
     private final Set<String>         headerFileExcludes;
     private final Set<String>         eolFileExcludes;
     private final Set<String>         bashFileExcludes;
-    public        boolean             forceEolCorrection;
-    public        boolean             forceHeaderCorrection;
-    public        boolean             forceDependabotCorrection;
-    public        boolean             forceBashCorrection;
-    public        boolean             forceVersionCorrection;
+
+    public abstract Property<Boolean> getForceEolCorrection();
+    public abstract Property<Boolean> getForceHeaderCorrection();
+    public abstract Property<Boolean> getForceDependabotCorrection();
+    public abstract Property<Boolean> getForceBashCorrection();
+    public abstract Property<Boolean> getForceVersionCorrection();
 
     public MvgCorrectorExtension(Project project) {
         this.project = project;
@@ -89,7 +97,6 @@ public class MvgCorrectorExtension {
         noTextExt = new HashSet<>(List.of(
                 "class",
                 "iml",
-                "jar",
                 "jar",
                 "jpeg",
                 "jpg",

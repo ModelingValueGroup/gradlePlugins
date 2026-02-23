@@ -42,9 +42,9 @@ import org.gradle.api.GradleException;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.TaskCollection;
 import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
@@ -72,19 +72,28 @@ public class MvgPlugin implements Plugin<Project> {
     private MvgUploader           mvgUploader;
     private boolean               traceHeaderDone;
 
-    public static class Extension {
+    public abstract static class Extension {
         public static Extension make(Gradle gradle) {
-            return gradle.getRootProject().getExtensions().create(MVG, Extension.class);
+            Extension ext = gradle.getRootProject().getExtensions().create(MVG, Extension.class);
+            ext.getVerboseTaskExecution().convention(true);
+            ext.getPrepTestsForJunit5().convention(true);
+            ext.getPrepJavacForLint().convention(true);
+            ext.getPrepJavadocForLint().convention(true);
+            ext.getPrepJavacForEncoding().convention(true);
+            ext.getPrepJavadocForEncoding().convention(true);
+            ext.getMakeJavadocAndSources().convention(true);
+            ext.getAddMvgGithubRepositories().convention(true);
+            return ext;
         }
 
-        public boolean verboseTaskExecution     = true;
-        public boolean prepTestsForJunit5       = true;
-        public boolean prepJavacForLint         = true;
-        public boolean prepJavadocForLint       = true;
-        public boolean prepJavacForEncoding     = true;
-        public boolean prepJavadocForEncoding   = true;
-        public boolean makeJavadocAndSources    = true;
-        public boolean addMvgGithubRepositories = true;
+        public abstract Property<Boolean> getVerboseTaskExecution();
+        public abstract Property<Boolean> getPrepTestsForJunit5();
+        public abstract Property<Boolean> getPrepJavacForLint();
+        public abstract Property<Boolean> getPrepJavadocForLint();
+        public abstract Property<Boolean> getPrepJavacForEncoding();
+        public abstract Property<Boolean> getPrepJavadocForEncoding();
+        public abstract Property<Boolean> getMakeJavadocAndSources();
+        public abstract Property<Boolean> getAddMvgGithubRepositories();
     }
 
     @Inject
@@ -270,7 +279,7 @@ public class MvgPlugin implements Plugin<Project> {
         // Note: unlike the old TaskExecutionListener, doFirst/doLast only fires for tasks that
         // actually execute work — not for UP-TO-DATE or SKIPPED tasks.
         gradle.afterProject(p -> {
-            if (ext.verboseTaskExecution) {
+            if (ext.getVerboseTaskExecution().get()) {
                 p.getTasks().configureEach(task -> {
                     task.doFirst(s -> LOGGER.info("+ mvg: >>>>> {}", task.getName()));
                     task.doLast(s -> LOGGER.info("+ mvg: <<<<< {}\n", task.getName()));
@@ -281,11 +290,8 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneTesting() {
         gradle.afterProject(p -> {
-            if (ext.prepTestsForJunit5) {
-                Task t = p.getTasks().findByName("test");
-                if (t instanceof Test) {
-                    Test test = (Test) t;
-
+            if (ext.getPrepTestsForJunit5().get()) {
+                p.getTasks().withType(Test.class).configureEach(test -> {
                     LOGGER.info("+ mvg: adding test.useJUnitPlatform");
                     test.useJUnitPlatform();
 
@@ -293,15 +299,13 @@ public class MvgPlugin implements Plugin<Project> {
                         LOGGER.info("+ mvg: increasing test heap from {} to {}", test.getMaxHeapSize() == null ? "default" : test.getMaxHeapSize(), MIN_TEST_HEAP_SIZE);
                         test.setMaxHeapSize(MIN_TEST_HEAP_SIZE);
                     }
+                });
 
-                    Object java = p.getExtensions().findByName("java");
-                    if (java != null) {
-                        LOGGER.info("+ mvg: adding junit5 dependencies");
-                        Info.JUNIT_IMPLEMENTATION_DEPS.forEach(dep -> p.getDependencies().add("testImplementation", dep));
-                        Info.JUNIT_RUNTIMEONLY_DEPS.forEach(dep -> p.getDependencies().add("testRuntimeOnly", dep));
-                    }
-                } else if (t != null) {
-                    LOGGER.info("+ mvg: 'test' task is not of type Test (but of type '{}')", t.getClass().getSimpleName());
+                Object java = p.getExtensions().findByName("java");
+                if (java != null) {
+                    LOGGER.info("+ mvg: adding junit5 dependencies");
+                    Info.JUNIT_IMPLEMENTATION_DEPS.forEach(dep -> p.getDependencies().add("testImplementation", dep));
+                    Info.JUNIT_RUNTIMEONLY_DEPS.forEach(dep -> p.getDependencies().add("testRuntimeOnly", dep));
                 }
             }
         });
@@ -309,7 +313,7 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneJavacPlugin() {
         gradle.afterProject(p -> {
-            if (ext.prepJavacForLint) {
+            if (ext.getPrepJavacForLint().get()) {
                 @SuppressWarnings("Convert2Lambda") // keep this, grdale does not like java lambdas here 8- see: https://docs.gradle.org/7.2/userguide/validation_problems.html#implementation_unknown
                 CommandLineArgumentProvider adder = new CommandLineArgumentProvider() {
                     @Override
@@ -332,7 +336,7 @@ public class MvgPlugin implements Plugin<Project> {
         gradle.afterProject(p -> {
             JavaPluginExtension javaExt = (JavaPluginExtension) p.getExtensions().findByName("java");
             if (javaExt != null) {
-                if (ext.makeJavadocAndSources) {
+                if (ext.getMakeJavadocAndSources().get()) {
                     LOGGER.info("+ mvg: adding tasks for javadoc & source jars");
                     javaExt.withJavadocJar();
                     javaExt.withSourcesJar();
@@ -355,9 +359,9 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneJavaDocPlugin() {
         gradle.afterProject(p -> {
-            if (ext.prepJavadocForLint) {
+            if (ext.getPrepJavadocForLint().get()) {
                 TaskCollection<Javadoc> javadocTasks = p.getTasks().withType(Javadoc.class);
-                javadocTasks.forEach(jd -> jd.options(opt -> {
+                javadocTasks.configureEach(jd -> jd.options(opt -> {
                     if (opt instanceof StandardJavadocDocletOptions) {
                         LOGGER.info("+ mvg: adding javadoc option to ignore warnings");
                         ((StandardJavadocDocletOptions) opt).addStringOption("Xdoclint:none", "-quiet");
@@ -370,7 +374,7 @@ public class MvgPlugin implements Plugin<Project> {
     private void tuneJavaEncoding() {
         String utf8 = StandardCharsets.UTF_8.name();
         gradle.afterProject(p -> {
-            if (ext.prepJavacForEncoding) {
+            if (ext.getPrepJavacForEncoding().get()) {
                 p.getTasks()
                         .withType(JavaCompile.class)
                         .configureEach(javac -> {
@@ -381,7 +385,7 @@ public class MvgPlugin implements Plugin<Project> {
                             }
                         });
             }
-            if (ext.prepJavadocForEncoding) {
+            if (ext.getPrepJavadocForEncoding().get()) {
                 p.getTasks()
                         .withType(Javadoc.class)
                         .configureEach(t -> {
@@ -397,7 +401,7 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void addMVGRepositories() {
         gradle.allprojects(p -> {
-            if (ext.addMvgGithubRepositories) {
+            if (ext.getAddMvgGithubRepositories().get()) {
                 LOGGER.info("+ mvg: adding MVG repositories to project {}", p.getName());
 
                 p.getRepositories().mavenCentral();

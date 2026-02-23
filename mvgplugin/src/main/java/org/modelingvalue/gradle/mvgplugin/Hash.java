@@ -20,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 
+import org.gradle.api.GradleException;
+
 public enum Hash {
     MD5("MD5"),
     SHA1("SHA1"),
@@ -48,7 +50,7 @@ public enum Hash {
             }
             return bytesToHex(digest.digest());
         } catch (Exception e) {
-            throw new Error("unexpected exception during " + name + " calculation of " + input, e);
+            throw new GradleException("unexpected exception during " + name + " calculation of " + input, e);
         }
     }
 

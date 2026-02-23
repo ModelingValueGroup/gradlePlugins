@@ -22,6 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import org.gradle.api.GradleException;
+
 public class EolCorrector extends TreeCorrector {
     private final MvgCorrectorExtension ext;
 
@@ -80,7 +82,7 @@ public class EolCorrector extends TreeCorrector {
         try {
             return Files.size(f);
         } catch (IOException e) {
-            throw new Error("file size failed", e);
+            throw new GradleException("file size failed", e);
         }
     }
 }

@@ -43,6 +43,7 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
+import org.gradle.api.provider.Property;
 
 public class MvgUploader {
 
@@ -53,36 +54,35 @@ public class MvgUploader {
         gradle.getRootProject().getTasks().register(UPLOADER_TASK_NAME, this::setup);
     }
 
-    public static class Extension {
+    public abstract static class Extension {
         public static Extension make(Gradle gradle) {
             Project project = gradle.getRootProject();
-            return project.getExtensions().create(UPLOADER_TASK_NAME, Extension.class, gradle);
+            Extension ext = project.getExtensions().create(UPLOADER_TASK_NAME, Extension.class);
+            ext.buildDirPath = project.getLayout().getBuildDirectory().get().getAsFile().toPath();
+            String defaultChannel = selectMasterDevelopElse("stable", "EAP", BranchParameterNames.get("channel", "DEV"));
+            ext.getChannel().convention(defaultChannel);
+            if (JETBRAINS_TOKEN != null) {
+                ext.getHubToken().convention(JETBRAINS_TOKEN);
+            }
+            LOGGER.info("+ mvg: default channel selected by uploader: {}", defaultChannel);
+            return ext;
         }
 
-        public Gradle gradle;
-        public String channel;
-        public String hubToken;
-        public String pluginId;
-        public String zipFile;
+        Path buildDirPath;
 
-        public Extension(Gradle gradle) {
-            this.gradle = gradle;
-            channel = getDefaultChannel();
-            hubToken = JETBRAINS_TOKEN;
-            LOGGER.info("+ mvg: default channel selected by uploader: {}", channel);
-        }
+        public abstract Property<String> getChannel();
+        public abstract Property<String> getHubToken();
+        public abstract Property<String> getPluginId();
+        public abstract Property<String> getZipFile();
 
-        public String getDefaultChannel() {
-            return selectMasterDevelopElse("stable", "EAP", BranchParameterNames.get("channel", "DEV"));
-        }
-
-        public Path getZipFile() {
+        public Path getZipFilePath() {
             Path path = null;
-            if (zipFile != null) {
-                path = Paths.get(zipFile).toAbsolutePath();
+            String zipFileValue = getZipFile().getOrNull();
+            if (zipFileValue != null) {
+                path = Paths.get(zipFileValue).toAbsolutePath();
                 LOGGER.info("+ mvg: upload file found at {} as indicated by {} ext", path, UPLOADER_TASK_NAME);
             } else {
-                Path artiDir = gradle.getRootProject().getLayout().getBuildDirectory().get().getAsFile().toPath().resolve("artifacts");
+                Path artiDir = buildDirPath.resolve("artifacts");
                 if (!Files.isDirectory(artiDir)) {
                     LOGGER.info("+ mvg: artifacts dir not found: {}", artiDir.toAbsolutePath());
                 } else {
@@ -117,10 +117,10 @@ public class MvgUploader {
     private void execute() {
         LOGGER.info("+ mvg: execute {} task", UPLOADER_TASK_NAME);
 
-        String hubToken = ext.hubToken;
-        String pluginId = ext.pluginId;
-        String channel  = ext.channel;
-        Path   zipFile  = ext.getZipFile();
+        String hubToken = ext.getHubToken().getOrNull();
+        String pluginId = ext.getPluginId().getOrNull();
+        String channel  = ext.getChannel().getOrNull();
+        Path   zipFile  = ext.getZipFilePath();
 
         if (zipFile == null || !Files.isRegularFile(zipFile)) {
             throw new GradleException("the selected plugin upload zipfile can not be identified: " + zipFile);

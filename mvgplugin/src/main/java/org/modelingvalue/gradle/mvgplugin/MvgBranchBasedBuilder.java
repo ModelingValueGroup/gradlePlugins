@@ -212,7 +212,7 @@ public class MvgBranchBasedBuilder {
     }
 
     private void makePublicationsBbb(PublishingExtension publishing) {
-        publishing.getPublications().all(pub -> {
+        publishing.getPublications().configureEach(pub -> {
             if (pub instanceof MavenPublication mpub) {
                 String oldGroup    = mpub.getGroupId();
                 String oldArtifact = mpub.getArtifactId();

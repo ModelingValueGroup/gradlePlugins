@@ -25,11 +25,12 @@ import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.HelpTasksPlugin;
@@ -37,6 +38,30 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 class MvgCorrector {
+    private static final List<Pattern> NOT_BEFORE_PATTERNS = Stream.of(
+            ".*jar",
+            ".*kotlin.*",
+            "buildEnvironment",
+            "buildScanPublishPrevious",
+            "components",
+            "dependen.*",
+            "help",
+            "init",
+            "model",
+            "mvg.*",
+            "outgoingVariants",
+            "prepareKotlinBuildScriptModel",
+            "process.*",
+            "projects",
+            "properties",
+            "provisionGradleEnterpriseAccessKey",
+            "publish.*",
+            "tasks",
+            "test",
+            "wrapper",
+            quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*"
+    ).map(s -> Pattern.compile("^(?i)" + s + "$")).toList();
+
     private final MvgCorrectorExtension ext;
 
     public MvgCorrector(Gradle gradle) {
@@ -44,7 +69,7 @@ class MvgCorrector {
         TaskProvider<Task> tp = gradle.getRootProject().getTasks().register(CORRECTOR_TASK_NAME, this::setup);
 
         // let all tasks depend on me...
-        gradle.allprojects(p -> p.getTasks().all(t -> {
+        gradle.allprojects(p -> p.getTasks().configureEach(t -> {
             String name  = t.getName();
             String group = "" + t.getGroup(); // may return null
             LOGGER.debug("++ mvg: checking if task '{}' should be before '{}' (group '{}'", tp.getName(), name, group);
@@ -61,29 +86,7 @@ class MvgCorrector {
     }
 
     private boolean isANotBeforeTask(String name) {
-        return Stream.of(
-                ".*jar",
-                ".*kotlin.*",
-                "buildEnvironment",
-                "buildScanPublishPrevious",
-                "components",
-                "dependen.*",
-                "help",
-                "init",
-                "model",
-                "mvg.*",
-                "outgoingVariants",
-                "prepareKotlinBuildScriptModel",
-                "process.*",
-                "projects",
-                "properties",
-                "provisionGradleEnterpriseAccessKey",
-                "publish.*",
-                "tasks",
-                "test",
-                "wrapper",
-                quote(LifecycleBasePlugin.CLEAN_TASK_NAME) + ".*"
-        ).map(s -> Pattern.compile("^(?i)" + s + "$")).collect(Collectors.toList()).stream().noneMatch(pat -> pat.matcher(name).matches());
+        return NOT_BEFORE_PATTERNS.stream().noneMatch(pat -> pat.matcher(name).matches());
     }
 
     private void setup(Task task) {
@@ -97,19 +100,19 @@ class MvgCorrector {
         try {
             Set<Path> changes = new HashSet<>();
 
-            if (doCorrector(ext.forceDependabotCorrection, "Dependabot file")) {
+            if (doCorrector(ext.getForceDependabotCorrection().get(), "Dependabot file")) {
                 changes.addAll(new DependabotCorrector(ext).generate().getChangedFiles());
             }
-            if (doCorrector(ext.forceBashCorrection, "with bash scripts")) {
+            if (doCorrector(ext.getForceBashCorrection().get(), "with bash scripts")) {
                 changes.addAll(new BashCorrector(ext).generate().getChangedFiles());
             }
-            if (doCorrector(ext.forceEolCorrection, "EOLs")) {
+            if (doCorrector(ext.getForceEolCorrection().get(), "EOLs")) {
                 changes.addAll(new EolCorrector(ext).generate().getChangedFiles());
             }
-            if (doCorrector(ext.forceHeaderCorrection, "headers")) {
+            if (doCorrector(ext.getForceHeaderCorrection().get(), "headers")) {
                 changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
             }
-            if (doCorrector(ext.forceVersionCorrection, "version")) {
+            if (doCorrector(ext.getForceVersionCorrection().get(), "version")) {
                 changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
             }
 
@@ -119,7 +122,7 @@ class MvgCorrector {
                 GitUtil.stageCommitPush(ext.getRoot(), GitUtil.NO_CI_COMMIT_MARKER + " updated by mvgplugin", changes);
             }
         } catch (IOException e) {
-            throw new Error("could not correct files", e);
+            throw new GradleException("could not correct files", e);
         }
     }
 

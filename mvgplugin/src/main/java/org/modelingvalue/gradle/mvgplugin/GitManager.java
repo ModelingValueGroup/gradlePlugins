@@ -20,6 +20,8 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.gradle.api.GradleException;
+
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
@@ -46,7 +48,7 @@ public class GitManager {
             }
             return git;
         } catch (IOException e) {
-            throw new Error("could not find git repo at " + path, e);
+            throw new GradleException("could not find git repo at " + path, e);
         }
     }
 
