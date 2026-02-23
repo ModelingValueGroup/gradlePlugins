@@ -43,8 +43,9 @@ public class GithubApi {
      *      -d '{"ref":"develop"}'
      * </pre>
      */
+    @SuppressWarnings("JavadocLinkAsPlainText")
     public static String triggerWorkflow(String repo, String workflowFilename, String branch, Consumer<String> errorHandler) throws IOException {
-        URL                url  = new URL(String.format(DISPATCH_ENTRYPOINT, OWNER, repo, workflowFilename));
+        URL                url  = Util.getUrl(String.format(DISPATCH_ENTRYPOINT, OWNER, repo, workflowFilename));
         HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
         conn.setRequestProperty("Authorization", "token " + Info.ALLREP_TOKEN);
         conn.setRequestProperty("Accept", JSON_FORMAT);

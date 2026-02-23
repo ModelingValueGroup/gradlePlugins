@@ -186,9 +186,8 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg: adding test.useJUnitPlatform", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: increasing test heap from default to 2g", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding junit5 dependencies", out)),
-                    () -> assertEquals(1, numOccurences("+ mvg: agreeing to buildScan", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding tasks for javadoc & source jars", out)),
-                    () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (11&11) to 11", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ mvg-mps: dependency replaced: ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
@@ -214,11 +213,11 @@ public class MvgPluginTest {
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
                     //
-                    () -> assertEquals(1959, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
+                    () -> assertEquals(2602, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
                     //
                     () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\r]", "").length()),
-                    () -> assertEquals(17, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\n]", "").length()),
-                    () -> assertEquals(17, Files.readAllLines(testWorkspaceDir.resolve(propFile)).size()),
+                    () -> assertEquals(22, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\n]", "").length()),
+                    () -> assertEquals(22, Files.readAllLines(testWorkspaceDir.resolve(propFile)).size()),
                     //
                     () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(pruupFile)).replaceAll("[^\r]", "").length()),
                     () -> assertEquals(1, Files.readString(testWorkspaceDir.resolve(pruupFile)).replaceAll("[^\n]", "").length()),

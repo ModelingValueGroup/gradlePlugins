@@ -23,20 +23,21 @@ import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperti
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.selectMasterDevelopElse;
 
 import java.io.File;
+import java.nio.file.Path;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.internal.extensibility.DefaultConvention;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 public class MvgMpsExtension {
-    private final static String MPS_DOWNLOAD_URL_TEMPLATE = "http://download.jetbrains.com/mps/%s/MPS-%s.zip";
+    private final static String MPS_DOWNLOAD_URL_TEMPLATE = "https://download.jetbrains.com/mps/%s/MPS-%s.zip";
     private final static String MPS_ROOT_DIR_TEMPLATE     = "MPS %s"; // this name is dictated by JetBrains in their zip file setup
     private final static String MPS_DOWNLOAD_DIR_TEMPLATE = "MPS-%s";
+    private final static Path   MPS_CACHE_DIR             = Path.of(System.getProperty("user.home"), ".gradle", "caches", "mps-downloads");
 
     public static MvgMpsExtension make(Gradle gradle) {
-        return ((DefaultConvention) gradle.getRootProject().getExtensions()).create(MPS_TASK_NAME, MvgMpsExtension.class, gradle);
+        return gradle.getRootProject().getExtensions().create(MPS_TASK_NAME, MvgMpsExtension.class, gradle);
     }
 
     private final Gradle  gradle;
@@ -64,7 +65,7 @@ public class MvgMpsExtension {
     }
 
     public File getMpsDownloadDir() {
-        return new File(gradle.getRootProject().getBuildDir(), String.format(MPS_DOWNLOAD_DIR_TEMPLATE, getVersion()));
+        return new File(gradle.getRootProject().getLayout().getBuildDirectory().get().getAsFile(), String.format(MPS_DOWNLOAD_DIR_TEMPLATE, getVersion()));
     }
 
     public String getMpsDownloadUrl() {
@@ -73,6 +74,10 @@ public class MvgMpsExtension {
 
     public File getMpsInstallDir() {
         return new File(getMpsDownloadDir(), String.format(MPS_ROOT_DIR_TEMPLATE, getMajorMpsVersion()));
+    }
+
+    public Path getMpsCacheFile() {
+        return MPS_CACHE_DIR.resolve(String.format("MPS-%s.zip", getVersion()));
     }
 
     @NotNull

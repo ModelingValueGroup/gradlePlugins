@@ -56,8 +56,8 @@ public class Util {
 
     public static URL getUrl(String url) {
         try {
-            return new URL(url);
-        } catch (MalformedURLException e) {
+            return new URI(url).toURL();
+        } catch (MalformedURLException | URISyntaxException e) {
             throw new GradleException("not a valid url in header (" + e.getMessage() + "): " + url, e);
         }
     }
@@ -138,14 +138,6 @@ public class Util {
         return count;
     }
 
-    public static URI makeURL(String url) {
-        try {
-            return new URI(url);
-        } catch (URISyntaxException e) {
-            throw new GradleException("unexpected exception", e);
-        }
-    }
-
     static Map<?, ?> readYaml(Path path) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         objectMapper.findAndRegisterModules();
@@ -164,21 +156,17 @@ public class Util {
 
     public static long toBytes(String in) {
         in = in.trim();
-        if (in.matches("[0-9][0-9]*")) {
+        if (in.matches("[0-9]+")) {
             return Long.parseLong(in);
-        } else if (in.matches("[0-9][0-9]*[kKmMgGtT]?")) {
+        } else if (in.matches("[0-9]+[kKmMgGtT]?")) {
             long l = Long.parseLong(in, 0, in.length() - 1, 10);
-            switch (Character.toLowerCase(in.charAt(in.length() - 1))) {
-            case 'k':
-                return l * 1024;
-            case 'm':
-                return l * 1024 * 1024;
-            case 'g':
-                return l * 1024 * 1024 * 1024;
-            case 't':
-                return l * 1024 * 1024 * 1024 * 1024;
-            }
-            return -1; // never reached
+            return switch (Character.toLowerCase(in.charAt(in.length() - 1))) {
+                case 'k' -> l * 1024;
+                case 'm' -> l * 1024 * 1024;
+                case 'g' -> l * 1024 * 1024 * 1024;
+                case 't' -> l * 1024 * 1024 * 1024 * 1024;
+                default -> -1;
+            };
         } else {
             throw new GradleException("human readable form of memory size '" + in + "' is not valid");
         }

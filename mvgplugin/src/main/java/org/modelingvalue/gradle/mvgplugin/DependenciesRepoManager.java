@@ -40,7 +40,6 @@ import org.eclipse.jgit.api.ListBranchCommand.ListMode;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.util.FileUtils;
-import org.gradle.api.invocation.Gradle;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,11 +80,11 @@ public class DependenciesRepoManager {
     private final        Set<String> workflowFileNames;
     private final        String      commitMessage;
 
-    public DependenciesRepoManager(Gradle gradle) {
+    public DependenciesRepoManager(Path buildDir) {
         repoName = InfoGradle.getMvgRepoName();
         branch = InfoGradle.getBranch();
         active = !InfoGradle.isMasterBranch() && InfoGradle.isMvgCI_orTesting();
-        dependenciesRepoDir = active ? gradle.getRootProject().getBuildDir().toPath().resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath() : null;
+        dependenciesRepoDir = active ? buildDir.resolve(MVG_DEPENDENCIES_REPO_NAME).toAbsolutePath() : null;
         workflowFileNames = active ? findMyTriggerWorkflows() : null;
         commitMessage = active ? repoName + ":" + branch + " @" + Info.NOW_STAMP + " [" + Info.HOSTNAME + "]" : null;
         if (active) {

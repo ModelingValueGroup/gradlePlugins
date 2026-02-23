@@ -43,7 +43,6 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.internal.extensibility.DefaultConvention;
 
 public class MvgUploader {
 
@@ -57,7 +56,7 @@ public class MvgUploader {
     public static class Extension {
         public static Extension make(Gradle gradle) {
             Project project = gradle.getRootProject();
-            return ((DefaultConvention) project.getExtensions()).create(UPLOADER_TASK_NAME, Extension.class, gradle);
+            return project.getExtensions().create(UPLOADER_TASK_NAME, Extension.class, gradle);
         }
 
         public Gradle gradle;
@@ -83,7 +82,7 @@ public class MvgUploader {
                 path = Paths.get(zipFile).toAbsolutePath();
                 LOGGER.info("+ mvg: upload file found at {} as indicated by {} ext", path, UPLOADER_TASK_NAME);
             } else {
-                Path artiDir = gradle.getRootProject().getBuildDir().toPath().resolve("artifacts");
+                Path artiDir = gradle.getRootProject().getLayout().getBuildDirectory().get().getAsFile().toPath().resolve("artifacts");
                 if (!Files.isDirectory(artiDir)) {
                     LOGGER.info("+ mvg: artifacts dir not found: {}", artiDir.toAbsolutePath());
                 } else {

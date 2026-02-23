@@ -27,12 +27,11 @@ import java.util.Set;
 
 import org.gradle.api.Project;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.internal.extensibility.DefaultConvention;
 
 public class MvgCorrectorExtension {
     public static MvgCorrectorExtension make(Gradle gradle) {
         Project project = gradle.getRootProject();
-        return ((DefaultConvention) project.getExtensions()).create(CORRECTOR_TASK_NAME, MvgCorrectorExtension.class, project);
+        return project.getExtensions().create(CORRECTOR_TASK_NAME, MvgCorrectorExtension.class, project);
     }
 
     private final Project             project;

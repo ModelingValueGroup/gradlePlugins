@@ -37,32 +37,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.gradle.build.event.BuildEventsListenerRegistry;
 import org.gradle.api.GradleException;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.api.execution.TaskExecutionListener;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.TaskCollection;
-import org.gradle.api.tasks.TaskState;
 import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.external.javadoc.MinimalJavadocOptions;
 import org.gradle.external.javadoc.StandardJavadocDocletOptions;
-import org.gradle.internal.extensibility.DefaultConvention;
 import org.gradle.process.CommandLineArgumentProvider;
 import org.jetbrains.annotations.NotNull;
 
-import com.gradle.scan.plugin.BuildScanExtension;
+import javax.inject.Inject;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class MvgPlugin implements Plugin<Project> {
     public static MvgPlugin singleton;
 
+    private final BuildEventsListenerRegistry buildEventsListenerRegistry;
     private boolean               inactiveBecauseNotRootProject;
     private Gradle                gradle;
     private Extension             ext;
@@ -75,7 +74,7 @@ public class MvgPlugin implements Plugin<Project> {
 
     public static class Extension {
         public static Extension make(Gradle gradle) {
-            return ((DefaultConvention) gradle.getRootProject().getExtensions()).create(MVG, Extension.class);
+            return gradle.getRootProject().getExtensions().create(MVG, Extension.class);
         }
 
         public boolean verboseTaskExecution     = true;
@@ -85,12 +84,13 @@ public class MvgPlugin implements Plugin<Project> {
         public boolean prepJavacForEncoding     = true;
         public boolean prepJavadocForEncoding   = true;
         public boolean makeJavadocAndSources    = true;
-        public boolean agreeToBuildScan         = true;
         public boolean addMvgGithubRepositories = true;
     }
 
-    public MvgPlugin() {
+    @Inject
+    public MvgPlugin(BuildEventsListenerRegistry buildEventsListenerRegistry) {
         singleton = this;
+        this.buildEventsListenerRegistry = buildEventsListenerRegistry;
     }
 
     public void apply(Project project) {
@@ -126,12 +126,11 @@ public class MvgPlugin implements Plugin<Project> {
             tuneJavacPlugin();
             tuneJavaDocPlugin();
             tuneJavaEncoding();
-            agreeToBuildScan();
             addMVGRepositories();
 
             mvgCorrector = new MvgCorrector(gradle);
             mvgTagger = new MvgTagger(gradle);
-            mvgBranchBasedBuilder = new MvgBranchBasedBuilder(gradle);
+            mvgBranchBasedBuilder = new MvgBranchBasedBuilder(gradle, buildEventsListenerRegistry);
             mvgMps = new MvgMps(gradle);
             mvgUploader = new MvgUploader(gradle);
         }
@@ -258,27 +257,23 @@ public class MvgPlugin implements Plugin<Project> {
                     LOGGER.debug("++-------------------------------------------------------------------------------------------------------------------------------------");
                 }
                 String projectName = String.format("%-30s", p.getName());
-                ((DefaultConvention) p.getExtensions()).getAsMap().forEach((name, ext) -> LOGGER.debug("++ mvg: found extension    : {} {} {}", /*          */String.format("%-30s", name), /*                         */projectName, ext.getClass().getSimpleName()));
-                p.getTasks().all(task -> /*                                             */LOGGER.debug("++ mvg: found task         : {} {} {}", /*          */String.format("%-30s", task.getName()), /*               */projectName, task.getClass().getSimpleName()));
-                p.getConfigurations().all(conf -> /*                                    */LOGGER.debug("++ mvg: found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), /*               */projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
+                // Eager iteration is intentional here: trace() is diagnostic and must see all existing elements
+                p.getExtensions().getExtensionsSchema().forEach(schema -> LOGGER.debug("++ mvg: found extension    : {} {} {}", String.format("%-30s", schema.getName()), projectName, schema.getPublicType().getSimpleName()));
+                p.getTasks().all(task ->                                   LOGGER.debug("++ mvg: found task         : {} {} {}", String.format("%-30s", task.getName()), projectName, task.getClass().getSimpleName()));
+                p.getConfigurations().all(conf ->                          LOGGER.debug("++ mvg: found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
                 p.getPlugins().all(plugin -> /*                                         */LOGGER.debug("++ mvg: found plugin       : {} {}", /*             */String.format("%-30s", plugin.getClass().getSimpleName()), projectName));
             });
         }
     }
 
     private void listenForTaskExecution() {
+        // Note: unlike the old TaskExecutionListener, doFirst/doLast only fires for tasks that
+        // actually execute work — not for UP-TO-DATE or SKIPPED tasks.
         gradle.afterProject(p -> {
             if (ext.verboseTaskExecution) {
-                gradle.addListener(new TaskExecutionListener() {
-                    @Override
-                    public void beforeExecute(Task task) {
-                        LOGGER.info("+ mvg: >>>>> {}", task.getName());
-                    }
-
-                    @Override
-                    public void afterExecute(Task task, TaskState taskState) {
-                        LOGGER.info("+ mvg: <<<<< {}\n", task.getName());
-                    }
+                p.getTasks().configureEach(task -> {
+                    task.doFirst(s -> LOGGER.info("+ mvg: >>>>> {}", task.getName()));
+                    task.doLast(s -> LOGGER.info("+ mvg: <<<<< {}\n", task.getName()));
                 });
             }
         });
@@ -324,9 +319,7 @@ public class MvgPlugin implements Plugin<Project> {
                 };
                 p.getTasks()
                         .withType(JavaCompile.class)
-                        .stream()
-                        .map(javaCompile -> javaCompile.getOptions().getCompilerArgumentProviders())
-                        .forEach(prov -> prov.add(adder));
+                        .configureEach(javaCompile -> javaCompile.getOptions().getCompilerArgumentProviders().add(adder));
             }
         });
     }
@@ -380,7 +373,7 @@ public class MvgPlugin implements Plugin<Project> {
             if (ext.prepJavacForEncoding) {
                 p.getTasks()
                         .withType(JavaCompile.class)
-                        .forEach(javac -> {
+                        .configureEach(javac -> {
                             CompileOptions options = javac.getOptions();
                             if (!utf8.equals(options.getEncoding())) {
                                 LOGGER.info("+ mvg: setting {} encoding from {} to {}", javac.getName(), options.getEncoding(), utf8);
@@ -391,26 +384,13 @@ public class MvgPlugin implements Plugin<Project> {
             if (ext.prepJavadocForEncoding) {
                 p.getTasks()
                         .withType(Javadoc.class)
-                        .forEach(t -> {
+                        .configureEach(t -> {
                             MinimalJavadocOptions options = t.getOptions();
                             if (!utf8.equals(options.getEncoding())) {
                                 LOGGER.info("+ mvg: setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
                                 options.setEncoding(utf8);
                             }
                         });
-            }
-        });
-    }
-
-    private void agreeToBuildScan() {
-        gradle.afterProject(p -> {
-            if (ext.agreeToBuildScan) {
-                BuildScanExtension buildScan = (BuildScanExtension) p.getExtensions().findByName("buildScan");
-                if (buildScan != null) {
-                    LOGGER.info("+ mvg: agreeing to buildScan");
-                    buildScan.setTermsOfServiceAgree("yes");
-                    buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
-                }
             }
         });
     }

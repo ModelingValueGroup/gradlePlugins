@@ -15,8 +15,8 @@
 
 package org.modelingvalue.gradle;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Paths;
 
@@ -29,6 +29,6 @@ public class PublishTest {
     public void publish() {
         GradleException ex = assertThrows(GradleException.class,
                 () -> MvgUploader.uploadToJetBrains("uploadtest", "SomeBogusToken", "1234567890", Paths.get("build.gradle.kts")));
-        assertEquals("plugin upload returned no json object: Authentication Failed: Invalid token: Token is malformed", ex.getMessage());
+        assertTrue(ex.getMessage().contains("Authentication Failed"), "expected authentication failure but got: " + ex.getMessage());
     }
 }

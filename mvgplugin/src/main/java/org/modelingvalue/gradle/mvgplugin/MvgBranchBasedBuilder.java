@@ -21,7 +21,7 @@ import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 
 import java.io.File;
-import java.util.HashSet;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,8 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.gradle.BuildAdapter;
-import org.gradle.BuildResult;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -40,54 +38,95 @@ import org.gradle.api.artifacts.component.ModuleComponentSelector;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
 import org.gradle.api.artifacts.repositories.PasswordCredentials;
-import org.gradle.api.credentials.Credentials;
 import org.gradle.api.invocation.Gradle;
+import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.Publication;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.services.BuildService;
+import org.gradle.api.services.BuildServiceParameters;
 import org.gradle.authentication.Authentication;
-import org.gradle.internal.authentication.AuthenticationInternal;
+import org.gradle.build.event.BuildEventsListenerRegistry;
+import org.gradle.tooling.events.FinishEvent;
+import org.gradle.tooling.events.OperationCompletionListener;
+import org.gradle.tooling.events.task.TaskFailureResult;
+import org.gradle.tooling.events.task.TaskFinishEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 public class MvgBranchBasedBuilder {
     public static final String BRANCH_INDICATOR           = "-BRANCHED";
     public static final String SNAPSHOT_VERSION_POST      = "-SNAPSHOT";
-    public static final String SNAPSHOTS_REPO_POST        = "-snapshots";
     public static final String SNAPSHOTS_GROUP_PRE        = "snapshots.";
     public static final String BRANCH_REASON              = "using Branch Based Building";
     public static final int    MAX_BRANCHNAME_PART_LENGTH = 16;
 
-    private final Gradle              gradle;
-    private final Map<String, String> bbbPublishingIdCache = new ConcurrentHashMap<>();
-    private final Map<String, String> bbbDependencyIdCache = new ConcurrentHashMap<>();
-    private final Set<String>         dependenciesToSave   = new HashSet<>();
-    private final Set<String>         publications         = new HashSet<>();
-    private final boolean             isCI;
+    private final Gradle                       gradle;
+    private final Map<String, String>          bbbPublishingIdCache = new ConcurrentHashMap<>();
+    private final Map<String, String>          bbbDependencyIdCache = new ConcurrentHashMap<>();
+    private final Provider<BuildFinishService> buildFinishServiceProvider;
+    private final boolean                      isCI;
 
-    public MvgBranchBasedBuilder(Gradle gradle) {
+    public abstract static class BuildFinishService implements BuildService<BuildFinishService.Params>, OperationCompletionListener, AutoCloseable {
+        public interface Params extends BuildServiceParameters {
+            Property<String> getBuildDirPath();
+        }
+
+        private final    Set<String> dependenciesToSave = ConcurrentHashMap.newKeySet();
+        private final    Set<String> publications       = ConcurrentHashMap.newKeySet();
+        private volatile boolean     buildFailed;
+
+        public void addDependencyToSave(String dep) {
+            dependenciesToSave.add(dep);
+        }
+
+        public void addPublication(String pub) {
+            publications.add(pub);
+        }
+
+        @Override
+        public void onFinish(FinishEvent event) {
+            if (event instanceof TaskFinishEvent taskFinishEvent && taskFinishEvent.getResult() instanceof TaskFailureResult) {
+                buildFailed = true;
+            }
+        }
+
+        @Override
+        public void close() {
+            if (buildFailed) {
+                LOGGER.info("+ mvg-bbb: skipping dependency repo update because the build failed");
+                return;
+            }
+            DependenciesRepoManager dependencyRepoManager = new DependenciesRepoManager(Path.of(getParameters().getBuildDirPath().get()));
+            dependencyRepoManager.saveDependencies(dependenciesToSave);
+            dependencyRepoManager.trigger(publications);
+        }
+    }
+
+    public MvgBranchBasedBuilder(Gradle gradle, BuildEventsListenerRegistry eventsListenerRegistry) {
         this.gradle = gradle;
 
         isCI = isMvgCI_orTesting();
         LOGGER.info("+ mvg-bbb: creating MvgBranchBasedBuilder (CI={} TEST|CI={} master={})", CI, isCI, isMasterBranch());
         TRACE.report(gradle);
 
+        buildFinishServiceProvider = gradle.getSharedServices().registerIfAbsent(
+                "mvgBuildFinish",
+                BuildFinishService.class,
+                spec -> spec.getParameters().getBuildDirPath().set(
+                        gradle.getRootProject().getLayout().getBuildDirectory().get().getAsFile().toPath().toString()
+                )
+        );
+
+        eventsListenerRegistry.onTaskCompletion(buildFinishServiceProvider);
+
         adjustAllDependencies();
         adjustAllPublications();
-
-        gradle.addListener(new BuildAdapter() {
-            @Override
-            public void buildFinished(BuildResult result) {
-                if (result.getFailure() == null) {
-                    DependenciesRepoManager dependencyRepoManager = new DependenciesRepoManager(gradle);
-                    dependencyRepoManager.saveDependencies(dependenciesToSave);
-                    dependencyRepoManager.trigger(publications);
-                }
-            }
-        });
     }
 
     private void adjustAllDependencies() {
-        gradle.allprojects(p -> p.getConfigurations().all(conf -> adjustDependencies(p, conf)));
+        gradle.allprojects(p -> p.getConfigurations().configureEach(conf -> adjustDependencies(p, conf)));
     }
 
     private void adjustDependencies(Project project, Configuration conf) {
@@ -97,24 +136,16 @@ public class MvgBranchBasedBuilder {
                 strategy.dependencySubstitution(depSubs ->
                         depSubs.all(depSub -> {
                                     ComponentSelector selector = depSub.getRequested();
-                                    if (!(selector instanceof ModuleComponentSelector)) {
+                                    if (!(selector instanceof ModuleComponentSelector moduleComponent)) {
                                         LOGGER.info("+ mvg-bbb: {} {} can not handle unknown dependency class: {}", projectName, confName, selector.getClass());
                                     } else {
-                                        ModuleComponentSelector moduleComponent = (ModuleComponentSelector) selector;
                                         if (!moduleComponent.getVersion().endsWith(BRANCH_INDICATOR)) {
                                             LOGGER.info("+ mvg-bbb: {} {} {} no BRANCH dependency: {}", Util.TEST_MARKER_REPLACE_NOT_DONE, projectName, confName, selector);
                                         } else {
-                                            String       rawGroup    = moduleComponent.getGroup();
-                                            String       rawArtifact = moduleComponent.getModule();
-                                            String       rawVersion  = moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", "");
-                                            List<String> branchesTpTry;
-                                            if (InfoGradle.isMasterBranch()) {
-                                                branchesTpTry = List.of(InfoGradle.getBranch());
-                                            } else if (InfoGradle.isDevelopBranch()) {
-                                                branchesTpTry = List.of(InfoGradle.getBranch(), "master");
-                                            } else {
-                                                branchesTpTry = List.of(InfoGradle.getBranch(), "develop", "master");
-                                            }
+                                            String       rawGroup      = moduleComponent.getGroup();
+                                            String       rawArtifact   = moduleComponent.getModule();
+                                            String       rawVersion    = moduleComponent.getVersion().replaceAll(Pattern.quote(BRANCH_INDICATOR) + "$", "");
+                                            List<String> branchesTpTry = getBranchesTpTry();
                                             for (String branch : branchesTpTry) {
                                                 String newGAV = makeBbbGAV(branch, rawGroup, rawArtifact, rawVersion);
 
@@ -122,7 +153,7 @@ public class MvgBranchBasedBuilder {
                                                     LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency not found: {} => {} (skipping this branch replacement)", Util.TEST_MARKER_REPLACE_DONE, projectName, confName, selector, newGAV);
                                                 } else {
                                                     depSub.useTarget(newGAV, BRANCH_REASON);
-                                                    dependenciesToSave.add(rawGroup + "." + rawArtifact);
+                                                    buildFinishServiceProvider.get().addDependencyToSave(rawGroup + "." + rawArtifact);
 
                                                     LOGGER.info("+ mvg-bbb: {} {} {} BRANCH dependency, replaced: {} => {}", Util.TEST_MARKER_REPLACE_DONE, projectName, confName, selector, newGAV);
                                                     break;
@@ -134,6 +165,16 @@ public class MvgBranchBasedBuilder {
                         )
                 )
         );
+    }
+
+    private static @NonNull List<String> getBranchesTpTry() {
+        if (InfoGradle.isMasterBranch()) {
+            return List.of(InfoGradle.getBranch());
+        } else if (InfoGradle.isDevelopBranch()) {
+            return List.of(InfoGradle.getBranch(), "master");
+        } else {
+            return List.of(InfoGradle.getBranch(), "develop", "master");
+        }
     }
 
     private boolean isInAnyMavenRepo(Project project, String gav) {
@@ -172,9 +213,7 @@ public class MvgBranchBasedBuilder {
 
     private void makePublicationsBbb(PublishingExtension publishing) {
         publishing.getPublications().all(pub -> {
-            if (pub instanceof MavenPublication) {
-                MavenPublication mpub = (MavenPublication) pub;
-
+            if (pub instanceof MavenPublication mpub) {
                 String oldGroup    = mpub.getGroupId();
                 String oldArtifact = mpub.getArtifactId();
                 String oldVersion  = mpub.getVersion();
@@ -195,7 +234,7 @@ public class MvgBranchBasedBuilder {
 
                     TRACE.report(publishing);
 
-                    publications.add(oldGroup + "." + oldArtifact);
+                    buildFinishServiceProvider.get().addPublication(oldGroup + "." + oldArtifact);
                 }
             }
         });
@@ -227,7 +266,7 @@ public class MvgBranchBasedBuilder {
     }
 
     private String makeBbbGroup(String g, String branch) {
-        return (isCI && isMasterBranch(branch)) || g.length() == 0 || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
+        return (isCI && isMasterBranch(branch)) || g.isEmpty() || g.startsWith(SNAPSHOTS_GROUP_PRE) ? g : SNAPSHOTS_GROUP_PRE + g;
     }
 
     private String makeBbbArtifact(String a, @SuppressWarnings("unused") String branch) {
@@ -235,7 +274,7 @@ public class MvgBranchBasedBuilder {
     }
 
     private String makeBbbVersion(String v, String branch, boolean forPublication) {
-        if ((isCI && isMasterBranch(branch)) || v.length() == 0 || v.endsWith(SNAPSHOT_VERSION_POST)) {
+        if ((isCI && isMasterBranch(branch)) || v.isEmpty() || v.endsWith(SNAPSHOT_VERSION_POST)) {
             return v;
         } else {
             return (forPublication ? bbbPublishingIdCache : bbbDependencyIdCache).computeIfAbsent(branch, b -> {
@@ -251,9 +290,10 @@ public class MvgBranchBasedBuilder {
         }
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    @SuppressWarnings("LoggingSimilarMessage")
     private static class TRACE {
         private static void report(Gradle gradle) {
             if (LOGGER.isDebugEnabled()) {
@@ -285,8 +325,7 @@ public class MvgBranchBasedBuilder {
         }
 
         private static String describe(Publication x) {
-            if (x instanceof MavenPublication) {
-                MavenPublication xx = (MavenPublication) x;
+            if (x instanceof MavenPublication xx) {
                 return xx.getGroupId() + ":" + xx.getArtifactId() + ":" + xx.getVersion();
             } else {
                 return otherClass("publication", x);
@@ -308,17 +347,7 @@ public class MvgBranchBasedBuilder {
                 String credeantials = describe(mar.getCredentials());
                 String authentications = mar.getAuthentication().getAsMap().entrySet().stream().map(e -> {
                     Authentication au = e.getValue();
-                    if (!(au instanceof AuthenticationInternal)) {
-                        return e.getKey() + ":" + otherClass("authentication", au);
-                    } else {
-                        AuthenticationInternal aui         = (AuthenticationInternal) au;
-                        Credentials            credentials = aui.getCredentials();
-                        if (!(credentials instanceof PasswordCredentials)) {
-                            return e.getKey() + ":" + aui.getName() + ":" + otherClass("credentials", credentials);
-                        } else {
-                            return e.getKey() + ":" + aui.getName() + ":" + describe((PasswordCredentials) credentials);
-                        }
-                    }
+                    return e.getKey() + ":" + au.getClass().getSimpleName();
                 }).collect(Collectors.joining(", ", "Authentications[", "]"));
                 return "repo url=" + mar.getUrl() + " - " + credeantials + " - " + authentications;
             }

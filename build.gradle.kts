@@ -13,16 +13,17 @@
 //     Arjan Kok, Carel Bast                                                                                           ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-defaultTasks("mvgCorrector", "test", "publishPlugins", "mvgTagger")
+defaultTasks("test", "publishPlugins")
 
-plugins {
-    id("org.modelingvalue.gradle.mvgplugin") version ("1.0.7")
-}
-mvgcorrector {
-    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
-    addEolFileExclude("mvgplugin/src/test/resources/.*")
-    addBashFileExclude(".*/bashProduced.*")
-}
+// TODO: Re-enable once the Gradle 9 compatible version of the plugin is published
+//plugins {
+//    id("org.modelingvalue.gradle.mvgplugin") version ("1.0.7")
+//}
+//mvgcorrector {
+//    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
+//    addEolFileExclude("mvgplugin/src/test/resources/.*")
+//    addBashFileExclude(".*/bashProduced.*")
+//}
 
 // for gradle debugging:
 tasks.register("task-tree") {
