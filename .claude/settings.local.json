@@ -7,7 +7,10 @@
       "Bash(./gradlew build:*)",
       "Bash(./gradlew compileJava:*)",
       "WebFetch(domain:plugins.gradle.org)",
-      "WebFetch(domain:search.maven.org)"
+      "WebFetch(domain:search.maven.org)",
+      "Bash(gh run view:*)",
+      "Bash(gh run rerun:*)",
+      "Bash(gh run watch:*)"
     ]
   }
 }
