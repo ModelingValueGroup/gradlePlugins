@@ -47,6 +47,8 @@ jobs:
           ./gradlew publishAllPublicationsToGitHubPagesRepository
           cd mvgplugin/build/github-pages-repo
           git init -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Publish Maven repository"
           git push -f https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git gh-pages
