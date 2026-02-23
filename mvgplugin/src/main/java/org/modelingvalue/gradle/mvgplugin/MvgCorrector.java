@@ -68,9 +68,18 @@ class MvgCorrector {
     ).map(s -> Pattern.compile("^(?i)" + s + "$")).toList();
 
     private final MvgCorrectorExtension ext;
+    private final VersionCorrector     versionCorrector;
 
     public MvgCorrector(Gradle gradle) {
         ext = MvgCorrectorExtension.make(gradle);
+
+        // Compute and apply version at configuration time so that Gradle's configuration
+        // resolution (which freezes artifact file paths) sees the correct version.
+        // Without this, ShadowJar and other tasks that resolve project dependencies at
+        // configuration time would reference jars with the old version name.
+        versionCorrector = new VersionCorrector(ext);
+        versionCorrector.computeAndSetVersion();
+
         TaskProvider<Task> tp = gradle.getRootProject().getTasks().register(CORRECTOR_TASK_NAME, this::setup);
 
         // let all tasks depend on me...
@@ -118,7 +127,7 @@ class MvgCorrector {
                 changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
             }
             if (doCorrector(ext.getForceVersionCorrection().get(), "version")) {
-                changes.addAll(new VersionCorrector(ext).generate().getChangedFiles());
+                changes.addAll(versionCorrector.generate().getChangedFiles());
             }
 
             LOGGER.info("+ mvg: changed {} files", changes.size());
