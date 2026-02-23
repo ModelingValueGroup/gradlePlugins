@@ -44,6 +44,11 @@ public class VersionCorrector {
     private final        String        defaultGroup;
     private final        DotProperties gradleDotProperties;
     private final        Set<Path>     changedFiles    = new HashSet<>();
+    //
+    private              String        oldVersion;
+    private              String        newVersion;
+    private              String        group;
+    private              boolean       versionComputed;
 
     public VersionCorrector(MvgCorrectorExtension ext) {
         root = ext.getRoot();
@@ -56,27 +61,43 @@ public class VersionCorrector {
         return changedFiles;
     }
 
-    public VersionCorrector generate() {
+    /**
+     * Compute the vacant version and set it on all projects.
+     * This must be called at configuration time so that Gradle's configuration resolution
+     * (which freezes artifact file paths) sees the correct version.
+     */
+    public void computeAndSetVersion() {
         if (!gradleDotProperties.isValid()) {
             LOGGER.info("+ mvg: can not determine version: no properties file found at {}", gradleDotProperties.getFile());
-        } else {
-            String oldVersion = gradleDotProperties.getProp(PROP_NAME_VERSION, DEFAULT_VERSION);
-            String group      = gradleDotProperties.getProp(PROP_NAME_GROUP, defaultGroup);
-            String newVersion = adjustVersion(oldVersion);
+            return;
+        }
+        oldVersion = gradleDotProperties.getProp(PROP_NAME_VERSION, DEFAULT_VERSION);
+        group      = gradleDotProperties.getProp(PROP_NAME_GROUP, defaultGroup);
+        newVersion = adjustVersion(oldVersion);
+        versionComputed = true;
 
-            if (!oldVersion.equals(newVersion)) {
-                LOGGER.info("+ mvg: overwriting property {} with new version {} (was {}) in property file {}", PROP_NAME_VERSION, newVersion, oldVersion, gradleDotProperties.getFile());
-                gradleDotProperties.setProp(PROP_NAME_VERSION, newVersion);
-                changedFiles.add(root.relativize(gradleDotProperties.getFile()));
+        project.getAllprojects().forEach(p -> {
+            if (!Objects.equals(p.getVersion(), newVersion) || !Objects.equals(p.getGroup(), group)) {
+                LOGGER.info("+ mvg: project '{}': version: {} => {}, group: {} => {}", p.getName(), p.getVersion(), newVersion, p.getGroup(), group);
+                p.setVersion(newVersion);
+                p.setGroup(group);
             }
+        });
+    }
 
-            project.getAllprojects().forEach(p -> {
-                if (!Objects.equals(p.getVersion(), newVersion) || !Objects.equals(p.getGroup(), group)) {
-                    LOGGER.info("+ mvg: project '{}': version: {} => {}, group: {} => {}", p.getName(), p.getVersion(), newVersion, p.getGroup(), group);
-                    p.setVersion(newVersion);
-                    p.setGroup(group);
-                }
-            });
+    /**
+     * Write the new version to gradle.properties if it changed.
+     * This should be called at execution time (in the mvgcorrector task action).
+     * Requires {@link #computeAndSetVersion()} to have been called first.
+     */
+    public VersionCorrector generate() {
+        if (!versionComputed) {
+            computeAndSetVersion();
+        }
+        if (oldVersion != null && !oldVersion.equals(newVersion)) {
+            LOGGER.info("+ mvg: overwriting property {} with new version {} (was {}) in property file {}", PROP_NAME_VERSION, newVersion, oldVersion, gradleDotProperties.getFile());
+            gradleDotProperties.setProp(PROP_NAME_VERSION, newVersion);
+            changedFiles.add(root.relativize(gradleDotProperties.getFile()));
         }
         return this;
     }

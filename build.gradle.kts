@@ -33,18 +33,18 @@ defaultTasks("test", "publishPlugins")
 // for gradle debugging:
 tasks.register("task-tree") {
     doLast {
-        getAllTasks(true).forEach {
-            System.err.println("  > " + it.key)
-            it.value.forEach {
-                System.err.println("       = " + it)
+        getAllTasks(true).forEach { task ->
+            System.err.println("  > " + task.key)
+            task.value.forEach { t ->
+                System.err.println("       = $t")
 
-                it.dependsOn.forEach {
-                    if (it is TaskDependency) {
-                        it.getDependencies(tasks.named("task-tree").get()).forEach {
-                            System.err.println("                                - " + it)
+                t.dependsOn.forEach { dep ->
+                    if (dep is TaskDependency) {
+                        dep.getDependencies(tasks.named("task-tree").get()).forEach { depdep ->
+                            System.err.println("                                - $depdep")
                         }
                     } else {
-                        System.err.println("                                - " + it)
+                        System.err.println("                                - $dep")
                     }
                 }
             }

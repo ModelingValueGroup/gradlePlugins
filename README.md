@@ -35,4 +35,25 @@ mvgplugin {
 }
 ```
 To download, see: https://plugins.gradle.org/plugin/org.modelingvalue.gradle.mvgplugin
+
+## Alternative: consume from GitHub Pages
+
+The plugin is also published as a Maven artifact to GitHub Pages. To use it from there, add the following to your `settings.gradle.kts`:
+
+```kotlin
+pluginManagement {
+    repositories {
+        maven { url = uri("https://modelingvaluegroup.github.io/gradlePlugins/") }
+        gradlePluginPortal()
+    }
+}
+```
+
+Then apply the plugin as usual in your `build.gradle.kts`:
+```kotlin
+plugins {
+    id("org.modelingvalue.gradle.mvgplugin") version "2.0.0"
+}
+```
+
 # ... other plugins might follow in the future
