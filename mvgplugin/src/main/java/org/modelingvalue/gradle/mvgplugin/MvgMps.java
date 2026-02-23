@@ -1,17 +1,22 @@
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
-//                                                                                                                     ~
-// Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
-// compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on ~
-// an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the  ~
-// specific language governing permissions and limitations under the License.                                          ~
-//                                                                                                                     ~
-// Maintainers:                                                                                                        ~
-//     Wim Bast, Tom Brus, Ronald Krijgsheld                                                                           ~
-// Contributors:                                                                                                       ~
-//     Arjan Kok, Carel Bast                                                                                           ~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  (C) Copyright 2018-2025 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
+//                                                                                                                       ~
+//  Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in       ~
+//  compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0   ~
+//  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on  ~
+//  an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the   ~
+//  specific language governing permissions and limitations under the License.                                           ~
+//                                                                                                                       ~
+//  Maintainers:                                                                                                         ~
+//      Wim Bast, Tom Brus                                                                                               ~
+//                                                                                                                       ~
+//  Contributors:                                                                                                        ~
+//      Ronald Krijgsheld ✝, Arjan Kok, Carel Bast                                                                       ~
+// --------------------------------------------------------------------------------------------------------------------- ~
+//  In Memory of Ronald Krijgsheld, 1972 - 2023                                                                          ~
+//      Ronald was suddenly and unexpectedly taken from us. He was not only our long-term colleague and team member      ~
+//      but also our friend. "He will live on in many of the lines of code you see below."                               ~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 package org.modelingvalue.gradle.mvgplugin;
 
@@ -23,7 +28,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
+import java.net.HttpURLConnection;
 import java.net.URLConnection;
 import java.nio.channels.Channels;
 import java.nio.file.Files;
@@ -34,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -74,16 +80,6 @@ public class MvgMps {
         return gradle.getRootProject().files(jar.toFile());
     }
 
-    public Properties getMpsBuildProps() {
-        loadMps();
-        return mpsBuildProps;
-    }
-
-    public Version getMpsBuildNumber() {
-        loadMps();
-        return mpsBuildNumber;
-    }
-
     private Map<String, Path> getJarIndex() {
         loadMps();
         return jarIndex;
@@ -116,8 +112,8 @@ public class MvgMps {
     }
 
     private void checkAntFilesAgainstMpsBuildNumber() {
-        try {
-            Files.walk(InfoGradle.getAbsProjectDir())
+        try (Stream<Path> pathStream = Files.walk(InfoGradle.getAbsProjectDir())) {
+            pathStream
                     .filter(p -> p.getFileName().toString().endsWith(".xml"))
                     .map(AntFileMpsVersionsExtractor::new)
                     .filter(AntFileMpsVersionsExtractor::isAntFile)
@@ -153,16 +149,66 @@ public class MvgMps {
     }
 
     private static void downloadAndUnzip(MvgMpsExtension ext) {
+        Path mpsCacheFile   = ext.getMpsCacheFile();
         Path mpsDownloadDir = ext.getMpsDownloadDir().toPath();
-        Path mpsZip         = mpsDownloadDir.resolve("mps.zip");
         Path mpsInstallDir  = ext.getMpsInstallDir().toPath();
 
-        if (!Files.isRegularFile(mpsZip)) {
-            downloadMps(ext, mpsZip);
+        if (!Files.isRegularFile(mpsCacheFile)) {
+            LOGGER.info("+ mvg-mps: cached MPS zip is absent, downloading...");
+            downloadMps(ext, mpsCacheFile);
+        } else if (!isCacheValid(ext, mpsCacheFile)) {
+            LOGGER.info("+ mvg-mps: cached MPS zip is stale, re-downloading...");
+            downloadMps(ext, mpsCacheFile);
+        } else {
+            LOGGER.info("+ mvg-mps: cached MPS zip is ok, using cache: {}", mpsCacheFile);
         }
         if (!Files.isDirectory(mpsInstallDir)) {
-            unzip(ext, mpsZip, mpsDownloadDir);
+            unzip(ext, mpsCacheFile, mpsDownloadDir);
         }
+    }
+
+    private static boolean isCacheValid(MvgMpsExtension ext, Path mpsCacheFile) {
+        try {
+            long cachedSize = Files.size(mpsCacheFile);
+            long remoteSize = getRemoteFileSize(ext.getMpsDownloadUrl());
+            if (remoteSize <= 0) {
+                LOGGER.info("+ mvg-mps: could not determine remote file size, trusting cached file");
+                return true;
+            }
+            if (remoteSize == cachedSize) {
+                return true;
+            }
+            LOGGER.info("+ mvg-mps: cache size mismatch: cached={}, remote={}", cachedSize, remoteSize);
+            return false;
+        } catch (IOException e) {
+            LOGGER.info("+ mvg-mps: could not verify cache ({}), trusting cached file", e.getMessage());
+            return true;
+        }
+    }
+
+    private static long getRemoteFileSize(String url) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) Util.getUrl(url).openConnection();
+        conn.setRequestMethod("HEAD");
+        conn.setInstanceFollowRedirects(true);
+        for (int i = 0; i < MAX_REDIRECTS; i++) {
+            int code = conn.getResponseCode();
+            if (code >= 300 && code < 400) {
+                String redirect = conn.getHeaderField("Location");
+                if (redirect == null) {
+                    break;
+                }
+                LOGGER.info("+ mvg-mps: HEAD redirect => {}", redirect);
+                conn.disconnect();
+                conn = (HttpURLConnection) Util.getUrl(redirect).openConnection();
+                conn.setRequestMethod("HEAD");
+                conn.setInstanceFollowRedirects(true);
+            } else {
+                break;
+            }
+        }
+        long size = conn.getContentLengthLong();
+        conn.disconnect();
+        return size;
     }
 
     private static void downloadMps(MvgMpsExtension ext, Path mpsZip) {
@@ -170,17 +216,17 @@ public class MvgMps {
         String url = ext.getMpsDownloadUrl();
         try {
             Files.createDirectories(mpsZip.getParent());
-            URLConnection urlConnection = new URL(url).openConnection();
+            URLConnection urlConnection = Util.getUrl(url).openConnection();
             for (int i = 0; i < MAX_REDIRECTS; i++) {
                 String redirect = urlConnection.getHeaderField("Location");
                 if (redirect == null) {
                     break;
                 }
                 LOGGER.info("+ mvg-mps: MPS download redirect => {}", redirect);
-                urlConnection = new URL(redirect).openConnection();
+                urlConnection = Util.getUrl(redirect).openConnection();
             }
-            try (InputStream is = urlConnection.getInputStream()) {
-                long len = new FileOutputStream(mpsZip.toFile()).getChannel().transferFrom(Channels.newChannel(is), 0, Long.MAX_VALUE);
+            try (InputStream is = urlConnection.getInputStream(); FileOutputStream fos = new FileOutputStream(mpsZip.toFile())) {
+                long len = fos.getChannel().transferFrom(Channels.newChannel(is), 0, Long.MAX_VALUE);
                 if (len == 0) {
                     Files.deleteIfExists(mpsZip);
                     throw new GradleException("could not download MPS " + ext.getVersion() + " from " + url + " (got empty file)");
@@ -217,17 +263,19 @@ public class MvgMps {
                 }
             }
             zis.closeEntry();
-            long numFiles = Files.walk(destDir).filter(Files::isRegularFile).count();
-            LOGGER.info("+ mvg-mps: unzipping   MPS {} gave {} files, took {} ms, at {}", ext.getVersion(), numFiles, System.currentTimeMillis() - t0, destDir);
+            try (Stream<Path> pathStream = Files.walk(destDir)) {
+                long numFiles = pathStream.filter(Files::isRegularFile).count();
+                LOGGER.info("+ mvg-mps: unzipping MPS {} gave {} files, took {} ms, at {}", ext.getVersion(), numFiles, System.currentTimeMillis() - t0, destDir);
+            }
         } catch (IOException e) {
             throw new GradleException("could not unzip MPS zip: " + fileZip, e);
         }
     }
 
     private void makeJarIndex() {
-        try {
+        try (Stream<Path> pathStream = Files.walk(rootPath)) {
             // determine the jars and index them by their code name:
-            Map<String, List<Path>> coreNameToPathMap = Files.walk(rootPath)
+            Map<String, List<Path>> coreNameToPathMap = pathStream
                     .filter(p -> p.getFileName().toString().endsWith(".jar"))
                     .collect(Collectors.groupingBy(p -> p.getFileName().toString().replaceAll("[.]jar$", "")));
 
@@ -239,7 +287,7 @@ public class MvgMps {
                     List<Path>              inLibs     = subtreeMap.get("lib");
                     if (inLibs != null && inLibs.size() == 1) {
                         if (LOGGER.isInfoEnabled()) {
-                            Path       inLibRel  = rel(inLibs.get(0));
+                            Path       inLibRel  = rel(inLibs.getFirst());
                             List<Path> othersRel = paths.stream().map(this::rel).filter(p -> !p.equals(inLibRel)).collect(Collectors.toList());
                             LOGGER.info("+ mvg-mps: ambiguous jar-name resolved: [{}]={} (ignoring: {})", coreName, inLibRel, othersRel);
                         }

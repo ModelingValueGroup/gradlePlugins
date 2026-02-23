@@ -1,17 +1,22 @@
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
-//                                                                                                                     ~
-// Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
-// compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on ~
-// an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the  ~
-// specific language governing permissions and limitations under the License.                                          ~
-//                                                                                                                     ~
-// Maintainers:                                                                                                        ~
-//     Wim Bast, Tom Brus, Ronald Krijgsheld                                                                           ~
-// Contributors:                                                                                                       ~
-//     Arjan Kok, Carel Bast                                                                                           ~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  (C) Copyright 2018-2025 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
+//                                                                                                                       ~
+//  Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in       ~
+//  compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0   ~
+//  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on  ~
+//  an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the   ~
+//  specific language governing permissions and limitations under the License.                                           ~
+//                                                                                                                       ~
+//  Maintainers:                                                                                                         ~
+//      Wim Bast, Tom Brus                                                                                               ~
+//                                                                                                                       ~
+//  Contributors:                                                                                                        ~
+//      Ronald Krijgsheld ✝, Arjan Kok, Carel Bast                                                                       ~
+// --------------------------------------------------------------------------------------------------------------------- ~
+//  In Memory of Ronald Krijgsheld, 1972 - 2023                                                                          ~
+//      Ronald was suddenly and unexpectedly taken from us. He was not only our long-term colleague and team member      ~
+//      but also our friend. "He will live on in many of the lines of code you see below."                               ~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 package org.modelingvalue.gradle.mvgplugin;
 
@@ -56,8 +61,8 @@ public class Util {
 
     public static URL getUrl(String url) {
         try {
-            return new URL(url);
-        } catch (MalformedURLException e) {
+            return new URI(url).toURL();
+        } catch (MalformedURLException | URISyntaxException e) {
             throw new GradleException("not a valid url in header (" + e.getMessage() + "): " + url, e);
         }
     }
@@ -138,14 +143,6 @@ public class Util {
         return count;
     }
 
-    public static URI makeURL(String url) {
-        try {
-            return new URI(url);
-        } catch (URISyntaxException e) {
-            throw new GradleException("unexpected exception", e);
-        }
-    }
-
     static Map<?, ?> readYaml(Path path) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
         objectMapper.findAndRegisterModules();
@@ -164,21 +161,17 @@ public class Util {
 
     public static long toBytes(String in) {
         in = in.trim();
-        if (in.matches("[0-9][0-9]*")) {
+        if (in.matches("[0-9]+")) {
             return Long.parseLong(in);
-        } else if (in.matches("[0-9][0-9]*[kKmMgGtT]?")) {
+        } else if (in.matches("[0-9]+[kKmMgGtT]?")) {
             long l = Long.parseLong(in, 0, in.length() - 1, 10);
-            switch (Character.toLowerCase(in.charAt(in.length() - 1))) {
-            case 'k':
-                return l * 1024;
-            case 'm':
-                return l * 1024 * 1024;
-            case 'g':
-                return l * 1024 * 1024 * 1024;
-            case 't':
-                return l * 1024 * 1024 * 1024 * 1024;
-            }
-            return -1; // never reached
+            return switch (Character.toLowerCase(in.charAt(in.length() - 1))) {
+                case 'k' -> l * 1024;
+                case 'm' -> l * 1024 * 1024;
+                case 'g' -> l * 1024 * 1024 * 1024;
+                case 't' -> l * 1024 * 1024 * 1024 * 1024;
+                default -> -1;
+            };
         } else {
             throw new GradleException("human readable form of memory size '" + in + "' is not valid");
         }

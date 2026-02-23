@@ -1,17 +1,22 @@
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
-//                                                                                                                     ~
-// Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
-// compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on ~
-// an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the  ~
-// specific language governing permissions and limitations under the License.                                          ~
-//                                                                                                                     ~
-// Maintainers:                                                                                                        ~
-//     Wim Bast, Tom Brus, Ronald Krijgsheld                                                                           ~
-// Contributors:                                                                                                       ~
-//     Arjan Kok, Carel Bast                                                                                           ~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  (C) Copyright 2018-2025 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
+//                                                                                                                       ~
+//  Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in       ~
+//  compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0   ~
+//  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on  ~
+//  an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the   ~
+//  specific language governing permissions and limitations under the License.                                           ~
+//                                                                                                                       ~
+//  Maintainers:                                                                                                         ~
+//      Wim Bast, Tom Brus                                                                                               ~
+//                                                                                                                       ~
+//  Contributors:                                                                                                        ~
+//      Ronald Krijgsheld ✝, Arjan Kok, Carel Bast                                                                       ~
+// --------------------------------------------------------------------------------------------------------------------- ~
+//  In Memory of Ronald Krijgsheld, 1972 - 2023                                                                          ~
+//      Ronald was suddenly and unexpectedly taken from us. He was not only our long-term colleague and team member      ~
+//      but also our friend. "He will live on in many of the lines of code you see below."                               ~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 package org.modelingvalue.gradle.mvgplugin;
 
@@ -27,12 +32,18 @@ import java.util.Set;
 
 import org.gradle.api.Project;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.internal.extensibility.DefaultConvention;
+import org.gradle.api.provider.Property;
 
-public class MvgCorrectorExtension {
+public abstract class MvgCorrectorExtension {
     public static MvgCorrectorExtension make(Gradle gradle) {
         Project project = gradle.getRootProject();
-        return ((DefaultConvention) project.getExtensions()).create(CORRECTOR_TASK_NAME, MvgCorrectorExtension.class, project);
+        MvgCorrectorExtension ext = project.getExtensions().create(CORRECTOR_TASK_NAME, MvgCorrectorExtension.class, project);
+        ext.getForceEolCorrection().convention(false);
+        ext.getForceHeaderCorrection().convention(false);
+        ext.getForceDependabotCorrection().convention(false);
+        ext.getForceBashCorrection().convention(false);
+        ext.getForceVersionCorrection().convention(false);
+        return ext;
     }
 
     private final Project             project;
@@ -45,11 +56,12 @@ public class MvgCorrectorExtension {
     private final Set<String>         headerFileExcludes;
     private final Set<String>         eolFileExcludes;
     private final Set<String>         bashFileExcludes;
-    public        boolean             forceEolCorrection;
-    public        boolean             forceHeaderCorrection;
-    public        boolean             forceDependabotCorrection;
-    public        boolean             forceBashCorrection;
-    public        boolean             forceVersionCorrection;
+
+    public abstract Property<Boolean> getForceEolCorrection();
+    public abstract Property<Boolean> getForceHeaderCorrection();
+    public abstract Property<Boolean> getForceDependabotCorrection();
+    public abstract Property<Boolean> getForceBashCorrection();
+    public abstract Property<Boolean> getForceVersionCorrection();
 
     public MvgCorrectorExtension(Project project) {
         this.project = project;
@@ -90,7 +102,6 @@ public class MvgCorrectorExtension {
         noTextExt = new HashSet<>(List.of(
                 "class",
                 "iml",
-                "jar",
                 "jar",
                 "jpeg",
                 "jpg",

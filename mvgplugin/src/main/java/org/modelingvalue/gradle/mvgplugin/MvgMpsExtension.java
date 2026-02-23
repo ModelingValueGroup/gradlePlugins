@@ -1,17 +1,22 @@
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
-//                                                                                                                     ~
-// Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
-// compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on ~
-// an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the  ~
-// specific language governing permissions and limitations under the License.                                          ~
-//                                                                                                                     ~
-// Maintainers:                                                                                                        ~
-//     Wim Bast, Tom Brus, Ronald Krijgsheld                                                                           ~
-// Contributors:                                                                                                       ~
-//     Arjan Kok, Carel Bast                                                                                           ~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  (C) Copyright 2018-2025 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
+//                                                                                                                       ~
+//  Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in       ~
+//  compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0   ~
+//  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on  ~
+//  an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the   ~
+//  specific language governing permissions and limitations under the License.                                           ~
+//                                                                                                                       ~
+//  Maintainers:                                                                                                         ~
+//      Wim Bast, Tom Brus                                                                                               ~
+//                                                                                                                       ~
+//  Contributors:                                                                                                        ~
+//      Ronald Krijgsheld ✝, Arjan Kok, Carel Bast                                                                       ~
+// --------------------------------------------------------------------------------------------------------------------- ~
+//  In Memory of Ronald Krijgsheld, 1972 - 2023                                                                          ~
+//      Ronald was suddenly and unexpectedly taken from us. He was not only our long-term colleague and team member      ~
+//      but also our friend. "He will live on in many of the lines of code you see below."                               ~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 package org.modelingvalue.gradle.mvgplugin;
 
@@ -23,20 +28,21 @@ import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperti
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.selectMasterDevelopElse;
 
 import java.io.File;
+import java.nio.file.Path;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.internal.extensibility.DefaultConvention;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 public class MvgMpsExtension {
-    private final static String MPS_DOWNLOAD_URL_TEMPLATE = "http://download.jetbrains.com/mps/%s/MPS-%s.zip";
+    private final static String MPS_DOWNLOAD_URL_TEMPLATE = "https://download.jetbrains.com/mps/%s/MPS-%s.zip";
     private final static String MPS_ROOT_DIR_TEMPLATE     = "MPS %s"; // this name is dictated by JetBrains in their zip file setup
     private final static String MPS_DOWNLOAD_DIR_TEMPLATE = "MPS-%s";
+    private final static Path   MPS_CACHE_DIR             = Path.of(System.getProperty("user.home"), ".gradle", "caches", "mps-downloads");
 
     public static MvgMpsExtension make(Gradle gradle) {
-        return ((DefaultConvention) gradle.getRootProject().getExtensions()).create(MPS_TASK_NAME, MvgMpsExtension.class, gradle);
+        return gradle.getRootProject().getExtensions().create(MPS_TASK_NAME, MvgMpsExtension.class, gradle);
     }
 
     private final Gradle  gradle;
@@ -64,7 +70,7 @@ public class MvgMpsExtension {
     }
 
     public File getMpsDownloadDir() {
-        return new File(gradle.getRootProject().getBuildDir(), String.format(MPS_DOWNLOAD_DIR_TEMPLATE, getVersion()));
+        return new File(gradle.getRootProject().getLayout().getBuildDirectory().get().getAsFile(), String.format(MPS_DOWNLOAD_DIR_TEMPLATE, getVersion()));
     }
 
     public String getMpsDownloadUrl() {
@@ -73,6 +79,10 @@ public class MvgMpsExtension {
 
     public File getMpsInstallDir() {
         return new File(getMpsDownloadDir(), String.format(MPS_ROOT_DIR_TEMPLATE, getMajorMpsVersion()));
+    }
+
+    public Path getMpsCacheFile() {
+        return MPS_CACHE_DIR.resolve(String.format("MPS-%s.zip", getVersion()));
     }
 
     @NotNull

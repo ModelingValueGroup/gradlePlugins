@@ -1,17 +1,22 @@
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
-//                                                                                                                     ~
-// Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
-// compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on ~
-// an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the  ~
-// specific language governing permissions and limitations under the License.                                          ~
-//                                                                                                                     ~
-// Maintainers:                                                                                                        ~
-//     Wim Bast, Tom Brus, Ronald Krijgsheld                                                                           ~
-// Contributors:                                                                                                       ~
-//     Arjan Kok, Carel Bast                                                                                           ~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  (C) Copyright 2018-2025 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
+//                                                                                                                       ~
+//  Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in       ~
+//  compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0   ~
+//  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on  ~
+//  an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the   ~
+//  specific language governing permissions and limitations under the License.                                           ~
+//                                                                                                                       ~
+//  Maintainers:                                                                                                         ~
+//      Wim Bast, Tom Brus                                                                                               ~
+//                                                                                                                       ~
+//  Contributors:                                                                                                        ~
+//      Ronald Krijgsheld ✝, Arjan Kok, Carel Bast                                                                       ~
+// --------------------------------------------------------------------------------------------------------------------- ~
+//  In Memory of Ronald Krijgsheld, 1972 - 2023                                                                          ~
+//      Ronald was suddenly and unexpectedly taken from us. He was not only our long-term colleague and team member      ~
+//      but also our friend. "He will live on in many of the lines of code you see below."                               ~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 package org.modelingvalue.gradle.mvgplugin;
 
@@ -37,32 +42,31 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.gradle.build.event.BuildEventsListenerRegistry;
 import org.gradle.api.GradleException;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.execution.TaskExecutionListener;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.TaskCollection;
-import org.gradle.api.tasks.TaskState;
 import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.Test;
 import org.gradle.external.javadoc.MinimalJavadocOptions;
 import org.gradle.external.javadoc.StandardJavadocDocletOptions;
-import org.gradle.internal.extensibility.DefaultConvention;
 import org.gradle.process.CommandLineArgumentProvider;
 import org.jetbrains.annotations.NotNull;
 
-import com.gradle.scan.plugin.BuildScanExtension;
+import javax.inject.Inject;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class MvgPlugin implements Plugin<Project> {
     public static MvgPlugin singleton;
 
+    private final BuildEventsListenerRegistry buildEventsListenerRegistry;
     private boolean               inactiveBecauseNotRootProject;
     private Gradle                gradle;
     private Extension             ext;
@@ -73,24 +77,34 @@ public class MvgPlugin implements Plugin<Project> {
     private MvgUploader           mvgUploader;
     private boolean               traceHeaderDone;
 
-    public static class Extension {
+    public abstract static class Extension {
         public static Extension make(Gradle gradle) {
-            return ((DefaultConvention) gradle.getRootProject().getExtensions()).create(MVG, Extension.class);
+            Extension ext = gradle.getRootProject().getExtensions().create(MVG, Extension.class);
+            ext.getVerboseTaskExecution().convention(true);
+            ext.getPrepTestsForJunit5().convention(true);
+            ext.getPrepJavacForLint().convention(true);
+            ext.getPrepJavadocForLint().convention(true);
+            ext.getPrepJavacForEncoding().convention(true);
+            ext.getPrepJavadocForEncoding().convention(true);
+            ext.getMakeJavadocAndSources().convention(true);
+            ext.getAddMvgGithubRepositories().convention(true);
+            return ext;
         }
 
-        public boolean verboseTaskExecution     = true;
-        public boolean prepTestsForJunit5       = true;
-        public boolean prepJavacForLint         = true;
-        public boolean prepJavadocForLint       = true;
-        public boolean prepJavacForEncoding     = true;
-        public boolean prepJavadocForEncoding   = true;
-        public boolean makeJavadocAndSources    = true;
-        public boolean agreeToBuildScan         = true;
-        public boolean addMvgGithubRepositories = true;
+        public abstract Property<Boolean> getVerboseTaskExecution();
+        public abstract Property<Boolean> getPrepTestsForJunit5();
+        public abstract Property<Boolean> getPrepJavacForLint();
+        public abstract Property<Boolean> getPrepJavadocForLint();
+        public abstract Property<Boolean> getPrepJavacForEncoding();
+        public abstract Property<Boolean> getPrepJavadocForEncoding();
+        public abstract Property<Boolean> getMakeJavadocAndSources();
+        public abstract Property<Boolean> getAddMvgGithubRepositories();
     }
 
-    public MvgPlugin() {
+    @Inject
+    public MvgPlugin(BuildEventsListenerRegistry buildEventsListenerRegistry) {
         singleton = this;
+        this.buildEventsListenerRegistry = buildEventsListenerRegistry;
     }
 
     public void apply(Project project) {
@@ -126,12 +140,11 @@ public class MvgPlugin implements Plugin<Project> {
             tuneJavacPlugin();
             tuneJavaDocPlugin();
             tuneJavaEncoding();
-            agreeToBuildScan();
             addMVGRepositories();
 
             mvgCorrector = new MvgCorrector(gradle);
             mvgTagger = new MvgTagger(gradle);
-            mvgBranchBasedBuilder = new MvgBranchBasedBuilder(gradle);
+            mvgBranchBasedBuilder = new MvgBranchBasedBuilder(gradle, buildEventsListenerRegistry);
             mvgMps = new MvgMps(gradle);
             mvgUploader = new MvgUploader(gradle);
         }
@@ -258,27 +271,23 @@ public class MvgPlugin implements Plugin<Project> {
                     LOGGER.debug("++-------------------------------------------------------------------------------------------------------------------------------------");
                 }
                 String projectName = String.format("%-30s", p.getName());
-                ((DefaultConvention) p.getExtensions()).getAsMap().forEach((name, ext) -> LOGGER.debug("++ mvg: found extension    : {} {} {}", /*          */String.format("%-30s", name), /*                         */projectName, ext.getClass().getSimpleName()));
-                p.getTasks().all(task -> /*                                             */LOGGER.debug("++ mvg: found task         : {} {} {}", /*          */String.format("%-30s", task.getName()), /*               */projectName, task.getClass().getSimpleName()));
-                p.getConfigurations().all(conf -> /*                                    */LOGGER.debug("++ mvg: found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), /*               */projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
+                // Eager iteration is intentional here: trace() is diagnostic and must see all existing elements
+                p.getExtensions().getExtensionsSchema().forEach(schema -> LOGGER.debug("++ mvg: found extension    : {} {} {}", String.format("%-30s", schema.getName()), projectName, schema.getPublicType().getSimpleName()));
+                p.getTasks().all(task ->                                   LOGGER.debug("++ mvg: found task         : {} {} {}", String.format("%-30s", task.getName()), projectName, task.getClass().getSimpleName()));
+                p.getConfigurations().all(conf ->                          LOGGER.debug("++ mvg: found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
                 p.getPlugins().all(plugin -> /*                                         */LOGGER.debug("++ mvg: found plugin       : {} {}", /*             */String.format("%-30s", plugin.getClass().getSimpleName()), projectName));
             });
         }
     }
 
     private void listenForTaskExecution() {
+        // Note: unlike the old TaskExecutionListener, doFirst/doLast only fires for tasks that
+        // actually execute work — not for UP-TO-DATE or SKIPPED tasks.
         gradle.afterProject(p -> {
-            if (ext.verboseTaskExecution) {
-                gradle.addListener(new TaskExecutionListener() {
-                    @Override
-                    public void beforeExecute(Task task) {
-                        LOGGER.info("+ mvg: >>>>> {}", task.getName());
-                    }
-
-                    @Override
-                    public void afterExecute(Task task, TaskState taskState) {
-                        LOGGER.info("+ mvg: <<<<< {}\n", task.getName());
-                    }
+            if (ext.getVerboseTaskExecution().get()) {
+                p.getTasks().configureEach(task -> {
+                    task.doFirst(s -> LOGGER.info("+ mvg: >>>>> {}", task.getName()));
+                    task.doLast(s -> LOGGER.info("+ mvg: <<<<< {}\n", task.getName()));
                 });
             }
         });
@@ -286,11 +295,8 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneTesting() {
         gradle.afterProject(p -> {
-            if (ext.prepTestsForJunit5) {
-                Task t = p.getTasks().findByName("test");
-                if (t instanceof Test) {
-                    Test test = (Test) t;
-
+            if (ext.getPrepTestsForJunit5().get()) {
+                p.getTasks().withType(Test.class).configureEach(test -> {
                     LOGGER.info("+ mvg: adding test.useJUnitPlatform");
                     test.useJUnitPlatform();
 
@@ -298,15 +304,13 @@ public class MvgPlugin implements Plugin<Project> {
                         LOGGER.info("+ mvg: increasing test heap from {} to {}", test.getMaxHeapSize() == null ? "default" : test.getMaxHeapSize(), MIN_TEST_HEAP_SIZE);
                         test.setMaxHeapSize(MIN_TEST_HEAP_SIZE);
                     }
+                });
 
-                    Object java = p.getExtensions().findByName("java");
-                    if (java != null) {
-                        LOGGER.info("+ mvg: adding junit5 dependencies");
-                        Info.JUNIT_IMPLEMENTATION_DEPS.forEach(dep -> p.getDependencies().add("testImplementation", dep));
-                        Info.JUNIT_RUNTIMEONLY_DEPS.forEach(dep -> p.getDependencies().add("testRuntimeOnly", dep));
-                    }
-                } else if (t != null) {
-                    LOGGER.info("+ mvg: 'test' task is not of type Test (but of type '{}')", t.getClass().getSimpleName());
+                Object java = p.getExtensions().findByName("java");
+                if (java != null) {
+                    LOGGER.info("+ mvg: adding junit5 dependencies");
+                    Info.JUNIT_IMPLEMENTATION_DEPS.forEach(dep -> p.getDependencies().add("testImplementation", dep));
+                    Info.JUNIT_RUNTIMEONLY_DEPS.forEach(dep -> p.getDependencies().add("testRuntimeOnly", dep));
                 }
             }
         });
@@ -314,7 +318,7 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneJavacPlugin() {
         gradle.afterProject(p -> {
-            if (ext.prepJavacForLint) {
+            if (ext.getPrepJavacForLint().get()) {
                 @SuppressWarnings("Convert2Lambda") // keep this, grdale does not like java lambdas here 8- see: https://docs.gradle.org/7.2/userguide/validation_problems.html#implementation_unknown
                 CommandLineArgumentProvider adder = new CommandLineArgumentProvider() {
                     @Override
@@ -324,9 +328,7 @@ public class MvgPlugin implements Plugin<Project> {
                 };
                 p.getTasks()
                         .withType(JavaCompile.class)
-                        .stream()
-                        .map(javaCompile -> javaCompile.getOptions().getCompilerArgumentProviders())
-                        .forEach(prov -> prov.add(adder));
+                        .configureEach(javaCompile -> javaCompile.getOptions().getCompilerArgumentProviders().add(adder));
             }
         });
     }
@@ -339,7 +341,7 @@ public class MvgPlugin implements Plugin<Project> {
         gradle.afterProject(p -> {
             JavaPluginExtension javaExt = (JavaPluginExtension) p.getExtensions().findByName("java");
             if (javaExt != null) {
-                if (ext.makeJavadocAndSources) {
+                if (ext.getMakeJavadocAndSources().get()) {
                     LOGGER.info("+ mvg: adding tasks for javadoc & source jars");
                     javaExt.withJavadocJar();
                     javaExt.withSourcesJar();
@@ -362,9 +364,9 @@ public class MvgPlugin implements Plugin<Project> {
 
     private void tuneJavaDocPlugin() {
         gradle.afterProject(p -> {
-            if (ext.prepJavadocForLint) {
+            if (ext.getPrepJavadocForLint().get()) {
                 TaskCollection<Javadoc> javadocTasks = p.getTasks().withType(Javadoc.class);
-                javadocTasks.forEach(jd -> jd.options(opt -> {
+                javadocTasks.configureEach(jd -> jd.options(opt -> {
                     if (opt instanceof StandardJavadocDocletOptions) {
                         LOGGER.info("+ mvg: adding javadoc option to ignore warnings");
                         ((StandardJavadocDocletOptions) opt).addStringOption("Xdoclint:none", "-quiet");
@@ -377,10 +379,10 @@ public class MvgPlugin implements Plugin<Project> {
     private void tuneJavaEncoding() {
         String utf8 = StandardCharsets.UTF_8.name();
         gradle.afterProject(p -> {
-            if (ext.prepJavacForEncoding) {
+            if (ext.getPrepJavacForEncoding().get()) {
                 p.getTasks()
                         .withType(JavaCompile.class)
-                        .forEach(javac -> {
+                        .configureEach(javac -> {
                             CompileOptions options = javac.getOptions();
                             if (!utf8.equals(options.getEncoding())) {
                                 LOGGER.info("+ mvg: setting {} encoding from {} to {}", javac.getName(), options.getEncoding(), utf8);
@@ -388,10 +390,10 @@ public class MvgPlugin implements Plugin<Project> {
                             }
                         });
             }
-            if (ext.prepJavadocForEncoding) {
+            if (ext.getPrepJavadocForEncoding().get()) {
                 p.getTasks()
                         .withType(Javadoc.class)
-                        .forEach(t -> {
+                        .configureEach(t -> {
                             MinimalJavadocOptions options = t.getOptions();
                             if (!utf8.equals(options.getEncoding())) {
                                 LOGGER.info("+ mvg: setting {} encoding from {} to {}", t.getName(), options.getEncoding(), utf8);
@@ -402,22 +404,9 @@ public class MvgPlugin implements Plugin<Project> {
         });
     }
 
-    private void agreeToBuildScan() {
-        gradle.afterProject(p -> {
-            if (ext.agreeToBuildScan) {
-                BuildScanExtension buildScan = (BuildScanExtension) p.getExtensions().findByName("buildScan");
-                if (buildScan != null) {
-                    LOGGER.info("+ mvg: agreeing to buildScan");
-                    buildScan.setTermsOfServiceAgree("yes");
-                    buildScan.setTermsOfServiceUrl("https://gradle.com/terms-of-service");
-                }
-            }
-        });
-    }
-
     private void addMVGRepositories() {
         gradle.allprojects(p -> {
-            if (ext.addMvgGithubRepositories) {
+            if (ext.getAddMvgGithubRepositories().get()) {
                 LOGGER.info("+ mvg: adding MVG repositories to project {}", p.getName());
 
                 p.getRepositories().mavenCentral();

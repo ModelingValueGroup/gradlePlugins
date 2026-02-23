@@ -1,17 +1,22 @@
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
-//                                                                                                                     ~
-// Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
-// compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on ~
-// an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the  ~
-// specific language governing permissions and limitations under the License.                                          ~
-//                                                                                                                     ~
-// Maintainers:                                                                                                        ~
-//     Wim Bast, Tom Brus, Ronald Krijgsheld                                                                           ~
-// Contributors:                                                                                                       ~
-//     Arjan Kok, Carel Bast                                                                                           ~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  (C) Copyright 2018-2025 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
+//                                                                                                                       ~
+//  Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in       ~
+//  compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0   ~
+//  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on  ~
+//  an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the   ~
+//  specific language governing permissions and limitations under the License.                                           ~
+//                                                                                                                       ~
+//  Maintainers:                                                                                                         ~
+//      Wim Bast, Tom Brus                                                                                               ~
+//                                                                                                                       ~
+//  Contributors:                                                                                                        ~
+//      Ronald Krijgsheld ✝, Arjan Kok, Carel Bast                                                                       ~
+// --------------------------------------------------------------------------------------------------------------------- ~
+//  In Memory of Ronald Krijgsheld, 1972 - 2023                                                                          ~
+//      Ronald was suddenly and unexpectedly taken from us. He was not only our long-term colleague and team member      ~
+//      but also our friend. "He will live on in many of the lines of code you see below."                               ~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 package org.modelingvalue.gradle.mvgplugin;
 
@@ -43,7 +48,7 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.invocation.Gradle;
-import org.gradle.internal.extensibility.DefaultConvention;
+import org.gradle.api.provider.Property;
 
 public class MvgUploader {
 
@@ -54,36 +59,35 @@ public class MvgUploader {
         gradle.getRootProject().getTasks().register(UPLOADER_TASK_NAME, this::setup);
     }
 
-    public static class Extension {
+    public abstract static class Extension {
         public static Extension make(Gradle gradle) {
             Project project = gradle.getRootProject();
-            return ((DefaultConvention) project.getExtensions()).create(UPLOADER_TASK_NAME, Extension.class, gradle);
+            Extension ext = project.getExtensions().create(UPLOADER_TASK_NAME, Extension.class);
+            ext.buildDirPath = project.getLayout().getBuildDirectory().get().getAsFile().toPath();
+            String defaultChannel = selectMasterDevelopElse("stable", "EAP", BranchParameterNames.get("channel", "DEV"));
+            ext.getChannel().convention(defaultChannel);
+            if (JETBRAINS_TOKEN != null) {
+                ext.getHubToken().convention(JETBRAINS_TOKEN);
+            }
+            LOGGER.info("+ mvg: default channel selected by uploader: {}", defaultChannel);
+            return ext;
         }
 
-        public Gradle gradle;
-        public String channel;
-        public String hubToken;
-        public String pluginId;
-        public String zipFile;
+        Path buildDirPath;
 
-        public Extension(Gradle gradle) {
-            this.gradle = gradle;
-            channel = getDefaultChannel();
-            hubToken = JETBRAINS_TOKEN;
-            LOGGER.info("+ mvg: default channel selected by uploader: {}", channel);
-        }
+        public abstract Property<String> getChannel();
+        public abstract Property<String> getHubToken();
+        public abstract Property<String> getPluginId();
+        public abstract Property<String> getZipFile();
 
-        public String getDefaultChannel() {
-            return selectMasterDevelopElse("stable", "EAP", BranchParameterNames.get("channel", "DEV"));
-        }
-
-        public Path getZipFile() {
+        public Path getZipFilePath() {
             Path path = null;
-            if (zipFile != null) {
-                path = Paths.get(zipFile).toAbsolutePath();
+            String zipFileValue = getZipFile().getOrNull();
+            if (zipFileValue != null) {
+                path = Paths.get(zipFileValue).toAbsolutePath();
                 LOGGER.info("+ mvg: upload file found at {} as indicated by {} ext", path, UPLOADER_TASK_NAME);
             } else {
-                Path artiDir = gradle.getRootProject().getBuildDir().toPath().resolve("artifacts");
+                Path artiDir = buildDirPath.resolve("artifacts");
                 if (!Files.isDirectory(artiDir)) {
                     LOGGER.info("+ mvg: artifacts dir not found: {}", artiDir.toAbsolutePath());
                 } else {
@@ -118,10 +122,10 @@ public class MvgUploader {
     private void execute() {
         LOGGER.info("+ mvg: execute {} task", UPLOADER_TASK_NAME);
 
-        String hubToken = ext.hubToken;
-        String pluginId = ext.pluginId;
-        String channel  = ext.channel;
-        Path   zipFile  = ext.getZipFile();
+        String hubToken = ext.getHubToken().getOrNull();
+        String pluginId = ext.getPluginId().getOrNull();
+        String channel  = ext.getChannel().getOrNull();
+        Path   zipFile  = ext.getZipFilePath();
 
         if (zipFile == null || !Files.isRegularFile(zipFile)) {
             throw new GradleException("the selected plugin upload zipfile can not be identified: " + zipFile);

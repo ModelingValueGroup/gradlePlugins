@@ -6,7 +6,7 @@ on  :
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if     : "!contains(github.event.head_commit.message, '[no-ci]')"
     env    :
       ALLREP_TOKEN : "${{secrets.ALLREP_TOKEN}}"
@@ -21,7 +21,7 @@ jobs:
 
       - uses: actions/setup-java@v3
         with:
-          java-version: 11
+          java-version: 21
           distribution: zulu
 
       ################################################################################

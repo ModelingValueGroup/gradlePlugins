@@ -1,17 +1,22 @@
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// (C) Copyright 2018-2022 Modeling Value Group B.V. (http://modelingvalue.org)                                        ~
-//                                                                                                                     ~
-// Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in      ~
-// compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0  ~
-// Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on ~
-// an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the  ~
-// specific language governing permissions and limitations under the License.                                          ~
-//                                                                                                                     ~
-// Maintainers:                                                                                                        ~
-//     Wim Bast, Tom Brus, Ronald Krijgsheld                                                                           ~
-// Contributors:                                                                                                       ~
-//     Arjan Kok, Carel Bast                                                                                           ~
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  (C) Copyright 2018-2025 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
+//                                                                                                                       ~
+//  Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in       ~
+//  compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0   ~
+//  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on  ~
+//  an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the   ~
+//  specific language governing permissions and limitations under the License.                                           ~
+//                                                                                                                       ~
+//  Maintainers:                                                                                                         ~
+//      Wim Bast, Tom Brus                                                                                               ~
+//                                                                                                                       ~
+//  Contributors:                                                                                                        ~
+//      Ronald Krijgsheld ✝, Arjan Kok, Carel Bast                                                                       ~
+// --------------------------------------------------------------------------------------------------------------------- ~
+//  In Memory of Ronald Krijgsheld, 1972 - 2023                                                                          ~
+//      Ronald was suddenly and unexpectedly taken from us. He was not only our long-term colleague and team member      ~
+//      but also our friend. "He will live on in many of the lines of code you see below."                               ~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 package org.modelingvalue.gradle;
 
@@ -186,9 +191,8 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg: adding test.useJUnitPlatform", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: increasing test heap from default to 2g", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding junit5 dependencies", out)),
-                    () -> assertEquals(1, numOccurences("+ mvg: agreeing to buildScan", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding tasks for javadoc & source jars", out)),
-                    () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (11&11) to 11", out)),
+                    () -> assertEquals(1, numOccurences("+ mvg: setting java source&target compatibility from (", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-mps: the MPS build number 203.5981.1014 of MPS 2020.3 is in range [111.222...333.444.555] of the requested in ant file", out)),
                     () -> assertEquals(3, numOccurences("+ mvg-mps: dependency replaced: ", out)),
                     () -> assertEquals(1, numOccurences("+ mvg-git:" + TEST_WORKSPACE_NAME + ": staging changes (adds=9 rms=0; branch=", out)),
@@ -214,11 +218,11 @@ public class MvgPluginTest {
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("\r")),
                     () -> assertFalse(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("\r")),
                     //
-                    () -> assertEquals(1959, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
+                    () -> assertEquals(2602, Files.readString(testWorkspaceDir.resolve(dependabotFile)).length()),
                     //
                     () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\r]", "").length()),
-                    () -> assertEquals(17, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\n]", "").length()),
-                    () -> assertEquals(17, Files.readAllLines(testWorkspaceDir.resolve(propFile)).size()),
+                    () -> assertEquals(22, Files.readString(testWorkspaceDir.resolve(propFile)).replaceAll("[^\n]", "").length()),
+                    () -> assertEquals(22, Files.readAllLines(testWorkspaceDir.resolve(propFile)).size()),
                     //
                     () -> assertEquals(0, Files.readString(testWorkspaceDir.resolve(pruupFile)).replaceAll("[^\r]", "").length()),
                     () -> assertEquals(1, Files.readString(testWorkspaceDir.resolve(pruupFile)).replaceAll("[^\n]", "").length()),
