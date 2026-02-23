@@ -5,7 +5,9 @@
       "WebSearch",
       "WebFetch(domain:docs.gradle.org)",
       "Bash(./gradlew build:*)",
-      "Bash(./gradlew compileJava:*)"
+      "Bash(./gradlew compileJava:*)",
+      "WebFetch(domain:plugins.gradle.org)",
+      "WebFetch(domain:search.maven.org)"
     ]
   }
 }
