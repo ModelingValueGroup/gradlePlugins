@@ -97,7 +97,7 @@ public class DotProperties {
                 crc = newCrc;
             } else {
                 LOGGER.info("+ mvg: FILE CHANGED: {} ({}!={})", file, crc, newCrc);
-                throw new GradleException("consistency problem: the file " + file + " has changed in mid air ('gradle --stop' might solve this)");
+                throw new GradleException("consistency problem: the file " + file + " has changed in mid air ('./gradlew --stop' might solve this)");
             }
         }
     }
