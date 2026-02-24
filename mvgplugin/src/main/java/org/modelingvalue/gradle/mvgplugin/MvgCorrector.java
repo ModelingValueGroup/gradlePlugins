@@ -129,6 +129,11 @@ class MvgCorrector {
             // version is computed and set at configuration time by versionCorrector.computeAndSetVersion()
             // and tagged after publishing by mvgtagger — no file changes needed here
 
+            // verify reported changes against actual git status to eliminate false positives
+            // (e.g. DependabotCorrector strips header, HeaderCorrector adds it back => net zero change)
+            Set<String> gitModified = GitUtil.getModifiedFiles(ext.getRoot());
+            changes.removeIf(p -> !gitModified.contains(p.toString()));
+
             LOGGER.info("+ mvg: changed {} files", changes.size());
 
             if (!changes.isEmpty() && isMvgCI_orTesting()) {

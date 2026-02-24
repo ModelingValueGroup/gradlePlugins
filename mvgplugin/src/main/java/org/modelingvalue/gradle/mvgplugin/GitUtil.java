@@ -69,6 +69,21 @@ public class GitUtil {
         return CREDENTIALS_PROV;
     }
 
+    public static Set<String> getModifiedFiles(Path root) {
+        try {
+            Git git = GitManager.git(root);
+            Status status = git.status().call();
+            Set<String> modified = new HashSet<>();
+            modified.addAll(status.getModified());
+            modified.addAll(status.getUntracked());
+            modified.addAll(status.getAdded());
+            return modified;
+        } catch (GitAPIException e) {
+            LOGGER.warn("+ mvg-git: could not determine modified files: {}", e.getMessage());
+            return Set.of();
+        }
+    }
+
     public static String diff(Path root, Path file) {
         try {
             Process p = new ProcessBuilder("git", "diff", "--", file.toString())
