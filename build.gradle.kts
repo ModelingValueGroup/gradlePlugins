@@ -21,7 +21,7 @@
 defaultTasks("test", "publishPlugins")
 
 plugins {
-    id("org.modelingvalue.gradle.mvgplugin") version ("2.0.4")
+    id("org.modelingvalue.gradle.mvgplugin") version ("2.2.1")
 }
 mvgcorrector {
     addHeaderFileExclude("mvgplugin/src/test/resources/.*")
