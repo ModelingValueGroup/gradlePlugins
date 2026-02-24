@@ -178,7 +178,7 @@ public class MvgPluginTest {
 
             // Verify the result
             assertAll(
-                    () -> assertEquals("0.0.5", instance.getProp(Info.PROP_NAME_VERSION)),
+                    () -> assertEquals("0.0.1", instance.getProp(Info.PROP_NAME_VERSION)),
                     () -> assertEquals("2020.3", instance.getProp(Info.PROP_NAME_VERSION_MPS)),
                     //
                     () -> assertEquals(7, numOccurences("+ mvg: header     regenerated : ", out)),
@@ -204,7 +204,7 @@ public class MvgPluginTest {
                     () -> assertEquals(4 * d, numOccurences(TEST_MARKER_TRIGGERING, out)),
                     () -> assertEquals(d, numOccurences(TEST_MARKER_TRIGGER, out)),
                     //
-                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.5\n")),
+                    () -> assertTrue(Files.readString(testWorkspaceDir.resolve(gradlePropsFile)).contains("\nversion=0.0.1\n")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(settingsFile)).contains("Copyright")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(buildFile)).contains("Copyright")),
                     () -> assertTrue(Files.readString(testWorkspaceDir.resolve(javaFile)).contains("Copyright")),

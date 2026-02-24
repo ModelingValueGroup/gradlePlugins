@@ -27,7 +27,6 @@ import static org.modelingvalue.gradle.mvgplugin.InfoGradle.getGradleDotProperti
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -43,12 +42,6 @@ public class VersionCorrector {
     private final        Project       project;
     private final        String        defaultGroup;
     private final        DotProperties gradleDotProperties;
-    private final        Set<Path>     changedFiles    = new HashSet<>();
-    //
-    private              String        oldVersion;
-    private              String        newVersion;
-    private              String        group;
-    private              boolean       versionComputed;
 
     public VersionCorrector(MvgCorrectorExtension ext) {
         root = ext.getRoot();
@@ -57,24 +50,23 @@ public class VersionCorrector {
         defaultGroup = gradleDotProperties.getFile().getParent().getFileName().toString();
     }
 
-    public Set<Path> getChangedFiles() {
-        return changedFiles;
-    }
-
     /**
      * Compute the vacant version and set it on all projects.
+     * The vacant version is the version from gradle.properties, or the first
+     * higher patch version that has no corresponding git tag.
      * This must be called at configuration time so that Gradle's configuration resolution
      * (which freezes artifact file paths) sees the correct version.
+     * The gradle.properties file is intentionally not modified — the next
+     * vacant version is always derived from git tags.
      */
     public void computeAndSetVersion() {
         if (!gradleDotProperties.isValid()) {
             LOGGER.info("+ mvg: can not determine version: no properties file found at {}", gradleDotProperties.getFile());
             return;
         }
-        oldVersion = gradleDotProperties.getProp(PROP_NAME_VERSION, DEFAULT_VERSION);
-        group      = gradleDotProperties.getProp(PROP_NAME_GROUP, defaultGroup);
-        newVersion = adjustVersion(oldVersion);
-        versionComputed = true;
+        String propVersion = gradleDotProperties.getProp(PROP_NAME_VERSION, DEFAULT_VERSION);
+        String group       = gradleDotProperties.getProp(PROP_NAME_GROUP, defaultGroup);
+        String newVersion  = adjustVersion(propVersion);
 
         project.getAllprojects().forEach(p -> {
             if (!Objects.equals(p.getVersion(), newVersion) || !Objects.equals(p.getGroup(), group)) {
@@ -83,30 +75,6 @@ public class VersionCorrector {
                 p.setGroup(group);
             }
         });
-    }
-
-    /**
-     * Bump the version in gradle.properties to prepare for the next release.
-     * The build itself uses {@link #newVersion} (set at configuration time).
-     * This writes newVersion+1 to gradle.properties so the next CI run starts from there.
-     */
-    public VersionCorrector generate() {
-        if (!versionComputed) {
-            computeAndSetVersion();
-        }
-        if (newVersion != null) {
-            String nextVersion = bumpPatch(newVersion);
-            LOGGER.info("+ mvg: preparing next version: overwriting property {} with {} (build uses {}, was {}) in {}", PROP_NAME_VERSION, nextVersion, newVersion, oldVersion, gradleDotProperties.getFile());
-            gradleDotProperties.setProp(PROP_NAME_VERSION, nextVersion);
-            changedFiles.add(root.relativize(gradleDotProperties.getFile()));
-        }
-        return this;
-    }
-
-    private static String bumpPatch(String version) {
-        String[] parts = version.split("[.]");
-        parts[parts.length - 1] = Integer.toString(Integer.parseInt(parts[parts.length - 1]) + 1);
-        return String.join(".", parts);
     }
 
     private String adjustVersion(String oldVersion) {

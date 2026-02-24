@@ -126,9 +126,8 @@ class MvgCorrector {
             if (doCorrector(ext.getForceHeaderCorrection().get(), "headers")) {
                 changes.addAll(new HeaderCorrector(ext).generate().getChangedFiles());
             }
-            if (doCorrector(ext.getForceVersionCorrection().get(), "version")) {
-                changes.addAll(versionCorrector.generate().getChangedFiles());
-            }
+            // version is computed and set at configuration time by versionCorrector.computeAndSetVersion()
+            // and tagged after publishing by mvgtagger — no file changes needed here
 
             LOGGER.info("+ mvg: changed {} files", changes.size());
 
