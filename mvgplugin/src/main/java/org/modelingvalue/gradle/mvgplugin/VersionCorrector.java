@@ -86,20 +86,27 @@ public class VersionCorrector {
     }
 
     /**
-     * Write the new version to gradle.properties if it changed.
-     * This should be called at execution time (in the mvgcorrector task action).
-     * Requires {@link #computeAndSetVersion()} to have been called first.
+     * Bump the version in gradle.properties to prepare for the next release.
+     * The build itself uses {@link #newVersion} (set at configuration time).
+     * This writes newVersion+1 to gradle.properties so the next CI run starts from there.
      */
     public VersionCorrector generate() {
         if (!versionComputed) {
             computeAndSetVersion();
         }
-        if (oldVersion != null && !oldVersion.equals(newVersion)) {
-            LOGGER.info("+ mvg: overwriting property {} with new version {} (was {}) in property file {}", PROP_NAME_VERSION, newVersion, oldVersion, gradleDotProperties.getFile());
-            gradleDotProperties.setProp(PROP_NAME_VERSION, newVersion);
+        if (newVersion != null) {
+            String nextVersion = bumpPatch(newVersion);
+            LOGGER.info("+ mvg: preparing next version: overwriting property {} with {} (build uses {}, was {}) in {}", PROP_NAME_VERSION, nextVersion, newVersion, oldVersion, gradleDotProperties.getFile());
+            gradleDotProperties.setProp(PROP_NAME_VERSION, nextVersion);
             changedFiles.add(root.relativize(gradleDotProperties.getFile()));
         }
         return this;
+    }
+
+    private static String bumpPatch(String version) {
+        String[] parts = version.split("[.]");
+        parts[parts.length - 1] = Integer.toString(Integer.parseInt(parts[parts.length - 1]) + 1);
+        return String.join(".", parts);
     }
 
     private String adjustVersion(String oldVersion) {
@@ -108,7 +115,7 @@ public class VersionCorrector {
             return oldVersion;
         } else {
             List<String> tags           = GitUtil.listTags(root);
-            String       versionPattern = "\\d\\d*[.]\\d\\d*[.]\\d\\d*";
+            String       versionPattern = "\\d+[.]\\d+[.]\\d+";
             if (!oldVersion.matches(versionPattern)) {
                 throw new GradleException("the current version '" + oldVersion + "' does not match the version pattern '" + versionPattern + "'");
             }
