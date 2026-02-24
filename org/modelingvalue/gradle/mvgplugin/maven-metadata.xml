@@ -3,11 +3,11 @@
   <groupId>org.modelingvalue.gradle</groupId>
   <artifactId>mvgplugin</artifactId>
   <versioning>
-    <latest>2.3.3</latest>
-    <release>2.3.3</release>
+    <latest>2.3.5</latest>
+    <release>2.3.5</release>
     <versions>
-      <version>2.3.3</version>
+      <version>2.3.5</version>
     </versions>
-    <lastUpdated>20260224142557</lastUpdated>
+    <lastUpdated>20260224151738</lastUpdated>
   </versioning>
 </metadata>
