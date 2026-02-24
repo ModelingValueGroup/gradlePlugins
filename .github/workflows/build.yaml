@@ -45,12 +45,18 @@ jobs:
         if  : github.ref == 'refs/heads/master'
         run : |
           ./gradlew publishAllPublicationsToGitHubPagesRepository
-          cd mvgplugin/build/github-pages-repo
-          git init -b gh-pages
+          PAGES_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          PAGES_DIR="$(mktemp -d)"
+          git clone --branch gh-pages --single-branch "$PAGES_URL" "$PAGES_DIR" || {
+            git init -b gh-pages "$PAGES_DIR"
+          }
+          cp -r mvgplugin/build/github-pages-repo/* "$PAGES_DIR/"
+          cd "$PAGES_DIR"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
+          git diff --cached --quiet && echo "No changes to publish" && exit 0
           git commit -m "Publish Maven repository"
-          git push -f https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git gh-pages
+          git push "$PAGES_URL" gh-pages
         env :
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

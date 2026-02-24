@@ -13,7 +13,8 @@
       "Bash(gh run watch:*)",
       "mcp__ide__getDiagnostics",
       "Bash(./gradlew:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git ls-tree:*)"
     ]
   }
 }
