@@ -133,7 +133,10 @@ class MvgCorrector {
 
             if (!changes.isEmpty() && isMvgCI_orTesting()) {
                 if (Info.CI && !Info.TESTING && InfoGradle.isMasterBranch()) {
-                    throw new GradleException("master branch has " + changes.size() + " file(s) that need corrections: " + changes + ". Fix these on a development branch before merging to master.");
+                    Path firstFile = changes.iterator().next();
+                    String diff = GitUtil.diff(ext.getRoot(), firstFile);
+                    throw new GradleException("master branch has " + changes.size() + " file(s) that need corrections: " + changes
+                            + ". Fix these on a development branch before merging to master.\n\nDiff of " + firstFile + ":\n" + diff);
                 }
                 if (ALLREP_TOKEN != null) {
                     GitUtil.stageCommitPush(ext.getRoot(), GitUtil.NO_CI_COMMIT_MARKER + " updated by mvgplugin", changes);

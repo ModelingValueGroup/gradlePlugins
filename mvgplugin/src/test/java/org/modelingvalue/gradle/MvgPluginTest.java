@@ -153,7 +153,7 @@ public class MvgPluginTest {
                     .forwardStdError(errWriter)
                     .withPluginClasspath()
                     .withProjectDir(testWorkspaceDir.toFile())
-                    .withArguments("--scan", "--info", "--stacktrace", "check", "publish")
+                    .withArguments("--info", "--stacktrace", "check", "publish")
                     .build();
         } finally {
             out = outWriter.toString();

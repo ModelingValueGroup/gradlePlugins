@@ -69,6 +69,20 @@ public class GitUtil {
         return CREDENTIALS_PROV;
     }
 
+    public static String diff(Path root, Path file) {
+        try {
+            Process p = new ProcessBuilder("git", "diff", "--", file.toString())
+                    .directory(root.toFile())
+                    .redirectErrorStream(true)
+                    .start();
+            String output = new String(p.getInputStream().readAllBytes());
+            p.waitFor();
+            return output;
+        } catch (Exception e) {
+            return "(could not determine diff: " + e.getMessage() + ")";
+        }
+    }
+
     public static List<String> listTags(Path root) {
         try {
             return GitManager.git(root)
