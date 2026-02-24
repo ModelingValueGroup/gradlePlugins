@@ -35,9 +35,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -51,21 +53,20 @@ public class MvgMps {
     private final static int    MAX_REDIRECTS = 10;
     private final static Object LOAD_LOCK     = new Object();
 
-    private final Gradle                  gradle;
     private final MvgMpsExtension         ext;
     private       boolean                 mpsHasBeenLoaded;
     private       Path                    rootPath;
     private final Map<String, Path>       jarIndex       = new HashMap<>();
     private final Map<String, List<Path>> ambiguousIndex = new HashMap<>();
+    private final Set<String>             loggedDeps     = new HashSet<>();
     private       Properties              mpsBuildProps;
     private       Version                 mpsBuildNumber;
 
     public MvgMps(Gradle gradle) {
-        this.gradle = gradle;
         ext = MvgMpsExtension.make(gradle);
     }
 
-    public Object resolveMpsDependency(String dep) {
+    public File resolveMpsDependency(String dep) {
         Path jar = getJarIndex().get(dep);
         if (jar == null) {
             List<Path> candidates = ambiguousIndex.get(dep);
@@ -75,9 +76,10 @@ public class MvgMps {
                 throw new GradleException("no jar found for '" + dep + "' in " + ext.getMpsInstallDir());
             }
         }
-        //TODO:  build/test-workspace/gradlePlugins/build/MPS-2020.3/MPS 2020.3/lib/MPS-src.zip
-        LOGGER.info("+ mvg-mps: dependency replaced: {} => {}", dep, jar);
-        return gradle.getRootProject().files(jar.toFile());
+        if (loggedDeps.add(dep)) {
+            LOGGER.info("+ mvg-mps: dependency replaced: {} => {}", dep, jar);
+        }
+        return jar.toFile();
     }
 
     private Map<String, Path> getJarIndex() {

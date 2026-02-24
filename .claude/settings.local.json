@@ -11,7 +11,8 @@
       "Bash(gh run view:*)",
       "Bash(gh run rerun:*)",
       "Bash(gh run watch:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(./gradlew:*)"
     ]
   }
 }
