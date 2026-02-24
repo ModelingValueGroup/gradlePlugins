@@ -132,7 +132,7 @@ class MvgCorrector {
             LOGGER.info("+ mvg: changed {} files", changes.size());
 
             if (!changes.isEmpty() && isMvgCI_orTesting()) {
-                if (Info.CI && InfoGradle.isMasterBranch()) {
+                if (Info.CI && !Info.TESTING && InfoGradle.isMasterBranch()) {
                     throw new GradleException("master branch has " + changes.size() + " file(s) that need corrections: " + changes + ". Fix these on a development branch before merging to master.");
                 }
                 if (ALLREP_TOKEN != null) {
