@@ -20,11 +20,11 @@
 
 defaultTasks("test", "publishPlugins")
 
-//plugins {
-//    id("org.modelingvalue.gradle.mvgplugin") version ("2.3.5")
-//}
-//mvgcorrector {
-//    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
-//    addEolFileExclude("mvgplugin/src/test/resources/.*")
-//    addBashFileExclude(".*/bashProduced.*")
-//}
+plugins {
+    id("org.modelingvalue.gradle.mvgplugin") version ("2.3.6")
+}
+mvgcorrector {
+    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
+    addEolFileExclude("mvgplugin/src/test/resources/.*")
+    addBashFileExclude(".*/bashProduced.*")
+}
