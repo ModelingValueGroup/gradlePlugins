@@ -187,7 +187,7 @@ public class MvgPluginTest {
                     () -> assertEquals(1, numOccurences("+ mvg: found vacant version: 0.0.4 (was 0.0.1)", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: project 'test-name': version: 0.0.1 => 0.0.4, group: test.group => test.group", out)),
                     () -> assertEquals(6, numOccurences(TEST_MARKER_REPLACE_DONE, out)),
-                    () -> assertEquals(41 + d * 6, numOccurences(TEST_MARKER_REPLACE_NOT_DONE, out)),
+                    () -> assertEquals(36 + d * 6, numOccurences(TEST_MARKER_REPLACE_NOT_DONE, out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding test.useJUnitPlatform", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: increasing test heap from default to 2g", out)),
                     () -> assertEquals(1, numOccurences("+ mvg: adding junit5 dependencies", out)),
