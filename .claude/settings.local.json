@@ -10,7 +10,8 @@
       "WebFetch(domain:search.maven.org)",
       "Bash(gh run view:*)",
       "Bash(gh run rerun:*)",
-      "Bash(gh run watch:*)"
+      "Bash(gh run watch:*)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

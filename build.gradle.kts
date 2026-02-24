@@ -1,5 +1,5 @@
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//  (C) Copyright 2018-2025 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
+//  (C) Copyright 2018-2026 Modeling Value Group B.V. (http://modelingvalue.org)                                         ~
 //                                                                                                                       ~
 //  Licensed under the GNU Lesser General Public License v3.0 (the 'License'). You may not use this file except in       ~
 //  compliance with the License. You may obtain a copy of the License at: https://choosealicense.com/licenses/lgpl-3.0   ~
@@ -20,34 +20,11 @@
 
 defaultTasks("test", "publishPlugins")
 
-// TODO: Re-enable once the Gradle 9 compatible version of the plugin is published
-//plugins {
-//    id("org.modelingvalue.gradle.mvgplugin") version ("1.0.7")
-//}
-//mvgcorrector {
-//    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
-//    addEolFileExclude("mvgplugin/src/test/resources/.*")
-//    addBashFileExclude(".*/bashProduced.*")
-//}
-
-// for gradle debugging:
-tasks.register("task-tree") {
-    doLast {
-        getAllTasks(true).forEach { task ->
-            System.err.println("  > " + task.key)
-            task.value.forEach { t ->
-                System.err.println("       = $t")
-
-                t.dependsOn.forEach { dep ->
-                    if (dep is TaskDependency) {
-                        dep.getDependencies(tasks.named("task-tree").get()).forEach { depdep ->
-                            System.err.println("                                - $depdep")
-                        }
-                    } else {
-                        System.err.println("                                - $dep")
-                    }
-                }
-            }
-        }
-    }
+plugins {
+    id("org.modelingvalue.gradle.mvgplugin") version ("2.0.2")
+}
+mvgcorrector {
+    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
+    addEolFileExclude("mvgplugin/src/test/resources/.*")
+    addBashFileExclude(".*/bashProduced.*")
 }
