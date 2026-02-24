@@ -32,18 +32,14 @@ jobs:
         run : |
           ./gradlew --info test
 
-      - name: "if master: publish gradle plugin"
+      - name: "if master: publish gradle plugin and to GitHub Pages"
         if  : github.ref == 'refs/heads/master'
         run : |
           ./gradlew \
               --info \
               -Pgradle.publish.key=$GRADLE_KEY \
-              -Pgradle.publish.secret=$GRADLE_SECRET
-
-      - name: "if master: publish to GitHub Pages"
-        if  : github.ref == 'refs/heads/master'
-        run : |
-          ./gradlew publishAllPublicationsToGitHubPagesRepository
+              -Pgradle.publish.secret=$GRADLE_SECRET \
+              publishAllPublicationsToGitHubPagesRepository
           PAGES_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           PAGES_DIR="$(mktemp -d)"
           git clone --branch gh-pages --single-branch "$PAGES_URL" "$PAGES_DIR" || {
