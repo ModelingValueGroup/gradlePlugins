@@ -27,19 +27,34 @@ import java.util.List;
 import java.util.Set;
 
 public class DependabotCorrector extends Corrector {
-    private final MvgCorrectorExtension ext;
 
+    @SuppressWarnings("unused")
     public DependabotCorrector(MvgCorrectorExtension ext) {
         super("dependabot");
-        this.ext = ext;
     }
 
     public DependabotCorrector generate() throws IOException {
         Path dependabotFile = InfoGradle.getAbsProjectDir().resolve(".github").resolve("dependabot.yml");
         if (!Files.isRegularFile(dependabotFile) || Files.readAllLines(dependabotFile).stream().noneMatch(l -> l.contains("#notouch"))) {
-            overwrite(dependabotFile, getFileContents());
+            List<String> contents = getFileContents();
+            if (!yamlContentEquals(dependabotFile, contents)) {
+                overwrite(dependabotFile, contents);
+            }
         }
         return this;
+    }
+
+    private boolean yamlContentEquals(Path file, List<String> expected) throws IOException {
+        if (!Files.isRegularFile(file)) {
+            return false;
+        }
+        List<String> actual = Files.readAllLines(file).stream()
+                .filter(l -> !l.trim().startsWith("#") && !l.trim().isEmpty())
+                .toList();
+        List<String> expectedContent = expected.stream()
+                .filter(l -> !l.trim().startsWith("#") && !l.trim().isEmpty())
+                .toList();
+        return actual.equals(expectedContent);
     }
 
     public Set<Path> getChangedFiles() {

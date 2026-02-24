@@ -15,11 +15,4 @@
     </wildcardResourcePatterns>
     <bytecodeTargetLevel target="21" />
   </component>
-  <component name="JavacSettings">
-    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="gradlePlugins.mvgplugin" options="-Xlint:unchecked -Xlint:deprecation" />
-      <module name="gradlePlugins.mvgplugin.main" options="-Xlint:unchecked -Xlint:deprecation" />
-      <module name="gradlePlugins.mvgplugin.test" options="-Xlint:unchecked -Xlint:deprecation" />
-    </option>
-  </component>
 </project>
