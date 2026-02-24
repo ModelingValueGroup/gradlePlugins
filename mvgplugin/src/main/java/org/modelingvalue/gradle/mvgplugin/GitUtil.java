@@ -45,6 +45,7 @@ import org.eclipse.jgit.lib.TextProgressMonitor;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.transport.CredentialsProvider;
 import org.eclipse.jgit.transport.PushResult;
+import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 
 public class GitUtil {
@@ -221,14 +222,16 @@ public class GitUtil {
         LOGGER.info("+ mvg-git:{}: commit (result={})", describe(git), rc);
     }
 
-    public static void push(Git git, boolean withTags) throws GitAPIException {
+    public static void push(Git git, boolean tagsOnly) throws GitAPIException {
         StoredConfig config = git.getRepository().getConfig();
 
         if (config.getSubsections("remote").isEmpty()) {
             LOGGER.info("+ mvg-git:{}: NOT pushing, repo has no remotes", describe(git));
         } else {
-            LOGGER.info("+ mvg-git:{}: pushing {} tags", describe(git), withTags ? "with" : "without");
-            Iterable<PushResult> result = (withTags ? git.push().setPushTags() : git.push())
+            LOGGER.info("+ mvg-git:{}: pushing {}", describe(git), tagsOnly ? "tags only" : "branch");
+            Iterable<PushResult> result = (tagsOnly
+                    ? git.push().setRefSpecs(new RefSpec("refs/tags/*:refs/tags/*"))
+                    : git.push())
                     .setCredentialsProvider(CREDENTIALS_PROV)
                     .setProgressMonitor(PROGRESS_MONITOR)
                     .call();
