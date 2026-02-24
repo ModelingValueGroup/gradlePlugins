@@ -20,34 +20,11 @@
 
 defaultTasks("test", "publishPlugins")
 
-// TODO: Re-enable once the Gradle 9 compatible version of the plugin is published
-//plugins {
-//    id("org.modelingvalue.gradle.mvgplugin") version ("1.0.7")
-//}
-//mvgcorrector {
-//    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
-//    addEolFileExclude("mvgplugin/src/test/resources/.*")
-//    addBashFileExclude(".*/bashProduced.*")
-//}
-
-// for gradle debugging:
-tasks.register("task-tree") {
-    doLast {
-        getAllTasks(true).forEach { task ->
-            System.err.println("  > " + task.key)
-            task.value.forEach { t ->
-                System.err.println("       = $t")
-
-                t.dependsOn.forEach { dep ->
-                    if (dep is TaskDependency) {
-                        dep.getDependencies(tasks.named("task-tree").get()).forEach { depdep ->
-                            System.err.println("                                - $depdep")
-                        }
-                    } else {
-                        System.err.println("                                - $dep")
-                    }
-                }
-            }
-        }
-    }
+plugins {
+    id("org.modelingvalue.gradle.mvgplugin") version ("2.0.2")
+}
+mvgcorrector {
+    addHeaderFileExclude("mvgplugin/src/test/resources/.*")
+    addEolFileExclude("mvgplugin/src/test/resources/.*")
+    addBashFileExclude(".*/bashProduced.*")
 }

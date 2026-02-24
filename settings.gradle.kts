@@ -18,4 +18,11 @@
 //      but also our friend. "He will live on in many of the lines of code you see below."                               ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+pluginManagement {
+    repositories {
+        maven { url = uri("https://modelingvaluegroup.github.io/gradlePlugins/") }
+        gradlePluginPortal()
+    }
+}
+
 include("mvgplugin")

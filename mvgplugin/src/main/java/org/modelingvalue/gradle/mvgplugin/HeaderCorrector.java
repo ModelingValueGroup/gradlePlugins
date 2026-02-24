@@ -34,26 +34,25 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class HeaderCorrector extends TreeCorrector {
-    private final MvgCorrectorExtension     ext;
     private final Map<String, String>       extensions;
     private final List<String>              headerLines;
     private final Map<String, List<String>> ext2header = new HashMap<>();
 
     public HeaderCorrector(MvgCorrectorExtension ext) {
         super("header", ext.getRoot(), ext.getHeaderFileExcludes());
-        this.ext = ext;
+
         extensions = ext.getHeaderFileExtensions();
-        URL          headerUrl = ext.getHeaderUrl();
-        List<String> raw       = Util.download(headerUrl);
+        extensions.forEach((e, p) -> LOGGER.debug("++ mvg: # header extensions      : {} ({})", e, p));
+
+        URL headerUrl = ext.getHeaderUrl();
+        LOGGER.info("+ mvg: header                 : {}", headerUrl);
+
+        List<String> raw = Util.download(headerUrl);
         if (raw == null) {
             LOGGER.warn("+ mvg: headers are not updated because {} could not be read", headerUrl);
             headerLines = null;
         } else {
             headerLines = Util.replaceVars(getVarMapping(), raw);
-        }
-        if (LOGGER.isDebugEnabled()) {
-            extensions.forEach((e, p) -> LOGGER.debug("++ mvg: # header extensions      : " + e + " (" + p + ")"));
-            LOGGER.debug("++ mvg: # header                 : {}", headerUrl);
         }
     }
 
@@ -73,12 +72,12 @@ public class HeaderCorrector extends TreeCorrector {
             String       ext        = Util.getExtension(f).orElseThrow();
             List<String> header     = ext2header.computeIfAbsent(ext, e -> border(extensions.get(e)));
             List<String> lines      = Util.readAllLines(f);
-            boolean      isHashBang = !lines.isEmpty() && lines.get(0).startsWith("#!");
+            boolean      isHashBang = !lines.isEmpty() && lines.getFirst().startsWith("#!");
             int          baseIndex  = isHashBang ? 1 : 0;
             while (baseIndex < lines.size() && isHeaderLine(lines.get(baseIndex), ext)) {
                 lines.remove(baseIndex);
             }
-            isHashBang = !lines.isEmpty() && lines.get(0).startsWith("#!");
+            isHashBang = !lines.isEmpty() && lines.getFirst().startsWith("#!");
             baseIndex = isHashBang ? 1 : 0;
             lines.addAll(baseIndex, header);
             overwrite(f, lines);
@@ -96,7 +95,7 @@ public class HeaderCorrector extends TreeCorrector {
         int          len      = cleaned.stream().mapToInt(String::length).max().getAsInt();
         String       border   = pre + "~" + String.format("%" + len + "s", "").replace(' ', '~') + "~~";
         List<String> bordered = cleaned.stream().map(l -> String.format(pre + " %-" + len + "s ~", l)).collect(Collectors.toList());
-        bordered.add(0, border);
+        bordered.addFirst(border);
         bordered.add(border);
         bordered.add("");
         return bordered;
@@ -106,7 +105,7 @@ public class HeaderCorrector extends TreeCorrector {
         List<String> h = inFile
                 .stream()
                 .map(String::stripTrailing)
-                .filter(l -> !l.matches("^" + pre + "~~*$") && !l.matches("^//" + "~~*$"))
+                .filter(l -> !l.matches("^" + pre + "~+$") && !l.matches("^//" + "~+$"))
                 .map(l -> l.replaceAll("^" + pre, ""))
                 .map(l -> l.replaceAll("^//", ""))
                 .map(l -> l.replaceAll("~$", ""))
@@ -116,11 +115,11 @@ public class HeaderCorrector extends TreeCorrector {
         if (0 < indent) {
             h = h.stream().map(l -> l.substring(min(l.length(), indent))).collect(Collectors.toList());
         }
-        while (!h.isEmpty() && h.get(0).trim().isEmpty()) {
-            h.remove(0);
+        while (!h.isEmpty() && h.getFirst().trim().isEmpty()) {
+            h.removeFirst();
         }
-        while (!h.isEmpty() && h.get(h.size() - 1).trim().isEmpty()) {
-            h.remove(h.size() - 1);
+        while (!h.isEmpty() && h.getLast().trim().isEmpty()) {
+            h.removeLast();
         }
         if (h.isEmpty()) {
             h.add("no header available");
@@ -135,7 +134,7 @@ public class HeaderCorrector extends TreeCorrector {
     private int calcIndent(List<String> h) {
         int indent = Integer.MAX_VALUE;
         for (String l : h) {
-            if (l.trim().length() != 0) {
+            if (!l.trim().isEmpty()) {
                 indent = min(indent, l.replaceAll("[^ ].*", "").length());
             }
         }
