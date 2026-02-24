@@ -34,12 +34,14 @@ import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMasterBranch;
 import static org.modelingvalue.gradle.mvgplugin.InfoGradle.isMvgCI_orTesting;
 import static org.modelingvalue.gradle.mvgplugin.Util.toBytes;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.gradle.build.event.BuildEventsListenerRegistry;
@@ -152,62 +154,7 @@ public class MvgPlugin implements Plugin<Project> {
 
     @NotNull
     public Object resolveMpsDependency(@NotNull String dep) {
-        // TODO use SelfResolvingDependency
-        //        new SelfResolvingDependency(){
-        //            @Nullable
-        //            @Override
-        //            public String getGroup() {
-        //                return null;
-        //            }
-        //
-        //            @Override
-        //            public String getName() {
-        //                return null;
-        //            }
-        //
-        //            @Nullable
-        //            @Override
-        //            public String getVersion() {
-        //                return null;
-        //            }
-        //
-        //            @Override
-        //            public boolean contentEquals(Dependency dependency) {
-        //                return false;
-        //            }
-        //
-        //            @Override
-        //            public Dependency copy() {
-        //                return null;
-        //            }
-        //
-        //            @Nullable
-        //            @Override
-        //            public String getReason() {
-        //                return null;
-        //            }
-        //
-        //            @Override
-        //            public void because(@Nullable String s) {
-        //
-        //            }
-        //
-        //            @Override
-        //            public TaskDependency getBuildDependencies() {
-        //                return null;
-        //            }
-        //
-        //            @Override
-        //            public Set<File> resolve() {
-        //                return mvgMps.resolveMpsDependency(dep);
-        //            }
-        //
-        //            @Override
-        //            public Set<File> resolve(boolean b) {
-        //                return resolve();
-        //            }
-        //        };
-        return mvgMps.resolveMpsDependency(dep);
+        return gradle.getRootProject().files((Callable<File>) () -> mvgMps.resolveMpsDependency(dep));
     }
 
     private void checkWorkflowFilesForLoopingDanger() {
