@@ -131,8 +131,13 @@ class MvgCorrector {
 
             LOGGER.info("+ mvg: changed {} files", changes.size());
 
-            if (!changes.isEmpty() && isMvgCI_orTesting() && ALLREP_TOKEN != null) {
-                GitUtil.stageCommitPush(ext.getRoot(), GitUtil.NO_CI_COMMIT_MARKER + " updated by mvgplugin", changes);
+            if (!changes.isEmpty() && isMvgCI_orTesting()) {
+                if (InfoGradle.isMasterBranch()) {
+                    throw new GradleException("master branch has " + changes.size() + " file(s) that need corrections: " + changes + ". Fix these on a development branch before merging to master.");
+                }
+                if (ALLREP_TOKEN != null) {
+                    GitUtil.stageCommitPush(ext.getRoot(), GitUtil.NO_CI_COMMIT_MARKER + " updated by mvgplugin", changes);
+                }
             }
         } catch (IOException e) {
             throw new GradleException("could not correct files", e);
