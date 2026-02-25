@@ -43,8 +43,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
-import org.gradle.build.event.BuildEventsListenerRegistry;
+import javax.inject.Inject;
+
 import org.gradle.api.GradleException;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Plugin;
@@ -57,27 +59,26 @@ import org.gradle.api.tasks.compile.CompileOptions;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.api.tasks.testing.Test;
+import org.gradle.build.event.BuildEventsListenerRegistry;
 import org.gradle.external.javadoc.MinimalJavadocOptions;
 import org.gradle.external.javadoc.StandardJavadocDocletOptions;
 import org.gradle.process.CommandLineArgumentProvider;
 import org.jetbrains.annotations.NotNull;
-
-import javax.inject.Inject;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class MvgPlugin implements Plugin<Project> {
     public static MvgPlugin singleton;
 
     private final BuildEventsListenerRegistry buildEventsListenerRegistry;
-    private boolean               inactiveBecauseNotRootProject;
-    private Gradle                gradle;
-    private Extension             ext;
-    private MvgCorrector          mvgCorrector;
-    private MvgTagger             mvgTagger;
-    private MvgBranchBasedBuilder mvgBranchBasedBuilder;
-    private MvgMps                mvgMps;
-    private MvgUploader           mvgUploader;
-    private boolean               traceHeaderDone;
+    private       boolean                     inactiveBecauseNotRootProject;
+    private       Gradle                      gradle;
+    private       Extension                   ext;
+    private       MvgCorrector                mvgCorrector;
+    private       MvgTagger                   mvgTagger;
+    private       MvgBranchBasedBuilder       mvgBranchBasedBuilder;
+    private       MvgMps                      mvgMps;
+    private       MvgUploader                 mvgUploader;
+    private       boolean                     traceHeaderDone;
 
     public abstract static class Extension {
         public static Extension make(Gradle gradle) {
@@ -94,12 +95,19 @@ public class MvgPlugin implements Plugin<Project> {
         }
 
         public abstract Property<Boolean> getVerboseTaskExecution();
+
         public abstract Property<Boolean> getPrepTestsForJunit5();
+
         public abstract Property<Boolean> getPrepJavacForLint();
+
         public abstract Property<Boolean> getPrepJavadocForLint();
+
         public abstract Property<Boolean> getPrepJavacForEncoding();
+
         public abstract Property<Boolean> getPrepJavadocForEncoding();
+
         public abstract Property<Boolean> getMakeJavadocAndSources();
+
         public abstract Property<Boolean> getAddMvgGithubRepositories();
     }
 
@@ -162,34 +170,73 @@ public class MvgPlugin implements Plugin<Project> {
         if (Files.isDirectory(workflowsDir)) {
             try {
                 AtomicBoolean errorsDetected = new AtomicBoolean();
-                Files.list(workflowsDir)
-                        .filter(f -> Files.isRegularFile(f) && f.getFileName().toString().matches(".*\\.ya?ml"))
-                        .forEach(f -> {
-                            try {
-                                Map<?, ?> jobs = (Map<?, ?>) Util.readYaml(f).get("jobs");
-                                if (jobs == null) {
-                                    LOGGER.warn("+ mvg: RECURSION DANGER: the workflow file {} does not contain jobs; is it a workflow file???", f);
-                                } else {
-                                    jobs.keySet().forEach(jobName -> {
-                                        Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
-                                        String    theIf = (String) job.get("if");
-                                        if (theIf == null || !theIf.equals(Info.NO_CI_GUARD)) {
-                                            LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, Info.NO_CI_GUARD);
-                                            errorsDetected.set(true);
-                                        }
-                                    });
+                try (Stream<Path> stream = Files.list(workflowsDir)) {
+                    stream.filter(f -> Files.isRegularFile(f) && f.getFileName().toString().matches(".*\\.ya?ml"))
+                            .forEach(f -> {
+                                try {
+                                    Map<?, ?> yaml = Util.readYaml(f);
+                                    Map<?, ?> jobs = (Map<?, ?>) yaml.get("jobs");
+                                    if (jobs == null) {
+                                        LOGGER.info("+ mvg: skipping loop guard check for {} (no jobs)", f.getFileName());
+                                    } else if (!canBeTriggeredByBranchPush(yaml)) {
+                                        LOGGER.info("+ mvg: skipping loop guard check for {} (not triggered by branch pushes)", f.getFileName());
+                                    } else {
+                                        jobs.keySet().forEach(jobName -> {
+                                            Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
+                                            String    theIf = (String) job.get("if");
+                                            if (theIf == null || !theIf.equals(Info.NO_CI_GUARD)) {
+                                                LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, Info.NO_CI_GUARD);
+                                                errorsDetected.set(true);
+                                            }
+                                        });
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        });
-                if (errorsDetected.get()) {
-                    throw new GradleException("BUILD LOOP DANGER in one or more workflow files");
+                            });
+                    if (errorsDetected.get()) {
+                        throw new GradleException("BUILD LOOP DANGER in one or more workflow files");
+                    }
                 }
             } catch (IOException e) {
                 throw new GradleException("can not scan workflows dir", e);
             }
         }
+    }
+
+    @SuppressWarnings("RedundantIfStatement")
+    private static boolean canBeTriggeredByBranchPush(Map<?, ?> yaml) {
+        // Jackson YAML parses 'on' as Boolean.TRUE (YAML 1.1 reserved word)
+        Object onSection = yaml.get(Boolean.TRUE);
+        if (onSection == null) {
+            onSection = yaml.get("on");
+        }
+        if (onSection == null) {
+            return false;
+        }
+        // handle: on: push
+        if (onSection instanceof String s) {
+            return s.equals("push");
+        }
+        // handle: on: [push, ...]
+        if (onSection instanceof List<?> list) {
+            return list.contains("push");
+        }
+        if (onSection instanceof Map<?, ?> onMap) {
+            Object pushSection = onMap.get("push");
+            if (pushSection == null) {
+                return false;
+            }
+            if (pushSection instanceof Map<?, ?> pushMap) {
+                boolean hasTags     = pushMap.containsKey("tags") || pushMap.containsKey("tags-ignore");
+                boolean hasBranches = pushMap.containsKey("branches") || pushMap.containsKey("branches-ignore");
+                if (hasTags && !hasBranches) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     private void checkIfWeAreUsingTheLatestPluginVersion() {
@@ -220,8 +267,8 @@ public class MvgPlugin implements Plugin<Project> {
                 String projectName = String.format("%-30s", p.getName());
                 // Eager iteration is intentional here: trace() is diagnostic and must see all existing elements
                 p.getExtensions().getExtensionsSchema().forEach(schema -> LOGGER.debug("++ mvg: found extension    : {} {} {}", String.format("%-30s", schema.getName()), projectName, schema.getPublicType().getSimpleName()));
-                p.getTasks().all(task ->                                   LOGGER.debug("++ mvg: found task         : {} {} {}", String.format("%-30s", task.getName()), projectName, task.getClass().getSimpleName()));
-                p.getConfigurations().all(conf ->                          LOGGER.debug("++ mvg: found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
+                p.getTasks().all(task -> LOGGER.debug("++ mvg: found task         : {} {} {}", String.format("%-30s", task.getName()), projectName, task.getClass().getSimpleName()));
+                p.getConfigurations().all(conf -> LOGGER.debug("++ mvg: found configuration: {} {} {} #artifacts={}", String.format("%-30s", conf.getName()), projectName, conf.getClass().getSimpleName(), conf.getAllArtifacts().size()));
                 p.getPlugins().all(plugin -> /*                                         */LOGGER.debug("++ mvg: found plugin       : {} {}", /*             */String.format("%-30s", plugin.getClass().getSimpleName()), projectName));
             });
         }
