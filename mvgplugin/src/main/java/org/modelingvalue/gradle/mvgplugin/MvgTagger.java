@@ -65,7 +65,7 @@ class MvgTagger {
             LOGGER.info("+ mvg: tagging this version with '{}' because this is the master branch", tag);
             GitUtil.tag(InfoGradle.getAbsProjectDir(), tag);
         } else {
-            LOGGER.info("+ mvg: not tagging this version with '{}' because this is not the master branch", tag);
+            LOGGER.info("+ mvg: not tagging this version with '{}' because this is not the master branch (branch={})", tag, InfoGradle.getBranch());
         }
     }
 }
