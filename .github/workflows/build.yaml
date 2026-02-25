@@ -46,6 +46,34 @@ jobs:
             git init -b gh-pages "$PAGES_DIR"
           }
           cp -r mvgplugin/build/github-pages-repo/* "$PAGES_DIR/"
+          touch "$PAGES_DIR/.nojekyll"
+          # generate index.html for each directory
+          find "$PAGES_DIR" -type d | while read -r dir; do
+            reldir="${dir#"$PAGES_DIR"}"
+            reldir="${reldir#/}"
+            title="${reldir:-Maven Repository}"
+            {
+              echo '<!DOCTYPE html><html><head><meta charset="utf-8">'
+              echo "<title>${title}</title>"
+              echo '<style>body{font-family:monospace;margin:2em}a{text-decoration:none}a:hover{text-decoration:underline}li{line-height:1.6}</style>'
+              echo "</head><body><h2>${title}</h2><ul>"
+              if [ -n "$reldir" ]; then
+                echo '<li><a href="..">..</a></li>'
+              fi
+              for entry in "$dir"/*; do
+                [ -e "$entry" ] || continue
+                name="$(basename "$entry")"
+                [ "$name" = "index.html" ] && continue
+                [ "$name" = ".nojekyll" ] && continue
+                if [ -d "$entry" ]; then
+                  echo "<li><a href=\"${name}/\">${name}/</a></li>"
+                else
+                  echo "<li><a href=\"${name}\">${name}</a></li>"
+                fi
+              done
+              echo '</ul></body></html>'
+            } > "$dir/index.html"
+          done
           cd "$PAGES_DIR"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
