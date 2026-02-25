@@ -76,7 +76,8 @@ public interface Info {
             JUNIT_GROUP_ID + ":junit-jupiter-params:" + JUNIT_VERSION
     );
     List<String> JUNIT_RUNTIMEONLY_DEPS       = List.of(
-            JUNIT_GROUP_ID + ":junit-jupiter-engine:" + JUNIT_VERSION
+            JUNIT_GROUP_ID + ":junit-jupiter-engine:" + JUNIT_VERSION,
+            "org.junit.platform:junit-platform-launcher"
     );
     //
     String       PLUGIN_META_URL              = "https://plugins.gradle.org/m2/gradle/plugin/" + MvgPlugin.class.getPackageName().replace('.', '/') + "/maven-metadata.xml";
