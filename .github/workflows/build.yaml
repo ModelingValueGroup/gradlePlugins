@@ -39,6 +39,7 @@ jobs:
               --info \
               -Pgradle.publish.key=$GRADLE_KEY \
               -Pgradle.publish.secret=$GRADLE_SECRET \
+              publishPlugins \
               publishAllPublicationsToGitHubPagesRepository
           PAGES_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           PAGES_DIR="$(mktemp -d)"
