@@ -184,7 +184,7 @@ public class MvgPlugin implements Plugin<Project> {
                                         jobs.keySet().forEach(jobName -> {
                                             Map<?, ?> job   = (Map<?, ?>) jobs.get(jobName);
                                             String    theIf = (String) job.get("if");
-                                            if (theIf == null || !theIf.equals(Info.NO_CI_GUARD)) {
+                                            if (theIf == null || !theIf.contains(Info.NO_CI_GUARD)) {
                                                 LOGGER.error("RECURSION DANGER: the workflow file {} contains a job '{}' that does not guard against retriggering (add 'if: \"{}\")", f, jobName, Info.NO_CI_GUARD);
                                                 errorsDetected.set(true);
                                             }
