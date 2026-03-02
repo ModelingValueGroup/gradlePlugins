@@ -80,7 +80,10 @@ public interface Info {
             "org.junit.platform:junit-platform-launcher"
     );
     //
-    String       PLUGIN_META_URL              = "https://plugins.gradle.org/m2/gradle/plugin/" + MvgPlugin.class.getPackageName().replace('.', '/') + "/maven-metadata.xml";
+    // https://plugins.gradle.org/m2/org/modelingvalue/gradle/mvgplugin/org.modelingvalue.gradle.mvgplugin.gradle.plugin/maven-metadata.xml
+    // https://plugins.gradle.org/m2/__________________________________/__________________________________.gradle.plugin/maven-metadata.xml
+    //
+    String       PLUGIN_META_URL              = "https://plugins.gradle.org/m2/" + MvgPlugin.class.getPackageName().replace('.', '/') + "/" + MvgPlugin.class.getPackageName() + ".gradle.plugin/maven-metadata.xml";
     String       JETBRAINS_UPLOAD_URL         = "https://plugins.jetbrains.com/plugin/uploadPlugin";
     String       MVG_MAVEN_REPO_BASE_URL      = "https://maven.pkg.github.com/" + MODELING_VALUE_GROUP + "/";
     String       MVG_REPO_BASE_URL            = "https://github.com/" + MODELING_VALUE_GROUP + "/";
