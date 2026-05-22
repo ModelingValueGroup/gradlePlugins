@@ -27,7 +27,7 @@ val mvgplugin_displayname: String by project
 plugins {
     `java-gradle-plugin`
     `kotlin-dsl`
-    id("com.gradle.plugin-publish") version "2.1.0"
+    id("com.gradle.plugin-publish") version "2.1.1"
 }
 
 repositories {
