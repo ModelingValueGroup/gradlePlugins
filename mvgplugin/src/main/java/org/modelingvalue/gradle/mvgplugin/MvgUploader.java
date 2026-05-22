@@ -156,10 +156,14 @@ public class MvgUploader {
 
             HttpClient   httpClient = HttpClientBuilder.create().setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build()).build();
             HttpResponse response   = httpClient.execute(request);
+            int          status     = response.getStatusLine().getStatusCode();
             String       answer     = EntityUtils.toString(response.getEntity());
 
-            LOGGER.info("+ mvg: upload plugin to JetBrains returned: {}", answer);
+            LOGGER.info("+ mvg: upload plugin to JetBrains returned: HTTP {} {}", status, answer);
 
+            if (status < 200 || 300 <= status) {
+                throw new GradleException("plugin upload failed (HTTP " + status + "): " + answer);
+            }
             if (!answer.startsWith("{") || !answer.endsWith("}")) {
                 throw new GradleException("plugin upload returned no json object: " + answer);
             }
