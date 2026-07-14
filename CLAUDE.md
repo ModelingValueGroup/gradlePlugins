@@ -80,6 +80,6 @@ On CI the project version is the patch successor of the highest version-like git
 
 - **Language:** Java 21+ with one Kotlin file
 - **Build:** Gradle 7.5+ with Kotlin DSL
-- **Git library:** JGit 5.13.0
-- **Testing:** JUnit 5 with Gradle TestKit; tests create isolated workspaces in `build/test-workspace/`
+- **Git library:** JGit 7.x
+- **Testing:** JUnit Jupiter with Gradle TestKit; tests create isolated workspaces in `build/test-workspace/`. `Info.JUNIT_VERSION` must match the junit versions in `mvgplugin/build.gradle.kts` (checked by `MvgPluginTest.checkJunitVersion`), and the `TEST_MARKER_REPLACE_NOT_DONE` count in `MvgPluginTest` shifts when dependency sets change
 - **Key dependencies:** Jackson (YAML), Apache HttpComponents, Gradle Enterprise plugin
