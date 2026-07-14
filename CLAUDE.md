@@ -56,6 +56,10 @@ Corrector (abstract)
 
 `MvgCorrector` orchestrates all correctors and exposes configuration via `MvgCorrectorExtension`.
 
+### Versioning (VersionCorrector)
+
+On CI the project version is the patch successor of the highest version-like git tag (any non-digit prefix + 3-part version: `v1.2.3`, `release1.2.3`, `1.2.3`, ...), or the `gradle.properties` version itself when that is higher than every tag - that is how a new minor/major release line is started. The `gradle.properties` file is never written back. Outside CI the version is always `dev` (local artifacts must not look like a release); `MvgTagger` refuses to tag `vdev`.
+
 ### Key Support Classes
 
 - **`Info`** — Interface with all constants: task names, property keys, URLs, default values

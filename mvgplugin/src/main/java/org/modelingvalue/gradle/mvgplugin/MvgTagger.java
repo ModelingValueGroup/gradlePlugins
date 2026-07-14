@@ -61,6 +61,8 @@ class MvgTagger {
         if (tag.equals("v") || tag.equals("vnull") || tag.equals("vunspecified")) {
             LOGGER.error("mvgplugin: can not tag git with version: version of the rootProject is not set: {}", tag);
             throw new GradleException("version of the rootProject is not set");
+        } else if (tag.equals("v" + VersionCorrector.DEV_VERSION)) {
+            LOGGER.info("+ mvg: not tagging the local '{}' version", VersionCorrector.DEV_VERSION);
         } else if (InfoGradle.isMasterBranch()) {
             LOGGER.info("+ mvg: tagging this version with '{}' because this is the master branch", tag);
             GitUtil.tag(InfoGradle.getAbsProjectDir(), tag);
