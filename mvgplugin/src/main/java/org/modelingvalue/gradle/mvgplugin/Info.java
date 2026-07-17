@@ -78,7 +78,7 @@ public interface Info {
     String       NO_CI_GUARD                  = "!contains(github.event.head_commit.message, '[no-ci]')";
     String       MIN_TEST_HEAP_SIZE           = "2g";
     String       JAVA_VERSION                 = "21";
-    String       JUNIT_VERSION                = "6.1.0";
+    String       JUNIT_VERSION                = "6.1.2";
     String       JUNIT_GROUP_ID               = "org.junit.jupiter";
     List<String> JUNIT_IMPLEMENTATION_DEPS    = List.of(
             JUNIT_GROUP_ID + ":junit-jupiter-api:" + JUNIT_VERSION,
