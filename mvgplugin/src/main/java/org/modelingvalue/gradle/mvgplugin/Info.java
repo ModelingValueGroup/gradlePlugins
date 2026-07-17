@@ -39,6 +39,7 @@ public interface Info {
     String       PLUGIN_NAME                  = MvgPlugin.class.getSimpleName().toLowerCase(Locale.ROOT);
     String       CORRECTOR_TASK_NAME          = MvgCorrector.class.getSimpleName().toLowerCase(Locale.ROOT);
     String       UPLOADER_TASK_NAME           = MvgUploader.class.getSimpleName().toLowerCase(Locale.ROOT);
+    String       CENTRAL_TASK_NAME            = MvgCentralPublisher.class.getSimpleName().toLowerCase(Locale.ROOT);
     String       TAG_TASK_NAME                = MvgTagger.class.getSimpleName().toLowerCase(Locale.ROOT);
     String       MPS_TASK_NAME                = MvgMps.class.getSimpleName().toLowerCase(Locale.ROOT);
     Logger       LOGGER                       = new TimedLogger(Logging.getLogger(PLUGIN_NAME));
@@ -49,6 +50,10 @@ public interface Info {
     String       PROP_NAME_VERSION_MPS        = "version_mps";
     String       PROP_NAME_ALLREP_TOKEN       = "ALLREP_TOKEN";
     String       PROP_NAME_JETBRAINS_TOKEN    = "JETBRAINS_PUBLISH_TOKEN";
+    String       PROP_NAME_CENTRAL_USERNAME   = "CENTRAL_USERNAME";
+    String       PROP_NAME_CENTRAL_PASSWORD   = "CENTRAL_PASSWORD";
+    String       PROP_NAME_SIGNING_KEY        = "MVG_SIGNING_KEY";
+    String       PROP_NAME_SIGNING_PASSPHRASE = "MVG_SIGNING_PASSPHRASE";
     String       PROP_NAME_GITHUB_WORKFLOW    = "GITHUB_WORKFLOW";
     String       PROP_NAME_CI                 = "CI";
     String       PROP_NAME_TESTING            = "TESTING";
@@ -59,6 +64,10 @@ public interface Info {
     boolean      TESTING                      = envOrPropBoolean(PROP_NAME_TESTING);
     String       ALLREP_TOKEN                 = envOrProp(PROP_NAME_ALLREP_TOKEN, "notset");
     String       JETBRAINS_TOKEN              = envOrProp(PROP_NAME_JETBRAINS_TOKEN, "notset");
+    String       CENTRAL_USERNAME             = envOrProp(PROP_NAME_CENTRAL_USERNAME, null);
+    String       CENTRAL_PASSWORD             = envOrProp(PROP_NAME_CENTRAL_PASSWORD, null);
+    String       MVG_SIGNING_KEY              = envOrProp(PROP_NAME_SIGNING_KEY, null);
+    String       MVG_SIGNING_PASSPHRASE       = envOrProp(PROP_NAME_SIGNING_PASSPHRASE, null);
     String       GITHUB_WORKFLOW              = envOrProp(PROP_NAME_GITHUB_WORKFLOW, null);
     String       MASTER_BRANCH                = "master";
     String       DEVELOP_BRANCH               = "develop";
@@ -85,6 +94,7 @@ public interface Info {
     //
     String       PLUGIN_META_URL              = "https://plugins.gradle.org/m2/" + MvgPlugin.class.getPackageName().replace('.', '/') + "/" + MvgPlugin.class.getPackageName() + ".gradle.plugin/maven-metadata.xml";
     String       JETBRAINS_UPLOAD_URL         = "https://plugins.jetbrains.com/plugin/uploadPlugin";
+    String       CENTRAL_PUBLISHER_API_URL    = "https://central.sonatype.com/api/v1/publisher";
     String       MVG_MAVEN_REPO_BASE_URL      = "https://maven.pkg.github.com/" + MODELING_VALUE_GROUP + "/";
     String       MVG_REPO_BASE_URL            = "https://github.com/" + MODELING_VALUE_GROUP + "/";
     String       PACKAGES_SNAPSHOTS_REPO_NAME = "packages-snapshots";

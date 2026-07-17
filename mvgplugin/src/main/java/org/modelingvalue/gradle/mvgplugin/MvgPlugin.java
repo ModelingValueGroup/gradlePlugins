@@ -78,6 +78,7 @@ public class MvgPlugin implements Plugin<Project> {
     private       MvgBranchBasedBuilder       mvgBranchBasedBuilder;
     private       MvgMps                      mvgMps;
     private       MvgUploader                 mvgUploader;
+    private       MvgCentralPublisher         mvgCentralPublisher;
     private       boolean                     traceHeaderDone;
 
     public abstract static class Extension {
@@ -157,6 +158,8 @@ public class MvgPlugin implements Plugin<Project> {
             mvgBranchBasedBuilder = new MvgBranchBasedBuilder(gradle, buildEventsListenerRegistry);
             mvgMps = new MvgMps(gradle);
             mvgUploader = new MvgUploader(gradle);
+            // after the bbb: its afterProject must run first so the github repo is added before the central staging repo
+            mvgCentralPublisher = new MvgCentralPublisher(gradle);
         }
     }
 
