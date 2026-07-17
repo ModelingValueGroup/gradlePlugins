@@ -1,0 +1,134 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.modelingvalue.gradle",
+    "module": "mvgplugin",
+    "version": "3.0.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.5.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "mvgplugin-3.0.0.jar",
+          "url": "mvgplugin-3.0.0.jar",
+          "size": 143056,
+          "sha512": "4d0bc702a3b0dc84e2ec5a1027cb7512d2de1c7a5651684342443d62716170a88a48d4b80896278985c5309dbe13a9546c6689799603b641e4890f99463b4681",
+          "sha256": "966713127e1d9028ab995f4f7fdb6db07341bf7629caf20e635aa44c5acaf4eb",
+          "sha1": "5876b667117211425385838e52ccaca222c0629b",
+          "md5": "6a46297867241ee66a024797af04d7d8"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.eclipse.jgit",
+          "module": "org.eclipse.jgit",
+          "version": {
+            "requires": "7.6.0.202603022253-r"
+          }
+        },
+        {
+          "group": "com.fasterxml.jackson.dataformat",
+          "module": "jackson-dataformat-yaml",
+          "version": {
+            "requires": "2.21.3"
+          }
+        },
+        {
+          "group": "com.fasterxml.jackson.datatype",
+          "module": "jackson-datatype-jsr310",
+          "version": {
+            "requires": "2.21.3"
+          }
+        },
+        {
+          "group": "org.apache.httpcomponents",
+          "module": "httpmime",
+          "version": {
+            "requires": "4.5.14"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "mvgplugin-3.0.0.jar",
+          "url": "mvgplugin-3.0.0.jar",
+          "size": 143056,
+          "sha512": "4d0bc702a3b0dc84e2ec5a1027cb7512d2de1c7a5651684342443d62716170a88a48d4b80896278985c5309dbe13a9546c6689799603b641e4890f99463b4681",
+          "sha256": "966713127e1d9028ab995f4f7fdb6db07341bf7629caf20e635aa44c5acaf4eb",
+          "sha1": "5876b667117211425385838e52ccaca222c0629b",
+          "md5": "6a46297867241ee66a024797af04d7d8"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "mvgplugin-3.0.0-javadoc.jar",
+          "url": "mvgplugin-3.0.0-javadoc.jar",
+          "size": 204464,
+          "sha512": "5536f2fd07adb52e25a524f937a5ffd8c2d27f975ffe31284ca7df02823485f67b6865519a794530c1684183678769491b7a5e6a5805184963049baeefabd675",
+          "sha256": "2bc6d62ba840efe431550a85075d57b99aac1de2c54a8a279a48e2fe69340a36",
+          "sha1": "3a00cf4c3796753bf76d5469e0e032028f2e9258",
+          "md5": "e309e4be6f968c86427c6cc3fcc7f0ef"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "mvgplugin-3.0.0-sources.jar",
+          "url": "mvgplugin-3.0.0-sources.jar",
+          "size": 78540,
+          "sha512": "72fec02d1a97c9e87523d680a02c50c94637f7504241bb821205d311b4a5c484e62d862e72596f4bb0d2435b6f5192d2fe66f296a5346c961773a51a0f58f3bc",
+          "sha256": "e5d6d0eedf9019eefb766aa2b937b600b99a2d6a8e88adce6b600b39b102a731",
+          "sha1": "47b3a7f2664902af6a9eb5f1ce33a7e85cc319f3",
+          "md5": "197624ad7c430ca6980a7ae5f88f2723"
+        }
+      ]
+    }
+  ]
+}
