@@ -20,9 +20,14 @@
 
 package org.modelingvalue.gradle.mvgplugin;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -34,14 +39,42 @@ public class DependabotCorrector extends Corrector {
     }
 
     public DependabotCorrector generate() throws IOException {
-        Path dependabotFile = InfoGradle.getAbsProjectDir().resolve(".github").resolve("dependabot.yml");
+        return generate(InfoGradle.getAbsProjectDir());
+    }
+
+    public DependabotCorrector generate(Path root) throws IOException {
+        Path dependabotFile = root.resolve(".github").resolve("dependabot.yml");
         if (!Files.isRegularFile(dependabotFile) || Files.readAllLines(dependabotFile).stream().noneMatch(l -> l.contains("#notouch"))) {
-            List<String> contents = getFileContents();
+            List<String> contents = getFileContents(npmDirectories(root));
             if (!yamlContentEquals(dependabotFile, contents)) {
                 overwrite(dependabotFile, contents);
             }
         }
         return this;
+    }
+
+    private static List<String> npmDirectories(Path root) throws IOException {
+        List<String> dirs = new ArrayList<>();
+        Files.walkFileTree(root, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                String name = dir.getFileName().toString();
+                if (!dir.equals(root) && (name.startsWith(".") || name.equals("node_modules") || name.equals("build"))) {
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                if (file.getFileName().toString().equals("package.json")) {
+                    String rel = root.relativize(file.getParent()).toString().replace(File.separatorChar, '/');
+                    dirs.add("/" + rel);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        return dirs.stream().sorted().toList();
     }
 
     private boolean yamlContentEquals(Path file, List<String> expected) throws IOException {
@@ -61,8 +94,8 @@ public class DependabotCorrector extends Corrector {
         return super.getChangedFiles(InfoGradle.getAbsProjectDir());
     }
 
-    private List<String> getFileContents() {
-        return List.of(
+    private List<String> getFileContents(List<String> npmDirs) {
+        List<String> contents = new ArrayList<>(List.of(
                 "version: 2",
                 "updates:",
                 "  - package-ecosystem: \"gradle\"",
@@ -75,6 +108,14 @@ public class DependabotCorrector extends Corrector {
                 "    target-branch: \"develop\"",
                 "    schedule:",
                 "      interval: \"daily\""
-        );
+        ));
+        npmDirs.forEach(dir -> contents.addAll(List.of(
+                "  - package-ecosystem: \"npm\"",
+                "    directory: \"" + dir + "\"",
+                "    target-branch: \"develop\"",
+                "    schedule:",
+                "      interval: \"daily\""
+        )));
+        return contents;
     }
 }
