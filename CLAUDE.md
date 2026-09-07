@@ -96,5 +96,5 @@ On CI the project version is the patch successor of the highest version-like git
 - **Language:** Java 21+ with one Kotlin file
 - **Build:** Gradle 7.5+ with Kotlin DSL
 - **Git library:** JGit 7.x
-- **Testing:** JUnit Jupiter with Gradle TestKit; tests create isolated workspaces in `build/test-workspace/`. `Info.JUNIT_VERSION` must match the junit versions in `mvgplugin/build.gradle.kts` (checked by `MvgPluginTest.checkJunitVersion`), and the `TEST_MARKER_REPLACE_NOT_DONE` count in `MvgPluginTest` shifts when dependency sets change
+- **Testing:** JUnit Jupiter with Gradle TestKit; tests create isolated workspaces in `$TMPDIR/mvgplugin-test-workspace/` (outside the project tree, so the IDE does not register the workspace git repos in `.idea/vcs.xml`; the path is printed at the start of `checkPlugin`). `Info.JUNIT_VERSION` must match the junit versions in `mvgplugin/build.gradle.kts` (checked by `MvgPluginTest.checkJunitVersion`), and the `TEST_MARKER_REPLACE_NOT_DONE` count in `MvgPluginTest` shifts when dependency sets change
 - **Key dependencies:** Jackson (YAML), Apache HttpComponents, Gradle Enterprise plugin

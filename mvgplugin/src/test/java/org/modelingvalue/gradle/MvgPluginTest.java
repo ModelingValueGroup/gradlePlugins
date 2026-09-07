@@ -72,7 +72,8 @@ import org.modelingvalue.gradle.mvgplugin.Info;
 public class MvgPluginTest {
     private static final boolean I_NEED_TO_DEBUG_THIS_TEST = true;
     public static final  String  TEST_WORKSPACE_NAME       = "gradlePlugins";
-    private static final Path    testWorkspaceDir          = Paths.get("build", "test-workspace", TEST_WORKSPACE_NAME).toAbsolutePath();
+    // outside the project tree, so the IDE does not detect the workspace git repos and add them to .idea/vcs.xml
+    private static final Path    testWorkspaceDir          = Paths.get(System.getProperty("java.io.tmpdir"), "mvgplugin-test-workspace", TEST_WORKSPACE_NAME).toAbsolutePath();
     private static final Path    settingsFile              = Paths.get("settings.gradle");
     private static final Path    bashFile                  = Paths.get("bashProduced.txt.corrector.sh");
     private static final Path    buildFile                 = Paths.get("build.gradle.kts");
@@ -240,6 +241,7 @@ public class MvgPluginTest {
         try (Git sourceGit = GitManager.git(Paths.get("."))) {
             sourceBranch = sourceGit.getRepository().getBranch();
         }
+        System.out.println("+ mvg-test: workspace at " + testWorkspaceDir);
         if (Files.isDirectory(testWorkspaceDir)) {
             FileUtils.delete(testWorkspaceDir.toFile(), FileUtils.RECURSIVE);
         }
