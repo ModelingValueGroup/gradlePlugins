@@ -61,6 +61,10 @@ Corrector (abstract)
 
 `MvgCorrector` orchestrates all correctors and exposes configuration via `MvgCorrectorExtension`.
 
+### Dependabot (DependabotCorrector)
+
+Regenerates `.github/dependabot.yml`: the fixed gradle + github-actions entries, plus one npm entry per directory containing a `package.json` (tree walk from the project root, pruning `node_modules`, `build` and dot-directories; sorted, so deterministic). A `#notouch` line anywhere in the file disables regeneration entirely. Comparison ignores comments/blank lines, so any manual entry not matching the generated set gets overwritten - manual additions must instead be discoverable (npm) or the file marked `#notouch`. Covered by `DependabotCorrectorTest`.
+
 ### Versioning (VersionCorrector)
 
 On CI the project version is the patch successor of the highest version-like git tag (any non-digit prefix + 3-part version: `v1.2.3`, `release1.2.3`, `1.2.3`, ...), or the `gradle.properties` version itself when that is higher than every tag - that is how a new minor/major release line is started. The `gradle.properties` file is never written back. Outside CI the version is always `dev` (local artifacts must not look like a release); `MvgTagger` refuses to tag `vdev`.
