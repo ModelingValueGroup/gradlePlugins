@@ -94,7 +94,7 @@ On CI the project version is the patch successor of the highest version-like git
 ## Technical Details
 
 - **Language:** Java 21+ with one Kotlin file
-- **Build:** Gradle 7.5+ with Kotlin DSL
+- **Build:** Gradle 9.7 wrapper with Kotlin DSL; build scripts read `gradle.properties` values via `providers.gradleProperty("x")` - the `val x: Type by project` delegate is deprecated and disappears in Gradle 10
 - **Git library:** JGit 7.x
 - **Testing:** JUnit Jupiter with Gradle TestKit; tests create isolated workspaces in `$TMPDIR/mvgplugin-test-workspace/` (outside the project tree, so the IDE does not register the workspace git repos in `.idea/vcs.xml`; the path is printed at the start of `checkPlugin`). `Info.JUNIT_VERSION` must match the junit versions in `mvgplugin/build.gradle.kts` (checked by `MvgPluginTest.checkJunitVersion`), and the `TEST_MARKER_REPLACE_NOT_DONE` count in `MvgPluginTest` shifts when dependency sets change
 - **Key dependencies:** Jackson (YAML), Apache HttpComponents, Gradle Enterprise plugin

@@ -18,11 +18,11 @@
 //      but also our friend. "He will live on in many of the lines of code you see below."                               ~
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-val mvgplugin_name: String by project
-val mvgplugin_id: String by project
-val mvgplugin_version: String? by project
-val mvgplugin_class: String by project
-val mvgplugin_displayname: String by project
+val mvgplugin_name       : String  = providers.gradleProperty("mvgplugin_name").get()
+val mvgplugin_id         : String  = providers.gradleProperty("mvgplugin_id").get()
+val mvgplugin_version    : String? = providers.gradleProperty("mvgplugin_version").orNull
+val mvgplugin_class      : String  = providers.gradleProperty("mvgplugin_class").get()
+val mvgplugin_displayname: String  = providers.gradleProperty("mvgplugin_displayname").get()
 
 plugins {
     `java-gradle-plugin`
