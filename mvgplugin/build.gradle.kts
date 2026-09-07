@@ -46,8 +46,8 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.22.2")
     implementation("org.apache.httpcomponents:httpmime:4.5.14")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:6.1.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:6.1.3")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
